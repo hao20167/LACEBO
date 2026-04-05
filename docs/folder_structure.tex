@@ -1,0 +1,45 @@
+\documentclass[12pt,a4paper]{article}
+
+% ===== PACKAGES =====
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{dirtree} % Package chuyên dụng cho cây thư mục
+
+% ===== CONFIG =====
+\geometry{left=2.5cm, right=2cm, top=2.5cm, bottom=2.5cm}
+\definecolor{foldercolor}{RGB}{0, 102, 204}
+
+% Tùy chỉnh màu sắc đường kẻ cho dirtree (nếu muốn)
+\renewcommand*\DTstyle{\ttfamily\textcolor{black}} 
+
+\begin{document}
+
+\section*{Cấu trúc thư mục dự án LACEBO}
+
+\begin{minipage}{10cm} % Giới hạn độ rộng để căn chỉnh cho đẹp
+\dirtree{%
+.1 LACEBO/.
+.2 .github/.
+.3 workflows/.
+.2 client/.
+.3 public/.
+.3 src/.
+.4 components/.
+.4 contexts/.
+.4 pages/.
+.4 services/.
+.2 server/.
+.3 data/.
+.3 src/.
+.4 config/.
+.4 database/.
+.4 helpers/.
+.4 middlewares/.
+.4 routes/.
+.2 docs/.
+}
+\end{minipage}
+
+\end{document}
