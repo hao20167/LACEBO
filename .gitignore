@@ -1,0 +1,7 @@
+# Monorepo scoped frontend artifacts
+/.npm-cache/
+/client/node_modules/
+/client/coverage/
+
+# pdf
+*.pdf 
