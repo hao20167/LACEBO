@@ -2,6 +2,7 @@
 /.npm-cache/
 /client/node_modules/
 /client/coverage/
+/server/target/
 
 # pdf
 *.pdf 
