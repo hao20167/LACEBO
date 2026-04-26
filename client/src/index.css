@@ -1,0 +1,137 @@
+/* Google Fonts — phải đứng trước @tailwind */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================
+ * CSS Custom Properties — Design Tokens
+ * Dùng song song với Tailwind cho các giá trị
+ * không map trực tiếp được (gradient text, v.v.)
+ * ============================================= */
+:root {
+  --color-bg: #0f0f13;
+  --color-surface: #1a1a24;
+  --color-surface-2: #23232f;
+  --color-border: #2e2e3e;
+  --color-text: #f1f0f5;
+  --color-text-muted: #8b8aa0;
+  --color-error: #f87171;
+  --color-success: #4ade80;
+  --transition: 200ms ease;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    @apply font-sans antialiased;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100%;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* =============================================
+ * Shared component classes — @layer components
+ * Dùng @apply để tái sử dụng Tailwind utilities
+ * ============================================= */
+@layer components {
+  /* --- Auth form card --- */
+  .auth-card {
+    @apply w-full max-w-md rounded-2xl border p-10;
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+  }
+
+  /* --- Gradient logo text --- */
+  .gradient-text {
+    display: inline-block;
+    background-image: linear-gradient(135deg, #a78bfa, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* --- Input field --- */
+  .form-input {
+    @apply w-full rounded px-3.5 py-2.5 text-sm outline-none transition-all;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+  }
+
+  .form-input::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.6;
+  }
+
+  .form-input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  }
+
+  .form-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .form-input--error {
+    border-color: var(--color-error) !important;
+  }
+
+  /* --- Primary button --- */
+  .btn-primary {
+    @apply w-full rounded py-3 text-sm font-semibold text-white transition-all;
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  /* --- Error alert --- */
+  .alert-error {
+    @apply rounded px-3.5 py-2.5 text-sm;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--color-error);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
