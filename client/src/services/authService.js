@@ -22,10 +22,29 @@ export const authService = {
    * register — Đăng ký tài khoản mới.
    * @param {{ username: string, email: string, password: string }} userData
    * @returns {{ token: string, user: object }}
+   *
+   * Backend trả về { id, username, email } (không có token).
+   * Hàm này chuẩn hóa thành shape { token, user } mà AuthContext mong đợi,
+   * dùng một dummy token tạm thời cho đến khi backend bổ sung JWT vào response.
    */
   async register(userData) {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
+    const response = await api.post('/users/register', userData);
+    const data = response.data;
+
+    // Nếu backend đã trả về shape { token, user } → dùng trực tiếp
+    if (data.token && data.user) {
+      return data;
+    }
+
+    // Backend hiện tại trả về { id, username, email } — chuẩn hóa về shape chuẩn
+    const user = {
+      id: data.id,
+      username: data.username,
+      email: data.email,
+    };
+    // Tạo session token tạm (sẽ được thay bằng JWT thật khi backend hỗ trợ)
+    const token = `session_${data.id}_${Date.now()}`;
+    return { token, user };
   },
 
   /**
