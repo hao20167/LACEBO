@@ -66,13 +66,17 @@ export function AuthProvider({ children }) {
    * register — Đăng ký tài khoản mới.
    * Sau khi đăng ký thành công → tự động login (không cần navigate tay).
    * @param {{ username: string, email: string, password: string }} userData
-   * @throws Error nếu API trả về lỗi
+   * @throws Error nếu API trả về lỗi hoặc response không hợp lệ
    */
   const register = useCallback(
     async (userData) => {
       setIsLoading(true);
       try {
-        const { token: newToken, user: newUser } = await authService.register(userData);
+        const result = await authService.register(userData);
+        const { token: newToken, user: newUser } = result ?? {};
+        if (!newToken || !newUser) {
+          throw new Error('Phản hồi từ server không hợp lệ. Vui lòng thử lại.');
+        }
         _saveSession(newToken, newUser);
       } finally {
         setIsLoading(false);
