@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import config from './config/index.js';
@@ -23,5 +24,5 @@ app.use('/api/posts', postsRouter);
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(config.port, () => {
-  console.log(`LACEBO server running on http://localhost:${config.port}`); // temporary
+  console.log(`LACEBO server running on http://localhost:${config.port}`); // temporary setup DB
 });
