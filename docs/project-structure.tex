@@ -1,0 +1,355 @@
+\documentclass[12pt,a4paper]{article}
+
+% ===== PACKAGES =====
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{forest}
+\usepackage{tabularray}
+\usepackage{enumitem}
+
+% ===== PAGE SETUP =====
+\geometry{left=2.5cm, right=2cm, top=2.5cm, bottom=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small LACEBO -- Roleplay Social Network}
+\fancyhead[R]{\small IT3180}
+\fancyfoot[C]{\thepage}
+
+% ===== COLORS =====
+\definecolor{foldercolor}{RGB}{14,165,233}
+\definecolor{filecolor}{RGB}{148,163,184}
+\definecolor{commentcolor}{RGB}{100,116,139}
+\definecolor{sectioncolor}{RGB}{3,105,161}
+
+% ===== LISTING STYLE =====
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!5},
+  rulecolor=\color{gray!30},
+  xleftmargin=1cm,
+}
+
+% ===== SECTION STYLE =====
+\titleformat{\section}{\Large\bfseries\color{sectioncolor}}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries\color{sectioncolor!80}}{\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{sectioncolor!60}}{\thesubsubsection.}{0.5em}{}
+
+% ===== DOCUMENT =====
+\begin{document}
+
+% ===== TITLE PAGE =====
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+
+{\Huge\bfseries ĐẠI HỌC BÁCH KHOA HÀ NỘI\\[0.3cm]}
+{\Large Viện Công nghệ Thông tin và Truyền thông\\[2cm]}
+
+\rule{\textwidth}{1pt}\\[0.5cm]
+{\LARGE\bfseries BÁO CÁO CẤU TRÚC DỰ ÁN\\[0.4cm]}
+{\Huge\bfseries\color{sectioncolor} LACEBO\\[0.2cm]}
+{\Large Roleplay Social Network Platform\\[0.5cm]}
+\rule{\textwidth}{1pt}\\[1.5cm]
+
+{\large\textbf{Môn học:} Nhập môn Công nghệ Phần mềm -- IT3180\\[0.3cm]}
+{\large\textbf{Nhóm:} Bùi Tuấn Đạt, Hoàng Thế Hiếu, Bùi Công Hào,\\
+Nguyễn Hồng Đạt, Trần Lê Ngọc Tâm\\[0.3cm]}
+{\large\textbf{Lớp:} CTTN -- Khoa học Máy tính K69\\[2cm]}
+
+{\large Hà Nội, 2026}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ==========================================
+\section{Tổng quan dự án}
+% ==========================================
+
+LACEBO (lấy cảm hứng từ \textit{Placebo} -- giả dược) là một nền tảng mạng xã hội nhập vai (roleplay), nơi người dùng có thể tạo và tham gia các thế giới ảo dưới dạng đơn giản. Dự án được xây dựng theo kiến trúc \textbf{Client--Server} với:
+
+\begin{itemize}[leftmargin=2cm]
+  \item \textbf{Backend:} Node.js + Express.js + SQLite (better-sqlite3)
+  \item \textbf{Frontend:} React 18 + Vite + TailwindCSS
+  \item \textbf{Authentication:} JWT (JSON Web Token)
+\end{itemize}
+
+% ==========================================
+\section{Cấu trúc tổng thể dự án}
+% ==========================================
+
+\begin{lstlisting}[title={\textbf{LACEBO/ (Root)}}]
+LACEBO/
+|-- .github/
+|   `-- workflows/          # CI/CD pipelines
+|-- client/                  # Frontend (React + Vite)
+|-- server/                  # Backend (Express.js)
+|-- docs/                    # Documentation (LaTeX)
+|-- .gitignore
+`-- README.md
+\end{lstlisting}
+
+% ==========================================
+\section{Backend (server/)}
+% ==========================================
+
+\subsection{Cấu trúc thư mục}
+
+\begin{lstlisting}[title={\textbf{server/}}]
+server/
+|-- data/                    # SQLite database files (gitignored)
+|   `-- lacebo.db
+|-- src/
+|   |-- config/
+|   |   `-- index.js         # App configuration (port, JWT, CORS)
+|   |-- database/
+|   |   |-- connection.js    # Database connection setup
+|   |   |-- schema.js        # Table definitions & migrations
+|   |   `-- index.js         # Database module exports
+|   |-- helpers/
+|   |   `-- world.js         # Shared helpers (isDev, isMember, addCredits)
+|   |-- middlewares/
+|   |   `-- auth.js          # JWT auth & optional auth middleware
+|   |-- routes/
+|   |   |-- users.js         # /api/users - Auth & user profile
+|   |   |-- worlds.js        # /api/worlds - World CRUD & members
+|   |   |-- events.js        # /api/events - Event management
+|   |   `-- posts.js         # /api/posts - Posts, comments, likes
+|   `-- index.js             # Express app entry point
+|-- package.json
+`-- package-lock.json
+\end{lstlisting}
+
+\subsection{Mô tả các module}
+
+\begin{tblr}{
+  colspec = {l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines,
+  vlines,
+}
+  Module & Mô tả \\
+  config/ & Tập trung cấu hình: port, JWT secret, CORS origin. Đọc từ biến môi trường hoặc giá trị mặc định. \\
+  database/connection.js & Khởi tạo kết nối SQLite với WAL mode và foreign keys. \\
+  database/schema.js & Định nghĩa schema cho 7 bảng: users, worlds, world\_members, events, posts, comments, likes, announcements. \\
+  helpers/world.js & Các hàm dùng chung: kiểm tra quyền Dev, kiểm tra thành viên, cộng/trừ credits. \\
+  middlewares/auth.js & JWT middleware: \texttt{authMiddleware} (bắt buộc), \texttt{optionalAuth} (tùy chọn), \texttt{generateToken}. \\
+  routes/users.js & Đăng ký, đăng nhập, lấy thông tin user hiện tại (\texttt{/me}). \\
+  routes/worlds.js & CRUD world, tìm kiếm, tham gia, phê duyệt thành viên, bảng xếp hạng. \\
+  routes/events.js & Tạo/sửa/duyệt events (big \& small), lore timeline. \\
+  routes/posts.js & Tạo post trong event, like/unlike, comment, announcements, phê duyệt post. \\
+\end{tblr}
+
+\subsection{Database Schema (ERD tóm tắt)}
+
+Hệ thống sử dụng 7 bảng chính:
+
+\begin{enumerate}[leftmargin=2cm]
+  \item \textbf{users} -- Thông tin người dùng (username, email, password hash, display\_name)
+  \item \textbf{worlds} -- Các thế giới roleplay (title, description, is\_public)
+  \item \textbf{world\_members} -- Quan hệ N-N giữa user và world (role: dev/player, status, credits)
+  \item \textbf{events} -- Sự kiện trong world (big/small, status: proposed/approved/open/closed)
+  \item \textbf{posts} -- Bài viết trong event (content, status: pending/approved)
+  \item \textbf{comments} -- Bình luận trên post
+  \item \textbf{likes} -- Lượt thích (post hoặc comment)
+  \item \textbf{announcements} -- Thông báo của Dev cho world
+\end{enumerate}
+
+% ==========================================
+\section{Frontend (client/)}
+% ==========================================
+
+\subsection{Cấu trúc thư mục}
+
+\begin{lstlisting}[title={\textbf{client/}}]
+client/
+|-- public/                  # Static assets
+|-- src/
+|   |-- components/          # Reusable UI components
+|   |   `-- Navbar.jsx       # Navigation bar
+|   |-- contexts/            # React Context providers
+|   |   `-- AuthContext.jsx   # Authentication state management
+|   |-- pages/               # Route-level page components
+|   |   |-- Home.jsx         # Landing page
+|   |   |-- Login.jsx        # Login form
+|   |   |-- Register.jsx     # Registration form
+|   |   |-- WorldList.jsx    # Browse & search worlds
+|   |   |-- WorldDetail.jsx  # World main menu (lore, events, leaderboard)
+|   |   |-- WorldManage.jsx  # Dev management panel
+|   |   |-- CreateWorld.jsx  # Create new world form
+|   |   |-- MyWorlds.jsx     # User's joined worlds
+|   |   `-- EventDetail.jsx  # Event page (posts, comments, likes)
+|   |-- services/            # API communication layer
+|   |   `-- api.js           # Axios instance with interceptors
+|   |-- App.jsx              # Root component & routing
+|   |-- main.jsx             # React entry point
+|   `-- index.css            # Global styles (Tailwind)
+|-- index.html               # HTML template
+|-- vite.config.js           # Vite configuration
+|-- tailwind.config.js       # TailwindCSS configuration
+|-- postcss.config.js        # PostCSS configuration
+|-- package.json
+`-- package-lock.json
+\end{lstlisting}
+
+\subsection{Mô tả các module}
+
+\begin{tblr}{
+  colspec = {l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines,
+  vlines,
+}
+  Module & Mô tả \\
+  services/api.js & Axios instance tập trung: tự động gắn JWT token, xử lý lỗi 401 (auto logout). Hỗ trợ biến môi trường \texttt{VITE\_API\_URL} cho production. \\
+  contexts/AuthContext.jsx & React Context quản lý state xác thực: login, register, logout, kiểm tra token khi load. \\
+  components/Navbar.jsx & Thanh điều hướng: logo, links (Explore, My Worlds, Create), trạng thái đăng nhập. \\
+  pages/Home.jsx & Trang chủ với giới thiệu platform và 3 feature cards. \\
+  pages/Login.jsx & Form đăng nhập với xử lý lỗi. \\
+  pages/Register.jsx & Form đăng ký 4 trường: display name, username, email, password. \\
+  pages/WorldList.jsx & Danh sách worlds dạng grid, có thanh tìm kiếm theo tiêu đề. \\
+  pages/WorldDetail.jsx & Trang chính của world với 4 tab: Lore (timeline), Events, Announcements, Leaderboard. \\
+  pages/EventDetail.jsx & Chi tiết event: header, form tạo post, danh sách posts với like/comment. \\
+  pages/WorldManage.jsx & Panel quản lý cho Dev: duyệt members, duyệt posts, duyệt event proposals. \\
+  pages/CreateWorld.jsx & Form tạo world mới (title, description). \\
+  pages/MyWorlds.jsx & Danh sách các world đã tham gia, hiển thị role và credits. \\
+\end{tblr}
+
+% ==========================================
+\section{API Endpoints}
+% ==========================================
+
+\subsection{Authentication (\texttt{/api/users})}
+
+\begin{tblr}{
+  colspec = {l l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines, vlines,
+}
+  Method & Endpoint & Mô tả \\
+  POST & /api/users/register & Đăng ký tài khoản mới \\
+  POST & /api/users/login & Đăng nhập, trả về JWT token \\
+  GET & /api/users/me & Lấy thông tin user hiện tại (auth required) \\
+\end{tblr}
+
+\subsection{Worlds (\texttt{/api/worlds})}
+
+\begin{tblr}{
+  colspec = {l l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines, vlines,
+}
+  Method & Endpoint & Mô tả \\
+  GET & /api/worlds & Danh sách worlds (hỗ trợ ?search=) \\
+  GET & /api/worlds/mine & Worlds của user hiện tại \\
+  POST & /api/worlds & Tạo world mới (auth) \\
+  GET & /api/worlds/:id & Chi tiết world \\
+  POST & /api/worlds/:id/join & Xin tham gia world \\
+  PATCH & /api/worlds/:id/members/:mid & Duyệt/từ chối member (dev only) \\
+  GET & /api/worlds/:id/members/pending & Danh sách chờ duyệt (dev only) \\
+  GET & /api/worlds/:id/members & Tất cả thành viên \\
+  GET & /api/worlds/:id/leaderboard & Bảng xếp hạng credits \\
+\end{tblr}
+
+\subsection{Events (\texttt{/api/events})}
+
+\begin{tblr}{
+  colspec = {l l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines, vlines,
+}
+  Method & Endpoint & Mô tả \\
+  GET & /api/events/world/:wid & Lore timeline (events đã duyệt) \\
+  GET & /api/events/world/:wid/proposed & Events chờ duyệt (dev only) \\
+  POST & /api/events/world/:wid & Tạo event (big: dev only; small: player đề xuất) \\
+  PATCH & /api/events/:eid & Cập nhật/duyệt/mở/đóng event (dev only) \\
+  GET & /api/events/:eid & Chi tiết event \\
+\end{tblr}
+
+\subsection{Posts \& Interactions (\texttt{/api/posts})}
+
+\begin{tblr}{
+  colspec = {l l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines, vlines,
+}
+  Method & Endpoint & Mô tả \\
+  GET & /api/posts/event/:eid & Posts trong event \\
+  POST & /api/posts/event/:eid & Tạo post (dev: auto approve; player: pending) \\
+  PATCH & /api/posts/:pid/approve & Duyệt post (dev only) \\
+  GET & /api/posts/world/:wid/pending & Posts chờ duyệt (dev only) \\
+  POST & /api/posts/:pid/like & Like/unlike post \\
+  GET & /api/posts/:pid/comments & Danh sách comments \\
+  POST & /api/posts/:pid/comments & Thêm comment \\
+  GET & /api/posts/world/:wid/announcements & Announcements \\
+  POST & /api/posts/world/:wid/announcements & Tạo announcement (dev only) \\
+\end{tblr}
+
+% ==========================================
+\section{Hệ thống Credits (Điểm công dân)}
+% ==========================================
+
+Mỗi world có hệ thống credits riêng, dùng để xếp hạng công dân:
+
+\begin{tblr}{
+  colspec = {X c},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines, vlines,
+}
+  Hành động & Credits \\
+  Tạo post được duyệt & +10 \\
+  Viết comment & +2 \\
+  Nhận 1 like & +1 \\
+  Bị unlike & -1 \\
+\end{tblr}
+
+% ==========================================
+\section{Công nghệ sử dụng}
+% ==========================================
+
+\begin{tblr}{
+  colspec = {l l X},
+  row{1} = {font=\bfseries, bg=sectioncolor!10},
+  hlines, vlines,
+}
+  Layer & Công nghệ & Mục đích \\
+  Frontend & React 18 & UI component-based \\
+  Frontend & Vite 5 & Build tool, HMR, dev server \\
+  Frontend & TailwindCSS 3 & Utility-first CSS \\
+  Frontend & React Router 6 & Client-side routing \\
+  Frontend & Axios & HTTP client \\
+  Backend & Node.js & JavaScript runtime \\
+  Backend & Express.js 4 & Web framework \\
+  Backend & better-sqlite3 & SQLite driver (synchronous) \\
+  Backend & bcryptjs & Password hashing \\
+  Backend & jsonwebtoken & JWT authentication \\
+  DevOps & GitHub Actions & CI/CD \\
+  DevOps & Git & Version control \\
+\end{tblr}
+
+% ==========================================
+\section{Hướng dẫn chạy dự án}
+% ==========================================
+
+\begin{lstlisting}[language=bash, title={\textbf{Development}}]
+# Backend
+cd server
+npm install
+npm run dev          # http://localhost:3001
+
+# Frontend (terminal khac)
+cd client
+npm install
+npm run dev          # http://localhost:5173
+\end{lstlisting}
+
+\end{document}
