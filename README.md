@@ -115,6 +115,7 @@ npm test
 Các lệnh hữu ích khác:
 
 ```bash
+npm run test:integration
 npm run test:watch
 npm run test:coverage
 ```
