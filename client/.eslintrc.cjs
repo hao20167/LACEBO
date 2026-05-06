@@ -9,7 +9,7 @@ module.exports = {
     'eslint:recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'eslint-config-prettier'
+    'prettier'
   ],
   parserOptions: {
     ecmaVersion: 'latest',
