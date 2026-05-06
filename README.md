@@ -103,26 +103,54 @@ npm run dev
 
 ---
 
-## Chạy Tests
+## Chạy Kiểm Thử
 
-### Backend Tests
+### Unit Test
+
+- Frontend unit test: viết trong [client/src](client/src) bên cạnh mã nguồn, file pattern `*.test.js` / `*.test.jsx`.
+- Backend unit test: viết trong [server/src/test](server/src/test), file pattern `*.test.js`.
+- Lệnh chạy frontend unit test:
+
+```bash
+cd client
+npm test
+```
+
+- Lệnh chạy backend unit test:
 
 ```bash
 cd server
 npm test
 ```
 
-Các lệnh hữu ích khác:
+### Component Test
+
+- Component test (UI) viết trong [client/src](client/src), đặt cạnh component/page, file pattern `*.test.jsx`.
+- Dùng React Testing Library + Vitest để kiểm thử hành vi người dùng.
+- Lệnh chạy component test (chạy cùng bộ Vitest với unit test):
 
 ```bash
+cd client
+npm test
+```
+
+### Integration Test
+
+- Integration test cho API viết trong [server/src/test](server/src/test), thường dùng suffix `*.integration.test.js`.
+- Dùng Jest + Supertest để kiểm thử end-to-end request/response, status code và schema.
+- Lệnh chạy integration test:
+
+```bash
+cd server
 npm run test:integration
+```
+
+Lệnh hữu ích khác (backend):
+
+```bash
 npm run test:watch
 npm run test:coverage
 ```
-
-### Frontend Tests
-
-Hiện tại frontend chưa có script test trong `package.json`. Khi bổ sung test runner, nên dùng Vitest cho stack Vite/React này.
 
 ---
 
@@ -182,6 +210,8 @@ LACEBO/
    ```bash
    git push origin feature/task-id-description
    ```
+
+4. Link pull request với issue tương ứng.
 
 ### Code Style
 

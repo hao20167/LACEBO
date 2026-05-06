@@ -9,7 +9,10 @@
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{js,jsx,css}\""
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css}\"",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "axios": "^1.7.4",
@@ -32,6 +35,9 @@
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.10",
     "vite": "^5.4.2",
-    "vitest": "^4.1.5"
+    "vitest": "^0.34.9",
+    "@testing-library/react": "^15.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.0.0"
   }
 }
