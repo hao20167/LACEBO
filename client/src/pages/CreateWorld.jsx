@@ -29,14 +29,14 @@ export default function CreateWorld() {
       {error && <div className="bg-red-900/30 border border-red-700 text-red-300 text-sm rounded-lg p-3 mb-4">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm text-dark-400 mb-1">World Title</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} required
+          <label htmlFor="title" className="block text-sm text-dark-400 mb-1">World Title</label>
+          <input id="title" type="text" value={title} onChange={e => setTitle(e.target.value)} required
             placeholder="e.g., A world where Vietnam wins WW3"
             className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition" />
         </div>
         <div>
-          <label className="block text-sm text-dark-400 mb-1">Description</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={5}
+          <label htmlFor="description" className="block text-sm text-dark-400 mb-1">Description</label>
+          <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={5}
             placeholder="Describe the premise and background of your world..."
             className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition resize-none" />
         </div>
