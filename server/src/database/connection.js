@@ -1,10 +1,12 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import config from '../config/index.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = config.dbPath || path.join(__dirname, '..', '..', 'data', 'lacebo.db');
+const cwd = process.cwd();
+const defaultDbPath = cwd.endsWith(`${path.sep}server`)
+  ? path.join(cwd, 'data', 'lacebo.db')
+  : path.join(cwd, 'server', 'data', 'lacebo.db');
+const dbPath = config.dbPath || defaultDbPath;
 
 // Ensure data directory exists
 import fs from 'fs';
