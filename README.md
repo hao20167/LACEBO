@@ -211,6 +211,8 @@ LACEBO/
    git push origin feature/task-id-description
    ```
 
+4. Link pull request với issue tương ứng.
+
 ### Code Style
 
 #### Frontend
