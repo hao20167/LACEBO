@@ -3,6 +3,7 @@
 /client/node_modules/
 /client/coverage/
 /server/target/
+/server/node_modules/
 
 # pdf
 *.pdf 
