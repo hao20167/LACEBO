@@ -1,4 +1,4 @@
-import { createContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { authService } from '@/services/authService.js';
 
 /**
@@ -14,6 +14,16 @@ import { authService } from '@/services/authService.js';
  *  - logout()      : () → void
  */
 export const AuthContext = createContext(null);
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
+  return context;
+}
 
 // Key lưu trong localStorage
 const TOKEN_KEY = 'lacebo_token';

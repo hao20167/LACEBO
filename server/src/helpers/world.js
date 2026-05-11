@@ -15,3 +15,22 @@ export function isDev(worldId, userId) {
     )
     .get(worldId, userId, 'dev', 'approved');
 }
+
+export function validateWorldData(data) {
+  if (!data.name || data.name.trim() === '') {
+    return { isValid: false, error: 'Name is required' };
+  }
+  return { isValid: true };
+}
+
+export function formatWorldSlug(name) {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/([^0-9a-z-\s])/g, '')
+    .replace(/(\s+)/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
