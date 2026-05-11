@@ -2,10 +2,10 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import MyWorlds from './MyWorlds.jsx';
-import api from '../api.js';
+import api from '../services/api.js';
 
 // Mock the api module
-vi.mock('../api.js', () => ({
+vi.mock('../services/api.js', () => ({
   default: {
     get: vi.fn(),
   },
