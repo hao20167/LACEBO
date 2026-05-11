@@ -2,9 +2,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import WorldManage from './WorldManage';
-import api from '../api';
+import api from '../services/api.js';
 
-vi.mock('../api');
+vi.mock('../services/api.js');
 
 const renderWorldManage = (id = "1") => {
   return render(

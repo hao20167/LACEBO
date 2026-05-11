@@ -2,9 +2,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import CreateWorld from './CreateWorld';
-import api from '../api';
+import api from '../services/api.js';
 
-vi.mock('../api');
+vi.mock('../services/api.js');
 
 describe('CreateWorld Page Component', () => {
   beforeEach(() => {
