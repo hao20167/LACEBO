@@ -9,3 +9,5 @@
 *.pdf 
 
 *.db
+
+.DS_Store
