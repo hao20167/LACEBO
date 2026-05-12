@@ -32,23 +32,23 @@ export default function Register() {
                 {error && <div className="bg-red-900/30 border border-red-700 text-red-300 text-sm rounded-lg p-3 mb-4">{error}</div>}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm text-dark-400 mb-1">Display Name</label>
-                        <input type="text" value={form.display_name} onChange={update('display_name')} required
+                        <label htmlFor="display_name" className="block text-sm text-dark-400 mb-1">Display Name</label>
+                        <input id="display_name" type="text" value={form.display_name} onChange={update('display_name')} required
                             className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition" />
                     </div>
                     <div>
-                        <label className="block text-sm text-dark-400 mb-1">Username</label>
-                        <input type="text" value={form.username} onChange={update('username')} required
+                        <label htmlFor="username" className="block text-sm text-dark-400 mb-1">Username</label>
+                        <input id="username" type="text" value={form.username} onChange={update('username')} required
                             className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition" />
                     </div>
                     <div>
-                        <label className="block text-sm text-dark-400 mb-1">Email</label>
-                        <input type="email" value={form.email} onChange={update('email')} required
+                        <label htmlFor="email" className="block text-sm text-dark-400 mb-1">Email</label>
+                        <input id="email" type="email" value={form.email} onChange={update('email')} required
                             className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition" />
                     </div>
                     <div>
-                        <label className="block text-sm text-dark-400 mb-1">Password</label>
-                        <input type="password" value={form.password} onChange={update('password')} required minLength={6}
+                        <label htmlFor="password" className="block text-sm text-dark-400 mb-1">Password</label>
+                        <input id="password" type="password" value={form.password} onChange={update('password')} required minLength={6}
                             className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition" />
                     </div>
                     <button type="submit" disabled={loading}

@@ -1,67 +1,52 @@
 import api from './api.js';
 
-/**
- * authService — Tầng giao tiếp API dành riêng cho Auth.
- *
- * Tất cả call liên quan đến xác thực đi qua đây.
- * AuthContext sẽ gọi các hàm này và xử lý state, không gọi API trực tiếp.
- */
-export const authService = {
-  /**
-   * login — Đăng nhập.
-   * @param {{ identifier: string, password: string }} credentials
-   * @returns {{ token: string, user: object }}
-   */
-  async login(credentials) {
-    const response = await api.post('/auth/login', credentials);
-    // Backend Spring Boot dự kiến trả về: { token, user: { id, username, email, ... } }
-    return response.data;
-  },
+const AUTH_ENDPOINTS = {
+  login: '/users/login',
+  register: '/users/register',
+  me: '/users/me',
+};
 
-  /**
-   * register — Đăng ký tài khoản mới.
-   * @param {{ username: string, email: string, password: string }} userData
-   * @returns {{ token: string, user: object }}
-   *
-   * Backend trả về { id, username, email } (không có token).
-   * Hàm này chuẩn hóa thành shape { token, user } mà AuthContext mong đợi,
-   * dùng một dummy token tạm thời cho đến khi backend bổ sung JWT vào response.
-   */
-  async register(userData) {
-    const response = await api.post('/users/register', userData);
-    const data = response.data;
-
-    // Nếu backend đã trả về shape { token, user } → dùng trực tiếp
-    if (data.token && data.user) {
-      return data;
-    }
-
-    // Backend hiện tại trả về { id, username, email } — chuẩn hóa về shape chuẩn
-    const user = {
-      id: data.id,
-      username: data.username,
-      email: data.email,
+const normalizeLoginPayload = (credentialsOrUsername, password) => {
+  if (typeof credentialsOrUsername === 'string') {
+    return {
+      username: credentialsOrUsername,
+      password,
     };
-    // Tạo session token tạm (sẽ được thay bằng JWT thật khi backend hỗ trợ)
-    const token = `session_${data.id}_${Date.now()}`;
-    return { token, user };
+  }
+
+  const credentials = credentialsOrUsername ?? {};
+  return {
+    username: credentials.username ?? credentials.identifier ?? '',
+    password: credentials.password ?? '',
+  };
+};
+
+const assertAuthResponse = (data) => {
+  if (!data?.token || !data?.user) {
+    throw new Error('Invalid authentication response from server.');
+  }
+
+  return data;
+};
+
+export const authService = {
+  async login(credentialsOrUsername, password) {
+    const payload = normalizeLoginPayload(credentialsOrUsername, password);
+    const response = await api.post(AUTH_ENDPOINTS.login, payload);
+    return assertAuthResponse(response.data);
   },
 
-  /**
-   * logout — Thông báo server invalidate token (best-effort).
-   * Dù thất bại, AuthContext vẫn xóa local session.
-   */
+  async register(userData) {
+    const response = await api.post(AUTH_ENDPOINTS.register, userData);
+    return assertAuthResponse(response.data);
+  },
+
   async logout() {
-    await api.post('/auth/logout');
+    // JWT logout is client-side only unless the server adds token revocation.
   },
 
-  /**
-   * getMe — Lấy thông tin user hiện tại từ server.
-   * Dùng để verify token còn hợp lệ hoặc refresh user data.
-   * @returns {{ id, username, email, ... }}
-   */
   async getMe() {
-    const response = await api.get('/auth/me');
+    const response = await api.get(AUTH_ENDPOINTS.me);
     return response.data;
   },
 };
