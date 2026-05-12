@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../database/connection.js';
-import { authMiddleware } from '../middlewares/auth.js';
+import { authMiddleware } from '../config/auth.js';
 import { isDev, isMember } from '../helpers/world.js';
 
 const router = Router();

@@ -1,5 +1,6 @@
-import { createContext, useState, useCallback, useMemo } from 'react';
-import { authService } from '@/services/authService.js';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { TOKEN_KEY, USER_KEY } from '../services/api.js';
+import { authService } from '../services/authService.js';
 
 /**
  * AuthContext — Context quản lý trạng thái xác thực toàn app.
@@ -15,9 +16,15 @@ import { authService } from '@/services/authService.js';
  */
 export const AuthContext = createContext(null);
 
-// Key lưu trong localStorage
-const TOKEN_KEY = 'lacebo_token';
-const USER_KEY = 'lacebo_user';
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
+  return context;
+}
 
 export function AuthProvider({ children }) {
   // Khởi tạo state từ localStorage — persist qua reload trang
@@ -49,10 +56,10 @@ export function AuthProvider({ children }) {
    * @throws Error nếu API trả về lỗi (để component tự xử lý hiển thị)
    */
   const login = useCallback(
-    async (credentials) => {
+    async (credentialsOrUsername, password) => {
       setIsLoading(true);
       try {
-        const { token: newToken, user: newUser } = await authService.login(credentials);
+        const { token: newToken, user: newUser } = await authService.login(credentialsOrUsername, password);
         _saveSession(newToken, newUser);
       } finally {
         // finally đảm bảo isLoading luôn reset dù thành công hay thất bại

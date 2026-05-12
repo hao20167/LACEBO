@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api';
+import api from '../services/api.js';
 
 export default function MyWorlds() {
   const [worlds, setWorlds] = useState([]);

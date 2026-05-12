@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api';
+import api from '../services/api.js';
 
 export default function WorldDetail() {
   const { id } = useParams();
