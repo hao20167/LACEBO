@@ -12,7 +12,7 @@ describe('World Helper Unit Tests', () => {
     db = dbModule.default;
     const schemaModule = await import('../database/schema.js');
     schemaModule.initDatabase();
-    
+
     const helperModule = await import('../helpers/world.js');
     isMember = helperModule.isMember;
     isDev = helperModule.isDev;
@@ -31,7 +31,9 @@ describe('World Helper Unit Tests', () => {
     const user = createTestUser({ db, username: 'member' });
     db.prepare("INSERT INTO worlds (title) VALUES ('Test World')").run();
     const worldId = 1;
-    db.prepare("INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'approved')").run(worldId, user.id);
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'approved')",
+    ).run(worldId, user.id);
 
     const result = isMember(worldId, user.id);
     expect(result).toBeDefined();
@@ -42,7 +44,9 @@ describe('World Helper Unit Tests', () => {
     const user = createTestUser({ db, username: 'pending' });
     db.prepare("INSERT INTO worlds (title) VALUES ('Test World')").run();
     const worldId = 1;
-    db.prepare("INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'pending')").run(worldId, user.id);
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'pending')",
+    ).run(worldId, user.id);
 
     const result = isMember(worldId, user.id);
     expect(result).toBeUndefined();
@@ -52,7 +56,9 @@ describe('World Helper Unit Tests', () => {
     const user = createTestUser({ db, username: 'dev' });
     db.prepare("INSERT INTO worlds (title) VALUES ('Test World')").run();
     const worldId = 1;
-    db.prepare("INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')").run(worldId, user.id);
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')",
+    ).run(worldId, user.id);
 
     const result = isDev(worldId, user.id);
     expect(result).toBeDefined();

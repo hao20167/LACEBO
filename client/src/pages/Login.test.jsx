@@ -15,7 +15,7 @@ const renderLogin = (authValue) => {
   return render(
     <BrowserRouter>
       <Login />
-    </BrowserRouter>
+    </BrowserRouter>,
   );
 };
 

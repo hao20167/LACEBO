@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import { TOKEN_KEY, USER_KEY } from '../services/api.js';
 import { authService } from '../services/authService.js';
 
@@ -59,7 +65,10 @@ export function AuthProvider({ children }) {
     async (credentialsOrUsername, password) => {
       setIsLoading(true);
       try {
-        const { token: newToken, user: newUser } = await authService.login(credentialsOrUsername, password);
+        const { token: newToken, user: newUser } = await authService.login(
+          credentialsOrUsername,
+          password,
+        );
         _saveSession(newToken, newUser);
       } finally {
         // finally đảm bảo isLoading luôn reset dù thành công hay thất bại

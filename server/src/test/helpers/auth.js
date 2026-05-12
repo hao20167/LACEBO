@@ -11,7 +11,7 @@ export function createTestUser({
   const hash = bcrypt.hashSync(password, 10);
   const result = db
     .prepare(
-      'INSERT INTO users (username, email, password, display_name) VALUES (?, ?, ?, ?)'
+      'INSERT INTO users (username, email, password, display_name) VALUES (?, ?, ?, ?)',
     )
     .run(username, email, hash, displayName);
 

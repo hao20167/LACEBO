@@ -49,7 +49,12 @@ const renderRegister = () =>
 // ─── Helper điền form ─────────────────────────────────────────────────────────
 const fillForm = async (
   user,
-  { displayName = 'Alice Nguyen', username = 'alice', email = 'alice@test.com', password = 'Password1!' } = {},
+  {
+    displayName = 'Alice Nguyen',
+    username = 'alice',
+    email = 'alice@test.com',
+    password = 'Password1!',
+  } = {},
 ) => {
   await user.type(screen.getByLabelText(/display name/i), displayName);
   await user.type(screen.getByLabelText(/username/i), username);
@@ -71,7 +76,9 @@ describe('Register — render', () => {
 
   it('hiển thị tiêu đề "Join LACEBO"', () => {
     renderRegister();
-    expect(screen.getByRole('heading', { name: /join lacebo/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /join lacebo/i }),
+    ).toBeInTheDocument();
   });
 
   it('hiển thị 4 input fields: Display Name, Username, Email, Password', () => {
@@ -84,7 +91,9 @@ describe('Register — render', () => {
 
   it('hiển thị nút "Create Account"', () => {
     renderRegister();
-    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /create account/i }),
+    ).toBeInTheDocument();
   });
 
   it('hiển thị link điều hướng về trang Login', () => {
@@ -125,12 +134,18 @@ describe('Register — nhập liệu', () => {
 
   it('input Password có type="password"', () => {
     renderRegister();
-    expect(screen.getByLabelText(/password/i)).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText(/password/i)).toHaveAttribute(
+      'type',
+      'password',
+    );
   });
 
   it('input Password có minLength="6"', () => {
     renderRegister();
-    expect(screen.getByLabelText(/password/i)).toHaveAttribute('minLength', '6');
+    expect(screen.getByLabelText(/password/i)).toHaveAttribute(
+      'minLength',
+      '6',
+    );
   });
 });
 
@@ -233,7 +248,9 @@ describe('Register — trạng thái loading', () => {
     renderRegister();
     await fillAndSubmit(user);
 
-    expect(screen.getByRole('button', { name: /creating account/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /creating account/i }),
+    ).toBeInTheDocument();
   });
 
   it('nút bị disabled trong khi loading', async () => {
@@ -244,7 +261,9 @@ describe('Register — trạng thái loading', () => {
     renderRegister();
     await fillAndSubmit(user);
 
-    expect(screen.getByRole('button', { name: /creating account/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /creating account/i }),
+    ).toBeDisabled();
   });
 
   it('nút trở lại "Create Account" và enabled sau khi request xong', async () => {
@@ -256,6 +275,8 @@ describe('Register — trạng thái loading', () => {
     await fillAndSubmit(user);
 
     await waitFor(() => expect(mockRegister).toHaveBeenCalledOnce());
-    expect(screen.getByRole('button', { name: /create account/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /create account/i }),
+    ).not.toBeDisabled();
   });
 });

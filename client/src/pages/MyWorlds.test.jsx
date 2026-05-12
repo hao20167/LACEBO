@@ -43,7 +43,7 @@ describe('MyWorlds', () => {
       render(
         <MemoryRouter>
           <MyWorlds />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -57,7 +57,7 @@ describe('MyWorlds', () => {
       render(
         <MemoryRouter>
           <MyWorlds />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -81,12 +81,14 @@ describe('MyWorlds', () => {
       render(
         <MemoryRouter>
           <MyWorlds />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
     await waitFor(() => {
-      expect(screen.getByText("You haven't joined any worlds yet.")).toBeInTheDocument();
+      expect(
+        screen.getByText("You haven't joined any worlds yet."),
+      ).toBeInTheDocument();
       expect(screen.getByText(/explore worlds/i)).toBeInTheDocument();
     });
   });
@@ -98,12 +100,14 @@ describe('MyWorlds', () => {
       render(
         <MemoryRouter>
           <MyWorlds />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
     await waitFor(() => {
-      expect(screen.getByText("You haven't joined any worlds yet.")).toBeInTheDocument();
+      expect(
+        screen.getByText("You haven't joined any worlds yet."),
+      ).toBeInTheDocument();
     });
   });
 
@@ -114,10 +118,13 @@ describe('MyWorlds', () => {
       render(
         <MemoryRouter>
           <MyWorlds />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
-    expect(screen.getByRole('link', { name: /\+ new world/i })).toHaveAttribute('href', '/worlds/create');
+    expect(screen.getByRole('link', { name: /\+ new world/i })).toHaveAttribute(
+      'href',
+      '/worlds/create',
+    );
   });
 });
