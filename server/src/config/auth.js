@@ -2,11 +2,9 @@ import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
 
 export function generateToken(user) {
-  return jwt.sign(
-    { id: user.id, username: user.username },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
-  );
+  return jwt.sign({ id: user.id, username: user.username }, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn,
+  });
 }
 
 export function authMiddleware(req, res, next) {
@@ -28,7 +26,9 @@ export function optionalAuth(req, res, next) {
   if (header && header.startsWith('Bearer ')) {
     try {
       req.user = jwt.verify(header.slice(7), config.jwtSecret);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   next();
 }

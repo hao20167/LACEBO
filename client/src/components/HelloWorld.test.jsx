@@ -17,7 +17,9 @@ export const mockAuthValue = {
 describe('HelloWorld', () => {
   it('renders the hello world heading', () => {
     render(<HelloWorld />);
-    expect(screen.getByRole('heading', { name: /hello world/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /hello world/i }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -30,6 +32,8 @@ describe('HelloWorld (với AuthContext wrapper)', () => {
         </AuthContext.Provider>
       </MemoryRouter>,
     );
-    expect(screen.getByRole('heading', { name: /hello world/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /hello world/i }),
+    ).toBeInTheDocument();
   });
 });

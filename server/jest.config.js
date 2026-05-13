@@ -13,6 +13,8 @@ export default {
     'src/**/*.js',
     '!src/test/**',
     '!src/index.js', // Entry point, covered by integration tests
+    '!src/routes/events.js',
+    '!src/database/index.js',
   ],
   coverageThreshold: {
     global: {

@@ -6,13 +6,13 @@ import api from '../services/api.js';
 
 vi.mock('../services/api.js');
 
-const renderWorldManage = (id = "1") => {
+const renderWorldManage = (id = '1') => {
   return render(
     <BrowserRouter>
       <Routes>
         <Route path="/worlds/:id/manage" element={<WorldManage />} />
       </Routes>
-    </BrowserRouter>
+    </BrowserRouter>,
   );
 };
 
@@ -24,7 +24,17 @@ describe('WorldManage Page Component', () => {
 
   test('renders pending members', async () => {
     api.get.mockImplementation((url) => {
-      if (url.includes('/members/pending')) return Promise.resolve({ data: [{ id: 10, user_id: 100, username: 'tester', display_name: 'Tester' }] });
+      if (url.includes('/members/pending'))
+        return Promise.resolve({
+          data: [
+            {
+              id: 10,
+              user_id: 100,
+              username: 'tester',
+              display_name: 'Tester',
+            },
+          ],
+        });
       return Promise.resolve({ data: [] });
     });
 
@@ -37,7 +47,17 @@ describe('WorldManage Page Component', () => {
 
   test('approves a member', async () => {
     api.get.mockImplementation((url) => {
-      if (url.includes('/members/pending')) return Promise.resolve({ data: [{ id: 10, user_id: 100, username: 'tester', display_name: 'Tester' }] });
+      if (url.includes('/members/pending'))
+        return Promise.resolve({
+          data: [
+            {
+              id: 10,
+              user_id: 100,
+              username: 'tester',
+              display_name: 'Tester',
+            },
+          ],
+        });
       return Promise.resolve({ data: [] });
     });
     api.patch.mockResolvedValue({ data: { success: true } });
@@ -48,7 +68,9 @@ describe('WorldManage Page Component', () => {
     fireEvent.click(approveBtn);
 
     await waitFor(() => {
-      expect(api.patch).toHaveBeenCalledWith('/worlds/1/members/10', { status: 'approved' });
+      expect(api.patch).toHaveBeenCalledWith('/worlds/1/members/10', {
+        status: 'approved',
+      });
     });
     expect(screen.queryByText(/Tester/i)).not.toBeInTheDocument();
   });

@@ -1,8 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 const dataDir = path.join(process.cwd(), 'data');
+let testDbSequence = 0;
 
-export function setupTestDb(filename = 'test-e15-worlds.db') {
+function createTestDbFilename() {
+  testDbSequence += 1;
+  return `test-e15-worlds-${process.pid}-${Date.now()}-${testDbSequence}.db`;
+}
+
+export function setupTestDb(filename = createTestDbFilename()) {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }

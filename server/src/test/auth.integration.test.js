@@ -1,9 +1,5 @@
 import request from 'supertest';
-import {
-  cleanupTestDb,
-  resetDatabase,
-  setupTestDb,
-} from './helpers/testDb.js';
+import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
 
 describe('Auth API Integration Tests', () => {
   let app;
@@ -30,18 +26,42 @@ describe('Auth API Integration Tests', () => {
   });
 
   test('POST /api/users/register - Should register successfully', async () => {
-    const res = await request(app)
-      .post('/api/users/register')
-      .send({
-        username: 'newuser',
-        email: 'newuser@example.com',
-        password: 'Password123!',
-        display_name: 'New User'
-      });
+    const res = await request(app).post('/api/users/register').send({
+      username: 'newuser',
+      email: 'newuser@example.com',
+      password: 'Password123!',
+      display_name: 'New User',
+    });
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('token');
     expect(res.body.user).toHaveProperty('username', 'newuser');
+  });
+
+  test('POST /api/users/register - Should fail when required fields are missing', async () => {
+    const res = await request(app)
+      .post('/api/users/register')
+      .send({ username: 'missing-fields' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('POST /api/users/register - Should fail on duplicate username', async () => {
+    await request(app).post('/api/users/register').send({
+      username: 'duplicate-user',
+      email: 'duplicate-user@example.com',
+      password: 'Password123!',
+      display_name: 'Duplicate User',
+    });
+
+    const res = await request(app).post('/api/users/register').send({
+      username: 'duplicate-user',
+      email: 'duplicate-user-2@example.com',
+      password: 'Password123!',
+      display_name: 'Duplicate User 2',
+    });
+
+    expect(res.status).toBe(409);
   });
 
   test('POST /api/users/login - Should login successfully', async () => {
@@ -50,18 +70,30 @@ describe('Auth API Integration Tests', () => {
       username: 'loginuser',
       email: 'login@example.com',
       password: 'Password123!',
-      display_name: 'Login User'
+      display_name: 'Login User',
     });
 
-    const res = await request(app)
-      .post('/api/users/login')
-      .send({
-        username: 'loginuser',
-        password: 'Password123!'
-      });
+    const res = await request(app).post('/api/users/login').send({
+      username: 'loginuser',
+      password: 'Password123!',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
+  });
+
+  test('POST /api/users/login - Should fail when credentials are missing', async () => {
+    const res = await request(app)
+      .post('/api/users/login')
+      .send({ username: 'no-password' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /api/users/me - Should require authentication', async () => {
+    const res = await request(app).get('/api/users/me');
+
+    expect(res.status).toBe(401);
   });
 
   test('E1.4 Integration: register -> login -> get current user info', async () => {
@@ -70,14 +102,12 @@ describe('Auth API Integration Tests', () => {
     const password = 'Password123!';
     const displayName = 'E1.4 User';
 
-    const registerRes = await request(app)
-      .post('/api/users/register')
-      .send({
-        username,
-        email,
-        password,
-        display_name: displayName,
-      });
+    const registerRes = await request(app).post('/api/users/register').send({
+      username,
+      email,
+      password,
+      display_name: displayName,
+    });
 
     expect(registerRes.status).toBe(201);
     expect(registerRes.body).toHaveProperty('token');
@@ -86,12 +116,10 @@ describe('Auth API Integration Tests', () => {
       display_name: displayName,
     });
 
-    const loginRes = await request(app)
-      .post('/api/users/login')
-      .send({
-        username,
-        password,
-      });
+    const loginRes = await request(app).post('/api/users/login').send({
+      username,
+      password,
+    });
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body).toHaveProperty('token');
@@ -120,15 +148,13 @@ describe('Auth API Integration Tests', () => {
       username: 'wrongpass',
       email: 'wrong@example.com',
       password: 'Password123!',
-      display_name: 'Wrong Pass'
+      display_name: 'Wrong Pass',
     });
 
-    const res = await request(app)
-      .post('/api/users/login')
-      .send({
-        username: 'wrongpass',
-        password: 'wrongpassword'
-      });
+    const res = await request(app).post('/api/users/login').send({
+      username: 'wrongpass',
+      password: 'wrongpassword',
+    });
 
     expect(res.status).toBe(401);
   });

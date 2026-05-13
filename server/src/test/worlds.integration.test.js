@@ -1,9 +1,5 @@
 import request from 'supertest';
-import {
-  cleanupTestDb,
-  resetDatabase,
-  setupTestDb,
-} from './helpers/testDb.js';
+import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
 import { createTestToken, createTestUser } from './helpers/auth.js';
 
 describe('E1.5 Integration: create world -> search -> detail', () => {
@@ -64,7 +60,9 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
     expect(createRes.body.id).toBeDefined();
     const worldId = createRes.body.id;
 
-    const searchRes = await request(app).get('/api/worlds').query({ search: title });
+    const searchRes = await request(app)
+      .get('/api/worlds')
+      .query({ search: title });
 
     expect(searchRes.status).toBe(200);
     expect(Array.isArray(searchRes.body)).toBe(true);
