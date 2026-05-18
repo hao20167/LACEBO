@@ -16,9 +16,20 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
     ORDER BY p.created_at DESC
   `).all(req.params.eventId);
 
-  if (req.user) {
+  if (req.user && posts.length > 0) {
+    const postIds = posts.map((post) => post.id);
+    const placeholders = postIds.map(() => '?').join(', ');
+    const likedRows = db.prepare(
+      `SELECT post_id FROM likes WHERE user_id = ? AND post_id IN (${placeholders})`
+    ).all(req.user.id, ...postIds);
+    const likedPostIds = new Set(likedRows.map((row) => row.post_id));
+
     for (const post of posts) {
-      post.liked = !!db.prepare('SELECT id FROM likes WHERE post_id = ? AND user_id = ?').get(post.id, req.user.id);
+      post.liked = likedPostIds.has(post.id);
+    }
+  } else if (req.user) {
+    for (const post of posts) {
+      post.liked = false;
     }
   }
   res.json(posts);
@@ -55,7 +66,11 @@ router.patch('/:postId/approve', authMiddleware, (req, res) => {
   if (!post) return res.status(404).json({ error: 'Post not found' });
   if (!isDev(post.world_id, req.user.id)) return res.status(403).json({ error: 'Dev only' });
 
-  db.prepare("UPDATE posts SET status = 'approved' WHERE id = ?").run(post.id);
+  const result = db.prepare("UPDATE posts SET status = 'approved' WHERE id = ? AND status = 'pending'").run(post.id);
+  if (result.changes === 0) {
+    return res.status(400).json({ error: 'Post is not pending' });
+  }
+
   addCredits(post.world_id, post.user_id, 10);
   res.json({ success: true });
 });
