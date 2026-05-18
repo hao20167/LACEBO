@@ -64,7 +64,9 @@ proxy._closeAll = function closeAll() {
   for (const [p, instance] of dbInstances.entries()) {
     try {
       instance.close();
-    } catch (_) {}
+    } catch (_) {
+      // Ignore close errors during cleanup so all cached instances are cleared.
+    }
     dbInstances.delete(p);
   }
 };
