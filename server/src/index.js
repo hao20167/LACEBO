@@ -5,6 +5,7 @@ import { initDatabase } from './database/schema.js';
 import usersRouter from './routes/users.js';
 import worldsRouter from './routes/worlds.js';
 import eventsRouter from './routes/events.js';
+import postsRouter from './routes/posts.js';
 
 // Initialize database tables
 initDatabase();
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/api/users', usersRouter);
 app.use('/api/worlds', worldsRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/posts', postsRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

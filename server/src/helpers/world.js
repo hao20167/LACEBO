@@ -16,6 +16,12 @@ export function isDev(worldId, userId) {
     .get(worldId, userId, 'dev', 'approved');
 }
 
+export function addCredits(worldId, userId, amount) {
+  db.prepare(
+    'UPDATE world_members SET credits = credits + ? WHERE world_id = ? AND user_id = ?'
+  ).run(amount, worldId, userId);
+}
+
 export function validateWorldData(data) {
   if (!data.name || data.name.trim() === '') {
     return { isValid: false, error: 'Name is required' };

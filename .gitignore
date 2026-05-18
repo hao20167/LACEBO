@@ -4,10 +4,13 @@
 /client/coverage/
 /server/target/
 /server/node_modules/
+/node_modules/
 
 # pdf
 *.pdf 
 
 *.db
+*.db-wal
+*.db-shm
 
 .DS_Store
