@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import WorldList from './pages/WorldList';
 import WorldDetail from './pages/WorldDetail';
+import EventDetail from './pages/EventDetail';
 import CreateWorld from './pages/CreateWorld';
 import MyWorlds from './pages/MyWorlds';
 import WorldManage from './pages/WorldManage';
@@ -49,6 +50,7 @@ export default function App() {
             }
           />
           <Route path="/worlds/:id" element={<WorldDetail />} />
+          <Route path="/events/:eventId" element={<EventDetail />} />
           <Route
             path="/worlds/:id/manage"
             element={
