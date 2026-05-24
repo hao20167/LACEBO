@@ -23,19 +23,29 @@ const getPostById = (postId) => {
 };
 
 const requireDevForPost = (post, userId) => {
-  if (!isDev(post.world_id, userId)) {
-    return false;
-  }
-
-  return true;
+  return isDev(post.world_id, userId);
 };
 
-const updatePendingPostStatus = (postId, status) => {
-  return db
-    .prepare(
-      `UPDATE posts SET status = '${status}' WHERE id = ? AND status = 'pending'`,
-    )
-    .run(postId);
+// Hàm Helper dùng chung để xử lý duyệt/từ chối bài viết, loại bỏ code duplication
+const handlePostStatusUpdate = (req, res, targetStatus, creditsToAward = 0) => {
+  const post = getPostById(req.params.postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  if (!requireDevForPost(post, req.user.id))
+    return res.status(403).json({ error: 'Dev only' });
+
+  const result = db
+    .prepare(`UPDATE posts SET status = ? WHERE id = ? AND status = 'pending'`)
+    .run(targetStatus, post.id);
+
+  if (result.changes === 0) {
+    return res.status(400).json({ error: 'Post is not pending' });
+  }
+
+  if (creditsToAward !== 0) {
+    addCredits(post.world_id, post.user_id, creditsToAward);
+  }
+
+  return res.json({ success: true });
 };
 
 // Get announcements for a world
@@ -152,35 +162,14 @@ router.post('/event/:eventId', authMiddleware, (req, res) => {
   res.status(201).json(post);
 });
 
-// Approve post (dev only)
+// Approve post (dev only) - Đã refactor sạch duplication
 router.patch('/:postId/approve', authMiddleware, (req, res) => {
-  const post = getPostById(req.params.postId);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (!requireDevForPost(post, req.user.id))
-    return res.status(403).json({ error: 'Dev only' });
-
-  const result = updatePendingPostStatus(post.id, 'approved');
-  if (result.changes === 0) {
-    return res.status(400).json({ error: 'Post is not pending' });
-  }
-
-  addCredits(post.world_id, post.user_id, 10);
-  res.json({ success: true });
+  handlePostStatusUpdate(req, res, 'approved', 10);
 });
 
-// Reject post (dev only)
+// Reject post (dev only) - Đã refactor sạch duplication
 router.patch('/:postId/reject', authMiddleware, (req, res) => {
-  const post = getPostById(req.params.postId);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (!requireDevForPost(post, req.user.id))
-    return res.status(403).json({ error: 'Dev only' });
-
-  const result = updatePendingPostStatus(post.id, 'rejected');
-  if (result.changes === 0) {
-    return res.status(400).json({ error: 'Post is not pending' });
-  }
-
-  res.json({ success: true });
+  handlePostStatusUpdate(req, res, 'rejected', 0);
 });
 
 // Get pending posts (dev only)
