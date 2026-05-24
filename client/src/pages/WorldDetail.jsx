@@ -48,7 +48,9 @@ export default function WorldDetail() {
       setEvents(eventsRes.data);
       setAnnouncements(annRes.data);
       setLeaderboard(lbRes.data);
-    } catch {}
+    } catch (error) {
+      void error;
+    }
     setLoading(false);
   };
 
@@ -67,7 +69,9 @@ export default function WorldDetail() {
     try {
       await api.post(`/worlds/${id}/join`);
       fetchData();
-    } catch {}
+    } catch (error) {
+      void error;
+    }
     setJoining(false);
   };
 
@@ -82,7 +86,9 @@ export default function WorldDetail() {
       setAnnTitle('');
       setAnnContent('');
       fetchData();
-    } catch {}
+    } catch (error) {
+      void error;
+    }
   };
 
   const handleCreateEvent = async (e) => {
@@ -98,7 +104,9 @@ export default function WorldDetail() {
         end_date: '',
       });
       fetchData();
-    } catch {}
+    } catch (error) {
+      void error;
+    }
   };
 
   const handleProposal = async (e) => {
@@ -111,7 +119,9 @@ export default function WorldDetail() {
       setShowProposalForm(false);
       setProposalForm({ title: '', description: '' });
       alert('Small event proposed! Waiting for Dev approval.');
-    } catch {}
+    } catch (error) {
+      void error;
+    }
   };
 
   if (loading)
@@ -125,10 +135,6 @@ export default function WorldDetail() {
 
   const openEvents = events.filter((e) => e.status === 'open');
   const closedEvents = events.filter((e) => e.status === 'closed');
-  const approvedSmall = events.filter(
-    (e) => e.event_type === 'small' && e.status === 'approved',
-  );
-
   return (
     <div>
       {/* Header */}
@@ -205,12 +211,12 @@ export default function WorldDetail() {
           </h2>
           {events.length === 0 ? (
             <p className="text-dark-400 text-center py-8">
-              No events in this world's lore yet.
+              No events in this world&apos;s lore yet.
             </p>
           ) : (
             <div className="relative">
               <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
-              {events.map((event, i) => (
+              {events.map((event) => (
                 <div key={event.id} className="relative pl-14 pb-8">
                   <div
                     className={`absolute left-4 w-5 h-5 rounded-full border-2 ${

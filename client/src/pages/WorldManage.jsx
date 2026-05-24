@@ -20,7 +20,9 @@ export default function WorldManage() {
       setPendingMembers(membersRes.data);
       setPendingPosts(postsRes.data);
       setProposedEvents(eventsRes.data);
-    } catch {}
+    } catch (error) {
+      void error;
+    }
     setLoading(false);
   };
 
@@ -32,23 +34,31 @@ export default function WorldManage() {
     try {
       await api.patch(`/worlds/${id}/members/${memberId}`, { status });
       setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
-    } catch {}
+    } catch (error) {
+      void error;
+    }
   };
 
   const handlePost = async (postId, action) => {
     try {
       if (action === 'approve') {
         await api.patch(`/posts/${postId}/approve`);
+      } else if (action === 'reject') {
+        await api.patch(`/posts/${postId}/reject`);
       }
       setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
-    } catch {}
+    } catch (error) {
+      void error;
+    }
   };
 
   const handleEvent = async (eventId, status) => {
     try {
       await api.patch(`/events/${eventId}`, { status });
       setProposedEvents(proposedEvents.filter((e) => e.id !== eventId));
-    } catch {}
+    } catch (error) {
+      void error;
+    }
   };
 
   if (loading)

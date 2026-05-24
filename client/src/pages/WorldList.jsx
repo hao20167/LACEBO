@@ -12,7 +12,9 @@ export default function WorldList() {
     try {
       const res = await api.get('/worlds', { params: q ? { search: q } : {} });
       setWorlds(res.data);
-    } catch {}
+    } catch (error) {
+      void error;
+    }
     setLoading(false);
   };
 

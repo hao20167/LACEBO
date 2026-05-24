@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getApiErrorMessage } from '../services/api.js';
 
@@ -33,6 +34,13 @@ function LikeButton({ liked, count, disabled, onToggle }) {
     </button>
   );
 }
+
+LikeButton.propTypes = {
+  liked: PropTypes.bool,
+  count: PropTypes.number,
+  disabled: PropTypes.bool,
+  onToggle: PropTypes.func.isRequired,
+};
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -120,13 +128,12 @@ export default function EventDetail() {
             ? {
                 ...post,
                 liked: res.data.liked,
-                like_count:
-                  Number(oldPost.like_count || 0) + (res.data.liked ? 1 : 0),
               }
             : post,
         ),
       );
-    } catch {
+    } catch (error) {
+      void error;
       await fetchEventData();
     }
   };
