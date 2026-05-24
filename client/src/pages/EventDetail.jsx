@@ -17,6 +17,23 @@ const statusClasses = {
   proposed: 'bg-yellow-900/40 text-yellow-300 border-yellow-800',
 };
 
+function LikeButton({ liked, count, disabled, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      className={`text-sm px-3 py-1.5 rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        liked
+          ? 'bg-primary-900/50 text-primary-300 border-primary-700'
+          : 'bg-dark-800 text-dark-300 border-dark-700 hover:border-dark-500'
+      }`}
+    >
+      {liked ? 'Liked' : 'Like'} ({count || 0})
+    </button>
+  );
+}
+
 export default function EventDetail() {
   const { eventId } = useParams();
   const { user } = useAuth();
@@ -80,6 +97,9 @@ export default function EventDetail() {
   const handleToggleLike = async (postId) => {
     if (!user) return;
 
+    const oldPost = posts.find((post) => post.id === postId);
+    if (!oldPost) return;
+
     setPosts((currentPosts) =>
       currentPosts.map((post) => {
         if (post.id !== postId) return post;
@@ -101,8 +121,7 @@ export default function EventDetail() {
                 ...post,
                 liked: res.data.liked,
                 like_count:
-                  Number(post.like_count || 0) +
-                  (res.data.liked === post.liked ? 0 : res.data.liked ? 1 : -1),
+                  Number(oldPost.like_count || 0) + (res.data.liked ? 1 : 0),
               }
             : post,
         ),
@@ -280,18 +299,12 @@ export default function EventDetail() {
                   />
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => handleToggleLike(post.id)}
+                <LikeButton
+                  liked={post.liked}
+                  count={post.like_count}
                   disabled={!user}
-                  className={`text-sm px-3 py-1.5 rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                    post.liked
-                      ? 'bg-primary-900/50 text-primary-300 border-primary-700'
-                      : 'bg-dark-800 text-dark-300 border-dark-700 hover:border-dark-500'
-                  }`}
-                >
-                  {post.liked ? 'Liked' : 'Like'} ({post.like_count || 0})
-                </button>
+                  onToggle={() => handleToggleLike(post.id)}
+                />
               </article>
             ))}
           </div>
