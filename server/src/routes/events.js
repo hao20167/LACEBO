@@ -14,7 +14,7 @@ router.get('/world/:worldId', (req, res) => {
       (SELECT COUNT(*) FROM posts WHERE event_id = e.id AND status = 'approved') as post_count
     FROM events e 
     JOIN users u ON u.id = e.created_by
-    WHERE e.world_id = ? AND e.status != 'proposed'
+    WHERE e.world_id = ? AND e.status IN ('approved', 'open', 'closed')
     ORDER BY e.start_date ASC
   `,
     )

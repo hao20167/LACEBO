@@ -18,7 +18,7 @@ export function isDev(worldId, userId) {
 
 export function addCredits(worldId, userId, amount) {
   db.prepare(
-    'UPDATE world_members SET credits = credits + ? WHERE world_id = ? AND user_id = ?'
+    'UPDATE world_members SET credits = credits + ? WHERE world_id = ? AND user_id = ?',
   ).run(amount, worldId, userId);
 }
 

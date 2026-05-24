@@ -40,7 +40,7 @@ export function initDatabase() {
       title TEXT NOT NULL,
       description TEXT,
       event_type TEXT NOT NULL CHECK(event_type IN ('big', 'small')),
-      status TEXT NOT NULL DEFAULT 'proposed' CHECK(status IN ('proposed', 'approved', 'open', 'closed')),
+      status TEXT NOT NULL DEFAULT 'proposed' CHECK(status IN ('proposed', 'approved', 'open', 'closed', 'rejected')),
       start_date DATETIME,
       end_date DATETIME,
       created_by INTEGER NOT NULL,
