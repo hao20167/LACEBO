@@ -132,8 +132,7 @@ export default function EventDetail() {
             : post,
         ),
       );
-    } catch (error) {
-      void error;
+    } catch {
       await fetchEventData();
     }
   };

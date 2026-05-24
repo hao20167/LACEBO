@@ -48,9 +48,7 @@ export default function WorldDetail() {
       setEvents(eventsRes.data);
       setAnnouncements(annRes.data);
       setLeaderboard(lbRes.data);
-    } catch (error) {
-      void error;
-    }
+    } catch {}
     setLoading(false);
   };
 
@@ -69,9 +67,7 @@ export default function WorldDetail() {
     try {
       await api.post(`/worlds/${id}/join`);
       fetchData();
-    } catch (error) {
-      void error;
-    }
+    } catch {}
     setJoining(false);
   };
 
@@ -86,9 +82,7 @@ export default function WorldDetail() {
       setAnnTitle('');
       setAnnContent('');
       fetchData();
-    } catch (error) {
-      void error;
-    }
+    } catch {}
   };
 
   const handleCreateEvent = async (e) => {
@@ -104,9 +98,7 @@ export default function WorldDetail() {
         end_date: '',
       });
       fetchData();
-    } catch (error) {
-      void error;
-    }
+    } catch {}
   };
 
   const handleProposal = async (e) => {
@@ -119,9 +111,7 @@ export default function WorldDetail() {
       setShowProposalForm(false);
       setProposalForm({ title: '', description: '' });
       alert('Small event proposed! Waiting for Dev approval.');
-    } catch (error) {
-      void error;
-    }
+    } catch {}
   };
 
   if (loading)
