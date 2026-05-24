@@ -5,17 +5,43 @@ import { isDev, addCredits } from '../helpers/world.js';
 
 const router = Router();
 
+const ANNOUNCEMENTS_BY_WORLD_QUERY = `
+  SELECT a.*, u.username, u.display_name, u.avatar_url
+  FROM announcements a JOIN users u ON u.id = a.user_id
+  WHERE a.world_id = ?
+  ORDER BY a.created_at DESC
+`;
+
+const ANNOUNCEMENT_BY_ID_QUERY = `
+  SELECT a.*, u.username, u.display_name, u.avatar_url
+  FROM announcements a JOIN users u ON u.id = a.user_id
+  WHERE a.id = ?
+`;
+
+const getPostById = (postId) => {
+  return db.prepare('SELECT * FROM posts WHERE id = ?').get(postId);
+};
+
+const requireDevForPost = (post, userId) => {
+  if (!isDev(post.world_id, userId)) {
+    return false;
+  }
+
+  return true;
+};
+
+const updatePendingPostStatus = (postId, status) => {
+  return db
+    .prepare(
+      `UPDATE posts SET status = '${status}' WHERE id = ? AND status = 'pending'`,
+    )
+    .run(postId);
+};
+
 // Get announcements for a world
 router.get('/world/:worldId/announcements', optionalAuth, (req, res) => {
   const announcements = db
-    .prepare(
-      `
-    SELECT a.*, u.username, u.display_name, u.avatar_url
-    FROM announcements a JOIN users u ON u.id = a.user_id
-    WHERE a.world_id = ?
-    ORDER BY a.created_at DESC
-  `,
-    )
+    .prepare(ANNOUNCEMENTS_BY_WORLD_QUERY)
     .all(req.params.worldId);
   res.json(announcements);
 });
@@ -40,13 +66,7 @@ router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
     .run(worldId, req.user.id, title, content);
 
   const announcement = db
-    .prepare(
-      `
-    SELECT a.*, u.username, u.display_name, u.avatar_url
-    FROM announcements a JOIN users u ON u.id = a.user_id
-    WHERE a.id = ?
-  `,
-    )
+    .prepare(ANNOUNCEMENT_BY_ID_QUERY)
     .get(result.lastInsertRowid);
 
   res.status(201).json(announcement);
@@ -134,18 +154,12 @@ router.post('/event/:eventId', authMiddleware, (req, res) => {
 
 // Approve post (dev only)
 router.patch('/:postId/approve', authMiddleware, (req, res) => {
-  const post = db
-    .prepare('SELECT * FROM posts WHERE id = ?')
-    .get(req.params.postId);
+  const post = getPostById(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (!isDev(post.world_id, req.user.id))
+  if (!requireDevForPost(post, req.user.id))
     return res.status(403).json({ error: 'Dev only' });
 
-  const result = db
-    .prepare(
-      "UPDATE posts SET status = 'approved' WHERE id = ? AND status = 'pending'",
-    )
-    .run(post.id);
+  const result = updatePendingPostStatus(post.id, 'approved');
   if (result.changes === 0) {
     return res.status(400).json({ error: 'Post is not pending' });
   }
@@ -156,18 +170,12 @@ router.patch('/:postId/approve', authMiddleware, (req, res) => {
 
 // Reject post (dev only)
 router.patch('/:postId/reject', authMiddleware, (req, res) => {
-  const post = db
-    .prepare('SELECT * FROM posts WHERE id = ?')
-    .get(req.params.postId);
+  const post = getPostById(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (!isDev(post.world_id, req.user.id))
+  if (!requireDevForPost(post, req.user.id))
     return res.status(403).json({ error: 'Dev only' });
 
-  const result = db
-    .prepare(
-      "UPDATE posts SET status = 'rejected' WHERE id = ? AND status = 'pending'",
-    )
-    .run(post.id);
+  const result = updatePendingPostStatus(post.id, 'rejected');
   if (result.changes === 0) {
     return res.status(400).json({ error: 'Post is not pending' });
   }
