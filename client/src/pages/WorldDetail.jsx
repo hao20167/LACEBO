@@ -1,7 +1,63 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api.js';
+
+const timelineStatusClasses = {
+  open: 'bg-green-900/50 text-green-300 border-green-800',
+  closed: 'bg-dark-800 text-dark-300 border-dark-700',
+  approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
+  proposed: 'bg-yellow-900/40 text-yellow-300 border-yellow-800',
+};
+
+const formatTimelineDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString();
+};
+
+const getTimelineDateLabel = (event) => {
+  const startDate = formatTimelineDate(event.start_date);
+  const endDate = formatTimelineDate(event.end_date);
+
+  if (startDate && endDate) return `${startDate} -> ${endDate}`;
+  if (startDate) return startDate;
+  if (endDate) return `Until ${endDate}`;
+  return 'Undated';
+};
+
+const getTimelineNodeClasses = (event) => {
+  if (event.status === 'open') {
+    return 'bg-green-500 border-green-300 shadow-lg shadow-green-900/40 ring-4 ring-green-500/15';
+  }
+
+  if (event.event_type === 'big') {
+    return 'bg-primary-500 border-primary-300 shadow-lg shadow-primary-900/40';
+  }
+
+  return 'bg-dark-600 border-dark-400';
+};
+
+const getTimelineCardBorder = (event) => {
+  if (event.status === 'open') return 'border-green-800 hover:border-green-600';
+  if (event.event_type === 'big')
+    return 'border-primary-800 hover:border-primary-600';
+  return 'border-dark-700 hover:border-dark-500';
+};
+
+const getTimelineTypeClasses = (event) => {
+  if (event.event_type === 'big') {
+    return 'bg-primary-900/50 text-primary-300 border-primary-800';
+  }
+
+  return 'bg-dark-800 text-dark-300 border-dark-700';
+};
+
+const getTimelineTitleClasses = (event) => {
+  if (event.event_type === 'big') return 'text-lg text-dark-100';
+  return 'text-base text-dark-200';
+};
 
 export default function WorldDetail() {
   const { id } = useParams();
@@ -36,7 +92,7 @@ export default function WorldDetail() {
     description: '',
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [worldRes, eventsRes, annRes, lbRes] = await Promise.all([
         api.get(`/worlds/${id}`),
@@ -50,11 +106,11 @@ export default function WorldDetail() {
       setLeaderboard(lbRes.data);
     } catch {}
     setLoading(false);
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [fetchData]);
 
   const isDev =
     world?.membership?.role === 'dev' &&
@@ -195,80 +251,104 @@ export default function WorldDetail() {
 
       {/* Lore Tab - Timeline */}
       {tab === 'lore' && (
-        <div>
-          <h2 className="text-xl font-bold text-dark-100 mb-4">
-            World Lore Timeline
-          </h2>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-dark-100">
+                World Lore Timeline
+              </h2>
+              <p className="text-sm text-dark-500">
+                Follow the approved lore events that shape this world.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-dark-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-primary-500"></span>
+                Big event
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-dark-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-dark-600 border border-dark-400"></span>
+                Small event
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-dark-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-green-500"></span>
+                Open
+              </span>
+            </div>
+          </div>
           {events.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">
+            <div className="text-dark-400 text-center bg-dark-900 border border-dark-700 rounded-xl py-10">
               No events in this world&apos;s lore yet.
-            </p>
+            </div>
           ) : (
-            <div className="relative">
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
-              {events.map((event) => (
-                <div key={event.id} className="relative pl-14 pb-8">
+            <div className="relative pl-10 sm:pl-0">
+              <div className="absolute left-4 top-3 bottom-3 w-0.5 bg-dark-700 sm:left-1/2 sm:-translate-x-1/2"></div>
+              {events.map((event, index) => {
+                const alignRight = index % 2 === 0;
+                const itemAlignment = alignRight
+                  ? 'sm:ml-auto sm:pl-10'
+                  : 'sm:mr-auto sm:pr-10';
+
+                return (
                   <div
-                    className={`absolute left-4 w-5 h-5 rounded-full border-2 ${
-                      event.event_type === 'big'
-                        ? 'bg-primary-500 border-primary-400'
-                        : 'bg-dark-600 border-dark-500'
-                    } ${event.status === 'open' ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-dark-950' : ''}`}
-                  ></div>
-                  <Link
-                    to={`/events/${event.id}`}
-                    className={`block bg-dark-900 border rounded-xl p-4 transition hover:border-primary-600 ${
-                      event.event_type === 'big'
-                        ? 'border-primary-800'
-                        : 'border-dark-700'
-                    }`}
+                    key={event.id}
+                    className={`relative pb-8 last:pb-0 sm:w-1/2 ${itemAlignment}`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          event.event_type === 'big'
-                            ? 'bg-primary-900/50 text-primary-300'
-                            : 'bg-dark-700 text-dark-300'
-                        }`}
-                      >
-                        {event.event_type === 'big'
-                          ? 'BIG EVENT'
-                          : 'SMALL EVENT'}
-                      </span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          event.status === 'open'
-                            ? 'bg-green-900/50 text-green-300'
-                            : 'bg-dark-700 text-dark-400'
-                        }`}
-                      >
-                        {event.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <h3
-                      className={`font-semibold mb-1 ${event.event_type === 'big' ? 'text-lg text-dark-100' : 'text-base text-dark-200'}`}
+                    <div
+                      className={`absolute -left-[1.9rem] top-5 h-5 w-5 rounded-full border-2 sm:left-auto ${
+                        alignRight ? 'sm:-left-2.5' : 'sm:-right-2.5'
+                      } ${getTimelineNodeClasses(event)}`}
+                      aria-hidden="true"
+                    />
+                    <Link
+                      to={`/events/${event.id}`}
+                      className={`block bg-dark-900 border rounded-xl p-4 transition ${getTimelineCardBorder(event)}`}
                     >
-                      {event.title}
-                    </h3>
-                    <p className="text-dark-400 text-sm line-clamp-2">
-                      {event.description}
-                    </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-dark-500">
-                      {event.start_date && (
-                        <span>
-                          📅 {new Date(event.start_date).toLocaleDateString()}
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${getTimelineTypeClasses(event)}`}
+                        >
+                          {event.event_type === 'big'
+                            ? 'BIG EVENT'
+                            : 'SMALL EVENT'}
                         </span>
-                      )}
-                      {event.end_date && (
-                        <span>
-                          → {new Date(event.end_date).toLocaleDateString()}
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                            timelineStatusClasses[event.status] ||
+                            timelineStatusClasses.closed
+                          }`}
+                        >
+                          {event.status.toUpperCase()}
                         </span>
-                      )}
-                      <span>📝 {event.post_count} posts</span>
-                    </div>
-                  </Link>
-                </div>
-              ))}
+                        <span className="text-xs text-dark-500">
+                          {getTimelineDateLabel(event)}
+                        </span>
+                      </div>
+                      <h3
+                        className={`font-semibold mb-1 ${getTimelineTitleClasses(event)}`}
+                      >
+                        {event.title}
+                      </h3>
+                      <p className="text-dark-400 text-sm line-clamp-2">
+                        {event.description || 'No description'}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-dark-500">
+                        {event.start_date && (
+                          <span>
+                            📅 {new Date(event.start_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        {event.end_date && (
+                          <span>
+                            → {new Date(event.end_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span>📝 {event.post_count} posts</span>
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
