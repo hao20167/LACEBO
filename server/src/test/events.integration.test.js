@@ -2,6 +2,21 @@ import request from 'supertest';
 import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
 import { createTestToken, createTestUser } from './helpers/auth.js';
 
+function compareStrings(left, right) {
+  return left.localeCompare(right);
+}
+
+function expectEventTitles(events, expectedTitles) {
+  expect(events.map((event) => event.title).sort(compareStrings)).toEqual(
+    [...expectedTitles].sort(compareStrings),
+  );
+}
+
+function expectCreatedEvent(response, expected) {
+  expect(response.status).toBe(expected.statusCode);
+  expect(response.body).toMatchObject(expected.body);
+}
+
 describe('Events API Integration Tests', () => {
   const AUTH_HEADER = 'Authorization';
   let userSeq = 0;
@@ -92,17 +107,6 @@ describe('Events API Integration Tests', () => {
       .patch(`/api/events/${eventId}`)
       .set(AUTH_HEADER, `Bearer ${token}`)
       .send(payload);
-  }
-
-  function expectEventTitles(events, expectedTitles) {
-    expect(events.map((event) => event.title).sort()).toEqual(
-      [...expectedTitles].sort(),
-    );
-  }
-
-  function expectCreatedEvent(response, expected) {
-    expect(response.status).toBe(expected.statusCode);
-    expect(response.body).toMatchObject(expected.body);
   }
 
   function createWorldAndMemberships() {
