@@ -1,28 +1,12 @@
 import request from 'supertest';
 import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
-import { createTestToken, createTestUser } from './helpers/auth.js';
-
-function compareStrings(left, right) {
-  return left.localeCompare(right);
-}
-
-function expectEventTitles(events, expectedTitles) {
-  expect(events.map((event) => event.title).sort(compareStrings)).toEqual(
-    [...expectedTitles].sort(compareStrings),
-  );
-}
-
-function expectCreatedEvent(response, expected) {
-  expect(response.status).toBe(expected.statusCode);
-  expect(response.body).toMatchObject(expected.body);
-}
+import { createEventsTestContext, expectCreatedEvent, expectEventTitles } from './helpers/events.js';
 
 describe('Events API Integration Tests', () => {
-  const AUTH_HEADER = 'Authorization';
-  let userSeq = 0;
   let app;
   let db;
   let testDbPath;
+  let events;
 
   beforeAll(async () => {
     testDbPath = setupTestDb();
@@ -35,6 +19,7 @@ describe('Events API Integration Tests', () => {
 
     const appModule = await import('../index.js');
     app = appModule.default;
+    events = createEventsTestContext(db);
   });
 
   beforeEach(() => {
@@ -46,97 +31,6 @@ describe('Events API Integration Tests', () => {
     cleanupTestDb(testDbPath);
     delete process.env.DB_PATH;
   });
-
-  function createWorld() {
-    const worldResult = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
-      .run('Events Test World', 'World used for events route tests');
-    return Number(worldResult.lastInsertRowid);
-  }
-
-  function addMember(worldId, userId, role) {
-    db.prepare(
-      "INSERT INTO world_members (world_id, user_id, role, status, credits) VALUES (?, ?, ?, 'approved', 0)",
-    ).run(worldId, userId, role);
-  }
-
-  function insertEvent(worldId, creatorId, fields = {}) {
-    const event = {
-      title: 'Default Event',
-      description: '',
-      eventType: 'small',
-      status: 'proposed',
-      startDate: null,
-      endDate: null,
-      ...fields,
-    };
-
-    const result = db
-      .prepare(
-        'INSERT INTO events (world_id, title, description, event_type, status, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      )
-      .run(
-        worldId,
-        event.title,
-        event.description,
-        event.eventType,
-        event.status,
-        event.startDate,
-        event.endDate,
-        creatorId,
-      );
-
-    return Number(result.lastInsertRowid);
-  }
-
-  function postEvent(worldId, token, payload) {
-    return request(app)
-      .post(`/api/events/world/${worldId}`)
-      .set(AUTH_HEADER, `Bearer ${token}`)
-      .send(payload);
-  }
-
-  function getProposed(worldId, token) {
-    return request(app)
-      .get(`/api/events/world/${worldId}/proposed`)
-      .set(AUTH_HEADER, `Bearer ${token}`);
-  }
-
-  function patchEvent(eventId, token, payload) {
-    return request(app)
-      .patch(`/api/events/${eventId}`)
-      .set(AUTH_HEADER, `Bearer ${token}`)
-      .send(payload);
-  }
-
-  function createWorldAndMemberships() {
-    userSeq += 1;
-    const stamp = `u${Date.now()}_${userSeq}`;
-    const dev = createTestUser({
-      db,
-      username: `dev_${stamp}`,
-      email: `dev_${stamp}@example.com`,
-      displayName: 'World Dev',
-    });
-    const player = createTestUser({
-      db,
-      username: `player_${stamp}`,
-      email: `player_${stamp}@example.com`,
-      displayName: 'World Player',
-    });
-
-    const worldId = createWorld();
-    addMember(worldId, dev.id, 'dev');
-    addMember(worldId, player.id, 'player');
-
-    return {
-      worldId,
-      dev,
-      player,
-      devToken: createTestToken(dev),
-      playerToken: createTestToken(player),
-    };
-  }
 
   test.each([
     {
@@ -181,10 +75,10 @@ describe('Events API Integration Tests', () => {
   ])(
     'A2.1: POST /api/events/world/:worldId - $caseName',
     async ({ userRole, payload, expectedStatus, expectedBody }) => {
-      const { worldId, devToken, playerToken } = createWorldAndMemberships();
+      const { worldId, devToken, playerToken } = events.createWorldAndMemberships();
       const token = userRole === 'dev' ? devToken : playerToken;
 
-      const res = await postEvent(worldId, token, payload);
+      const res = await events.postEvent(app, worldId, token, payload);
 
       expectCreatedEvent(res, {
         statusCode: expectedStatus,
@@ -194,7 +88,7 @@ describe('Events API Integration Tests', () => {
   );
 
   test('A2.2: GET /api/events/world/:worldId - returns only approved/open/closed timeline events', async () => {
-    const { worldId, dev } = createWorldAndMemberships();
+    const { worldId, dev } = events.createWorldAndMemberships();
 
     const seededEvents = [
       {
@@ -224,7 +118,7 @@ describe('Events API Integration Tests', () => {
     ];
 
     seededEvents.forEach((event) => {
-      insertEvent(worldId, dev.id, event);
+      events.insertEvent(worldId, dev.id, event);
     });
 
     const res = await request(app).get(`/api/events/world/${worldId}`);
@@ -240,7 +134,7 @@ describe('Events API Integration Tests', () => {
       userRole: 'dev',
       expectedStatus: 200,
       setup(worldId, dev) {
-        insertEvent(worldId, dev.id, {
+        events.insertEvent(worldId, dev.id, {
           title: 'Proposed Story',
           eventType: 'small',
           status: 'proposed',
@@ -263,11 +157,11 @@ describe('Events API Integration Tests', () => {
   ])(
     'A2.3: GET /api/events/world/:worldId/proposed - $caseName',
     async ({ userRole, expectedStatus, setup, assert }) => {
-      const { worldId, dev, devToken, playerToken } = createWorldAndMemberships();
+      const { worldId, dev, devToken, playerToken } = events.createWorldAndMemberships();
       setup(worldId, dev);
       const token = userRole === 'dev' ? devToken : playerToken;
 
-      const res = await getProposed(worldId, token);
+      const res = await events.getProposed(app, worldId, token);
 
       expect(res.status).toBe(expectedStatus);
       assert(res);
@@ -275,9 +169,9 @@ describe('Events API Integration Tests', () => {
   );
 
   test('A2.4: GET /api/events/:eventId - returns event detail', async () => {
-    const { worldId, dev } = createWorldAndMemberships();
+    const { worldId, dev } = events.createWorldAndMemberships();
 
-    const eventId = insertEvent(worldId, dev.id, {
+    const eventId = events.insertEvent(worldId, dev.id, {
       title: 'Detail Event',
       description: 'Event details here',
       eventType: 'small',
@@ -303,7 +197,7 @@ describe('Events API Integration Tests', () => {
       userRole: 'dev',
       expectedStatus: 200,
       setup(worldId, dev) {
-        return insertEvent(worldId, dev.id, {
+        return events.insertEvent(worldId, dev.id, {
           title: 'Before Update',
           description: 'old',
           eventType: 'small',
@@ -329,7 +223,7 @@ describe('Events API Integration Tests', () => {
       userRole: 'player',
       expectedStatus: 403,
       setup(worldId, dev) {
-        return insertEvent(worldId, dev.id, {
+        return events.insertEvent(worldId, dev.id, {
           title: 'Locked Event',
           eventType: 'small',
           status: 'proposed',
@@ -345,11 +239,11 @@ describe('Events API Integration Tests', () => {
   ])(
     'A2.5: PATCH /api/events/:eventId - $caseName',
     async ({ userRole, expectedStatus, setup, payload, assert }) => {
-      const { worldId, dev, devToken, playerToken } = createWorldAndMemberships();
+      const { worldId, dev, devToken, playerToken } = events.createWorldAndMemberships();
       const eventId = setup(worldId, dev);
       const token = userRole === 'dev' ? devToken : playerToken;
 
-      const res = await patchEvent(eventId, token, payload);
+      const res = await events.patchEvent(app, eventId, token, payload);
 
       expect(res.status).toBe(expectedStatus);
       assert(res, eventId);
