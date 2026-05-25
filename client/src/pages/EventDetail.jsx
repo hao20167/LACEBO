@@ -303,6 +303,109 @@ export default function EventDetail() {
   const endDate = formatDate(event.end_date);
   const isOpen = event.status === 'open';
 
+  let createPostContent;
+  if (user) {
+    createPostContent = (
+      <form onSubmit={handleCreatePost} className="space-y-3">
+        <textarea
+          value={postContent}
+          onChange={(e) => setPostContent(e.target.value)}
+          placeholder="Write a post for this event..."
+          required
+          rows={4}
+          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
+        />
+        <input
+          type="url"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="Image URL (optional)"
+          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500"
+        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="submit"
+            disabled={submitting || !postContent.trim()}
+            className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+          >
+            {submitting ? 'Posting...' : 'Post'}
+          </button>
+          {formMessage && (
+            <p className="text-sm text-dark-400">{formMessage}</p>
+          )}
+        </div>
+      </form>
+    );
+  } else {
+    createPostContent = (
+      <p className="text-sm text-dark-400">
+        You need to login and be an approved member of this world to post.
+      </p>
+    );
+  }
+
+  let postsContent;
+  if (posts.length === 0) {
+    postsContent = (
+      <div className="text-center text-dark-400 bg-dark-900 border border-dark-700 rounded-xl py-10">
+        No approved posts for this event yet.
+      </div>
+    );
+  } else {
+    postsContent = (
+      <div className="space-y-4">
+        {posts.map((post) => (
+          <article
+            key={post.id}
+            className="bg-dark-900 border border-dark-700 rounded-xl p-4"
+          >
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div>
+                <p className="font-medium text-dark-100">
+                  {post.display_name || post.username}
+                </p>
+                <p className="text-xs text-dark-500">
+                  @{post.username}
+                  {post.created_at
+                    ? ` - ${new Date(post.created_at).toLocaleString()}`
+                    : ''}
+                </p>
+              </div>
+              <span className="text-xs text-dark-500">
+                {post.comment_count || 0} comments
+              </span>
+            </div>
+
+            <p className="text-dark-300 whitespace-pre-wrap mb-3">
+              {post.content}
+            </p>
+
+            {post.image_url && (
+              <img
+                src={post.image_url}
+                alt=""
+                className="max-h-96 w-full object-cover rounded-lg border border-dark-700 mb-3"
+              />
+            )}
+
+            <LikeButton
+              liked={post.liked}
+              count={post.like_count}
+              disabled={!user}
+              onToggle={() => handleToggleLike(post.id)}
+            />
+
+            <Comments
+              postId={post.id}
+              user={user}
+              onCommentCreated={handleCommentCreated}
+            />
+          </article>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Link
@@ -366,41 +469,7 @@ export default function EventDetail() {
             )}
           </div>
 
-          {user ? (
-            <form onSubmit={handleCreatePost} className="space-y-3">
-              <textarea
-                value={postContent}
-                onChange={(e) => setPostContent(e.target.value)}
-                placeholder="Write a post for this event..."
-                required
-                rows={4}
-                className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
-              />
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Image URL (optional)"
-                className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500"
-              />
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="submit"
-                  disabled={submitting || !postContent.trim()}
-                  className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
-                >
-                  {submitting ? 'Posting...' : 'Post'}
-                </button>
-                {formMessage && (
-                  <p className="text-sm text-dark-400">{formMessage}</p>
-                )}
-              </div>
-            </form>
-          ) : (
-            <p className="text-sm text-dark-400">
-              You need to login and be an approved member of this world to post.
-            </p>
-          )}
+          {createPostContent}
         </section>
       )}
 
@@ -410,62 +479,7 @@ export default function EventDetail() {
           <span className="text-sm text-dark-500">{posts.length} posts</span>
         </div>
 
-        {posts.length === 0 ? (
-          <div className="text-center text-dark-400 bg-dark-900 border border-dark-700 rounded-xl py-10">
-            No approved posts for this event yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {posts.map((post) => (
-              <article
-                key={post.id}
-                className="bg-dark-900 border border-dark-700 rounded-xl p-4"
-              >
-                <div className="flex items-center justify-between gap-4 mb-3">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {post.display_name || post.username}
-                    </p>
-                    <p className="text-xs text-dark-500">
-                      @{post.username}
-                      {post.created_at
-                        ? ` - ${new Date(post.created_at).toLocaleString()}`
-                        : ''}
-                    </p>
-                  </div>
-                  <span className="text-xs text-dark-500">
-                    {post.comment_count || 0} comments
-                  </span>
-                </div>
-
-                <p className="text-dark-300 whitespace-pre-wrap mb-3">
-                  {post.content}
-                </p>
-
-                {post.image_url && (
-                  <img
-                    src={post.image_url}
-                    alt=""
-                    className="max-h-96 w-full object-cover rounded-lg border border-dark-700 mb-3"
-                  />
-                )}
-
-                <LikeButton
-                  liked={post.liked}
-                  count={post.like_count}
-                  disabled={!user}
-                  onToggle={() => handleToggleLike(post.id)}
-                />
-
-                <Comments
-                  postId={post.id}
-                  user={user}
-                  onCommentCreated={handleCommentCreated}
-                />
-              </article>
-            ))}
-          </div>
-        )}
+        {postsContent}
       </section>
     </div>
   );
