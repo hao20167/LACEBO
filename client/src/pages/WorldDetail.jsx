@@ -465,12 +465,11 @@ export default function WorldDetail() {
                         </span>
                       )}
                       {event.end_date && (
-                        <span>
-                          {' '}
+                        <span className="ml-1">
                           → {new Date(event.end_date).toLocaleDateString()}
                         </span>
                       )}
-                      <span className="ml-3">📝 {event.post_count} posts</span>
+                      <span>{' '}📝 {event.post_count} posts</span>
                     </div>
                   </Link>
                 ))}
@@ -687,6 +686,7 @@ export default function WorldDetail() {
                         <span className="text-dark-100 font-medium">
                           {m.display_name}
                         </span>
+                        {' '}
                         <span className="text-dark-500 text-sm ml-2">
                           @{m.username}
                         </span>
