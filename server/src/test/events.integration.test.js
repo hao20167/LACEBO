@@ -3,6 +3,8 @@ import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
 import { createTestToken, createTestUser } from './helpers/auth.js';
 
 describe('Events API Integration Tests', () => {
+  const AUTH_HEADER = 'Authorization';
+  let userSeq = 0;
   let app;
   let db;
   let testDbPath;
@@ -30,8 +32,71 @@ describe('Events API Integration Tests', () => {
     delete process.env.DB_PATH;
   });
 
+  function createWorld() {
+    const worldResult = db
+      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
+      .run('Events Test World', 'World used for events route tests');
+    return Number(worldResult.lastInsertRowid);
+  }
+
+  function addMember(worldId, userId, role) {
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status, credits) VALUES (?, ?, ?, 'approved', 0)",
+    ).run(worldId, userId, role);
+  }
+
+  function insertEvent(worldId, creatorId, fields = {}) {
+    const event = {
+      title: 'Default Event',
+      description: '',
+      eventType: 'small',
+      status: 'proposed',
+      startDate: null,
+      endDate: null,
+      ...fields,
+    };
+
+    const result = db
+      .prepare(
+        'INSERT INTO events (world_id, title, description, event_type, status, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        worldId,
+        event.title,
+        event.description,
+        event.eventType,
+        event.status,
+        event.startDate,
+        event.endDate,
+        creatorId,
+      );
+
+    return Number(result.lastInsertRowid);
+  }
+
+  function postEvent(worldId, token, payload) {
+    return request(app)
+      .post(`/api/events/world/${worldId}`)
+      .set(AUTH_HEADER, `Bearer ${token}`)
+      .send(payload);
+  }
+
+  function getProposed(worldId, token) {
+    return request(app)
+      .get(`/api/events/world/${worldId}/proposed`)
+      .set(AUTH_HEADER, `Bearer ${token}`);
+  }
+
+  function patchEvent(eventId, token, payload) {
+    return request(app)
+      .patch(`/api/events/${eventId}`)
+      .set(AUTH_HEADER, `Bearer ${token}`)
+      .send(payload);
+  }
+
   function createWorldAndMemberships() {
-    const stamp = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    userSeq += 1;
+    const stamp = `u${Date.now()}_${userSeq}`;
     const dev = createTestUser({
       db,
       username: `dev_${stamp}`,
@@ -45,18 +110,9 @@ describe('Events API Integration Tests', () => {
       displayName: 'World Player',
     });
 
-    const worldResult = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
-      .run('Events Test World', 'World used for events route tests');
-    const worldId = Number(worldResult.lastInsertRowid);
-
-    db.prepare(
-      "INSERT INTO world_members (world_id, user_id, role, status, credits) VALUES (?, ?, 'dev', 'approved', 0)",
-    ).run(worldId, dev.id);
-
-    db.prepare(
-      "INSERT INTO world_members (world_id, user_id, role, status, credits) VALUES (?, ?, 'player', 'approved', 0)",
-    ).run(worldId, player.id);
+    const worldId = createWorld();
+    addMember(worldId, dev.id, 'dev');
+    addMember(worldId, player.id, 'player');
 
     return {
       worldId,
@@ -70,14 +126,11 @@ describe('Events API Integration Tests', () => {
   test('A2.1: POST /api/events/world/:worldId - dev can create big event with open status', async () => {
     const { worldId, devToken } = createWorldAndMemberships();
 
-    const res = await request(app)
-      .post(`/api/events/world/${worldId}`)
-      .set('Authorization', `Bearer ${devToken}`)
-      .send({
-        title: 'Great War',
-        description: 'A major world event',
-        event_type: 'big',
-      });
+    const res = await postEvent(worldId, devToken, {
+      title: 'Great War',
+      description: 'A major world event',
+      event_type: 'big',
+    });
 
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
@@ -91,10 +144,10 @@ describe('Events API Integration Tests', () => {
   test('A2.1: POST /api/events/world/:worldId - player cannot create big event', async () => {
     const { worldId, playerToken } = createWorldAndMemberships();
 
-    const res = await request(app)
-      .post(`/api/events/world/${worldId}`)
-      .set('Authorization', `Bearer ${playerToken}`)
-      .send({ title: 'Forbidden Big Event', event_type: 'big' });
+    const res = await postEvent(worldId, playerToken, {
+      title: 'Forbidden Big Event',
+      event_type: 'big',
+    });
 
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Only devs can create big events' });
@@ -103,10 +156,10 @@ describe('Events API Integration Tests', () => {
   test('A2.1: POST /api/events/world/:worldId - player creates small event as proposed', async () => {
     const { worldId, playerToken } = createWorldAndMemberships();
 
-    const res = await request(app)
-      .post(`/api/events/world/${worldId}`)
-      .set('Authorization', `Bearer ${playerToken}`)
-      .send({ title: 'Small Tavern Story', event_type: 'small' });
+    const res = await postEvent(worldId, playerToken, {
+      title: 'Small Tavern Story',
+      event_type: 'small',
+    });
 
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('proposed');
@@ -116,18 +169,34 @@ describe('Events API Integration Tests', () => {
   test('A2.2: GET /api/events/world/:worldId - returns only approved/open/closed timeline events', async () => {
     const { worldId, dev } = createWorldAndMemberships();
 
-    db.prepare(
-      "INSERT INTO events (world_id, title, event_type, status, created_by, start_date) VALUES (?, 'Approved Event', 'small', 'approved', ?, '2026-01-01')",
-    ).run(worldId, dev.id);
-    db.prepare(
-      "INSERT INTO events (world_id, title, event_type, status, created_by, start_date) VALUES (?, 'Open Event', 'big', 'open', ?, '2026-01-02')",
-    ).run(worldId, dev.id);
-    db.prepare(
-      "INSERT INTO events (world_id, title, event_type, status, created_by, start_date) VALUES (?, 'Closed Event', 'small', 'closed', ?, '2026-01-03')",
-    ).run(worldId, dev.id);
-    db.prepare(
-      "INSERT INTO events (world_id, title, event_type, status, created_by, start_date) VALUES (?, 'Proposed Event', 'small', 'proposed', ?, '2026-01-04')",
-    ).run(worldId, dev.id);
+    [
+      {
+        title: 'Approved Event',
+        eventType: 'small',
+        status: 'approved',
+        startDate: '2026-01-01',
+      },
+      {
+        title: 'Open Event',
+        eventType: 'big',
+        status: 'open',
+        startDate: '2026-01-02',
+      },
+      {
+        title: 'Closed Event',
+        eventType: 'small',
+        status: 'closed',
+        startDate: '2026-01-03',
+      },
+      {
+        title: 'Proposed Event',
+        eventType: 'small',
+        status: 'proposed',
+        startDate: '2026-01-04',
+      },
+    ].forEach((event) => {
+      insertEvent(worldId, dev.id, event);
+    });
 
     const res = await request(app).get(`/api/events/world/${worldId}`);
 
@@ -142,13 +211,13 @@ describe('Events API Integration Tests', () => {
   test('A2.3: GET /api/events/world/:worldId/proposed - dev can read proposed events', async () => {
     const { worldId, dev, devToken } = createWorldAndMemberships();
 
-    db.prepare(
-      "INSERT INTO events (world_id, title, event_type, status, created_by) VALUES (?, 'Proposed Story', 'small', 'proposed', ?)",
-    ).run(worldId, dev.id);
+    insertEvent(worldId, dev.id, {
+      title: 'Proposed Story',
+      eventType: 'small',
+      status: 'proposed',
+    });
 
-    const res = await request(app)
-      .get(`/api/events/world/${worldId}/proposed`)
-      .set('Authorization', `Bearer ${devToken}`);
+    const res = await getProposed(worldId, devToken);
 
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(1);
@@ -158,9 +227,7 @@ describe('Events API Integration Tests', () => {
   test('A2.3: GET /api/events/world/:worldId/proposed - non-dev is forbidden', async () => {
     const { worldId, playerToken } = createWorldAndMemberships();
 
-    const res = await request(app)
-      .get(`/api/events/world/${worldId}/proposed`)
-      .set('Authorization', `Bearer ${playerToken}`);
+    const res = await getProposed(worldId, playerToken);
 
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Dev only' });
@@ -169,13 +236,12 @@ describe('Events API Integration Tests', () => {
   test('A2.4: GET /api/events/:eventId - returns event detail', async () => {
     const { worldId, dev } = createWorldAndMemberships();
 
-    const eventResult = db
-      .prepare(
-        "INSERT INTO events (world_id, title, description, event_type, status, created_by) VALUES (?, 'Detail Event', 'Event details here', 'small', 'approved', ?)",
-      )
-      .run(worldId, dev.id);
-
-    const eventId = Number(eventResult.lastInsertRowid);
+    const eventId = insertEvent(worldId, dev.id, {
+      title: 'Detail Event',
+      description: 'Event details here',
+      eventType: 'small',
+      status: 'approved',
+    });
     const res = await request(app).get(`/api/events/${eventId}`);
 
     expect(res.status).toBe(200);
@@ -193,21 +259,18 @@ describe('Events API Integration Tests', () => {
   test('A2.5: PATCH /api/events/:eventId - dev can update status and metadata', async () => {
     const { worldId, dev, devToken } = createWorldAndMemberships();
 
-    const eventResult = db
-      .prepare(
-        "INSERT INTO events (world_id, title, description, event_type, status, created_by) VALUES (?, 'Before Update', 'old', 'small', 'proposed', ?)",
-      )
-      .run(worldId, dev.id);
-    const eventId = Number(eventResult.lastInsertRowid);
+    const eventId = insertEvent(worldId, dev.id, {
+      title: 'Before Update',
+      description: 'old',
+      eventType: 'small',
+      status: 'proposed',
+    });
 
-    const res = await request(app)
-      .patch(`/api/events/${eventId}`)
-      .set('Authorization', `Bearer ${devToken}`)
-      .send({
-        status: 'approved',
-        title: 'After Update',
-        description: 'new',
-      });
+    const res = await patchEvent(eventId, devToken, {
+      status: 'approved',
+      title: 'After Update',
+      description: 'new',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -221,17 +284,13 @@ describe('Events API Integration Tests', () => {
   test('A2.5: PATCH /api/events/:eventId - non-dev cannot update', async () => {
     const { worldId, dev, playerToken } = createWorldAndMemberships();
 
-    const eventResult = db
-      .prepare(
-        "INSERT INTO events (world_id, title, event_type, status, created_by) VALUES (?, 'Locked Event', 'small', 'proposed', ?)",
-      )
-      .run(worldId, dev.id);
-    const eventId = Number(eventResult.lastInsertRowid);
+    const eventId = insertEvent(worldId, dev.id, {
+      title: 'Locked Event',
+      eventType: 'small',
+      status: 'proposed',
+    });
 
-    const res = await request(app)
-      .patch(`/api/events/${eventId}`)
-      .set('Authorization', `Bearer ${playerToken}`)
-      .send({ status: 'approved' });
+    const res = await patchEvent(eventId, playerToken, { status: 'approved' });
 
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Dev only' });
