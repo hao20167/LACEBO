@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link, useParams } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getApiErrorMessage } from '../services/api.js';
 
@@ -268,8 +269,6 @@ export default function EventDetail() {
             ? {
                 ...post,
                 liked: res.data.liked,
-                like_count:
-                  Number(oldPost.like_count || 0) + (res.data.liked ? 1 : 0),
               }
             : post,
         ),

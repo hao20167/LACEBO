@@ -39,6 +39,8 @@ export default function WorldManage() {
     try {
       if (action === 'approve') {
         await api.patch(`/posts/${postId}/approve`);
+      } else if (action === 'reject') {
+        await api.patch(`/posts/${postId}/reject`);
       }
       setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
     } catch {}

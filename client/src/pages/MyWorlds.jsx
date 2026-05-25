@@ -30,7 +30,7 @@ export default function MyWorlds() {
       </div>
       {worlds.length === 0 ? (
         <div className="text-center text-dark-400 py-12">
-          <p>You haven't joined any worlds yet.</p>
+          <p>You haven&apos;t joined any worlds yet.</p>
           <Link
             to="/worlds"
             className="text-primary-400 hover:underline text-sm mt-2 inline-block"

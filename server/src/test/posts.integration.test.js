@@ -22,36 +22,48 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
 
   beforeEach(() => {
     resetDatabase(db);
-    
+
     // Create users
     devUser = createTestUser({
-      db, username: 'dev_user', email: 'dev@test.com', password: 'Password123!', displayName: 'Dev User'
+      db,
+      username: 'dev_user',
+      email: 'dev@test.com',
+      password: 'Password123!',
+      displayName: 'Dev User',
     });
     devToken = createTestToken(devUser);
-    
+
     playerUser = createTestUser({
-      db, username: 'player_user', email: 'player@test.com', password: 'Password123!', displayName: 'Player User'
+      db,
+      username: 'player_user',
+      email: 'player@test.com',
+      password: 'Password123!',
+      displayName: 'Player User',
     });
     playerToken = createTestToken(playerUser);
 
     // Create world & assign roles
-    const worldResult = db.prepare(
-      'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, ?)'
-    ).run('Test World', 'World for testing posts', 1);
+    const worldResult = db
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, ?)',
+      )
+      .run('Test World', 'World for testing posts', 1);
     worldId = worldResult.lastInsertRowid;
 
     db.prepare(
-      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')"
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')",
     ).run(worldId, devUser.id);
-    
+
     db.prepare(
-      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'approved')"
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'approved')",
     ).run(worldId, playerUser.id);
 
     // Create open event
-    const eventResult = db.prepare(
-      "INSERT INTO events (world_id, title, event_type, status, created_by) VALUES (?, ?, 'small', 'open', ?)"
-    ).run(worldId, 'Test Event', devUser.id);
+    const eventResult = db
+      .prepare(
+        "INSERT INTO events (world_id, title, event_type, status, created_by) VALUES (?, ?, 'small', 'open', ?)",
+      )
+      .run(worldId, 'Test Event', devUser.id);
     eventId = eventResult.lastInsertRowid;
   });
 
@@ -62,6 +74,15 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
   });
 
   describe('Posts', () => {
+    it('should return an empty list for an authenticated user when there are no approved posts', async () => {
+      const res = await request(app)
+        .get(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(0);
+    });
+
     it('should allow player to create a post, but it requires approval', async () => {
       const res = await request(app)
         .post(`/api/posts/event/${eventId}`)
@@ -71,7 +92,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(res.status).toBe(201);
       expect(res.body.content).toBe('Player post content');
       expect(res.body.status).toBe('pending');
-      
+
       // Should not be visible in event posts yet
       const getRes = await request(app).get(`/api/posts/event/${eventId}`);
       expect(getRes.status).toBe(200);
@@ -87,12 +108,27 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(res.status).toBe(201);
       expect(res.body.content).toBe('Dev post content');
       expect(res.body.status).toBe('approved');
-      
+
       // Should be visible in event posts
       const getRes = await request(app).get(`/api/posts/event/${eventId}`);
       expect(getRes.status).toBe(200);
       expect(getRes.body).toHaveLength(1);
       expect(getRes.body[0].content).toBe('Dev post content');
+    });
+
+    it('should return approved posts for an authenticated user', async () => {
+      await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Visible to members' });
+
+      const res = await request(app)
+        .get(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].liked).toBe(false);
     });
 
     it('should allow dev to view pending posts and approve them', async () => {
@@ -107,7 +143,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       const pendingRes = await request(app)
         .get(`/api/posts/world/${worldId}/pending`)
         .set('Authorization', `Bearer ${devToken}`);
-      
+
       expect(pendingRes.status).toBe(200);
       expect(pendingRes.body).toHaveLength(1);
       expect(pendingRes.body[0].content).toBe('Needs approval');
@@ -116,7 +152,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       const approveRes = await request(app)
         .patch(`/api/posts/${postId}/approve`)
         .set('Authorization', `Bearer ${devToken}`);
-      
+
       expect(approveRes.status).toBe(200);
       expect(approveRes.body.success).toBe(true);
 
@@ -125,6 +161,66 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(getRes.status).toBe(200);
       expect(getRes.body).toHaveLength(1);
       expect(getRes.body[0].content).toBe('Needs approval');
+    });
+
+    it('should reject approving a post that is no longer pending', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Already handled' });
+
+      const approveRes = await request(app)
+        .patch(`/api/posts/${createRes.body.id}/approve`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(approveRes.status).toBe(200);
+
+      const secondApproveRes = await request(app)
+        .patch(`/api/posts/${createRes.body.id}/approve`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(secondApproveRes.status).toBe(400);
+    });
+  });
+
+  describe('Announcements', () => {
+    it('should allow dev to create and fetch announcements', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/world/${worldId}/announcements`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({
+          title: 'World Notice',
+          content: 'Server maintenance tonight.',
+        });
+
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.title).toBe('World Notice');
+      expect(createRes.body.display_name).toBe(devUser.display_name);
+
+      const listRes = await request(app).get(
+        `/api/posts/world/${worldId}/announcements`,
+      );
+      expect(listRes.status).toBe(200);
+      expect(listRes.body).toHaveLength(1);
+      expect(listRes.body[0].content).toBe('Server maintenance tonight.');
+    });
+
+    it('should reject invalid announcement payloads', async () => {
+      const res = await request(app)
+        .post(`/api/posts/world/${worldId}/announcements`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ title: 'Missing content' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject announcements from non-dev users', async () => {
+      const res = await request(app)
+        .post(`/api/posts/world/${worldId}/announcements`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ title: 'Nope', content: 'No access.' });
+
+      expect(res.status).toBe(403);
     });
   });
 
@@ -164,6 +260,47 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(getRes2.body[0].like_count).toBe(0);
     });
 
+    it('should return pending posts only to dev users', async () => {
+      const res = await request(app)
+        .get(`/api/posts/world/${worldId}/pending`)
+        .set('Authorization', `Bearer ${playerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should allow dev to reject a pending post', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Reject me' });
+
+      const rejectRes = await request(app)
+        .patch(`/api/posts/${createRes.body.id}/reject`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(rejectRes.status).toBe(200);
+      expect(rejectRes.body.success).toBe(true);
+    });
+
+    it('should reject a post that is already rejected', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Reject me twice' });
+
+      const rejectRes = await request(app)
+        .patch(`/api/posts/${createRes.body.id}/reject`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(rejectRes.status).toBe(200);
+
+      const secondRejectRes = await request(app)
+        .patch(`/api/posts/${createRes.body.id}/reject`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(secondRejectRes.status).toBe(400);
+    });
+
     it('should allow user to add comments to a post and fetch them', async () => {
       // Add comment
       const commentRes = await request(app)
@@ -176,7 +313,9 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(commentRes.body.user_id).toBe(playerUser.id);
 
       // Fetch comments
-      const getCommentsRes = await request(app).get(`/api/posts/${postId}/comments`);
+      const getCommentsRes = await request(app).get(
+        `/api/posts/${postId}/comments`,
+      );
       expect(getCommentsRes.status).toBe(200);
       expect(getCommentsRes.body).toHaveLength(1);
       expect(getCommentsRes.body[0].content).toBe('This is a comment');

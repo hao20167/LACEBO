@@ -6,7 +6,7 @@ import api from '../services/api.js';
 
 vi.mock('../services/api.js');
 
-const renderWorldManage = (id = '1') => {
+const renderWorldManage = () => {
   return render(
     <BrowserRouter>
       <Routes>

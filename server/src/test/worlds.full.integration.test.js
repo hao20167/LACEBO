@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
+import { cleanupTestDb, setupTestDb } from './helpers/testDb.js';
 import { createTestToken, createTestUser } from './helpers/auth.js';
 
 describe('World Full API Integration Tests', () => {
