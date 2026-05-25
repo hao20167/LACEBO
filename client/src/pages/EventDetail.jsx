@@ -83,76 +83,90 @@ function Comments({ postId, user, onCommentCreated }) {
     }
   };
 
+  let commentsContent;
+  if (loading) {
+    commentsContent = (
+      <p className="text-sm text-dark-500">Loading comments...</p>
+    );
+  } else if (error) {
+    commentsContent = (
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-red-300">{error}</p>
+        <button
+          type="button"
+          onClick={fetchComments}
+          className="self-start text-sm text-primary-400 hover:text-primary-300"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  } else if (comments.length === 0) {
+    commentsContent = <p className="text-sm text-dark-500">No comments yet.</p>;
+  } else {
+    commentsContent = (
+      <div className="space-y-3">
+        {comments.map((comment) => (
+          <div key={comment.id} className="rounded-lg bg-dark-800/70 p-3">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+              <span className="text-sm font-medium text-dark-100">
+                {comment.display_name || comment.username}
+              </span>
+              <span className="text-xs text-dark-500">
+                @{comment.username}
+                {comment.created_at
+                  ? ` - ${new Date(comment.created_at).toLocaleString()}`
+                  : ''}
+              </span>
+            </div>
+            <p className="text-sm text-dark-300 whitespace-pre-wrap">
+              {comment.content}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  let commentForm;
+  if (user) {
+    commentForm = (
+      <form onSubmit={handleSubmit} className="mt-4 space-y-2">
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Write a comment..."
+          required
+          rows={3}
+          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
+        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="submit"
+            disabled={submitting || !content.trim()}
+            className="self-start bg-dark-700 hover:bg-dark-600 text-dark-100 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50"
+          >
+            {submitting ? 'Commenting...' : 'Comment'}
+          </button>
+          {formMessage && (
+            <p className="text-sm text-dark-400">{formMessage}</p>
+          )}
+        </div>
+      </form>
+    );
+  } else {
+    commentForm = (
+      <p className="mt-4 text-sm text-dark-500">
+        Login and join this world to comment.
+      </p>
+    );
+  }
+
   return (
     <div className="mt-4 border-t border-dark-800 pt-4">
       <h3 className="text-sm font-semibold text-dark-200 mb-3">Comments</h3>
-
-      {loading ? (
-        <p className="text-sm text-dark-500">Loading comments...</p>
-      ) : error ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-red-300">{error}</p>
-          <button
-            type="button"
-            onClick={fetchComments}
-            className="self-start text-sm text-primary-400 hover:text-primary-300"
-          >
-            Retry
-          </button>
-        </div>
-      ) : comments.length === 0 ? (
-        <p className="text-sm text-dark-500">No comments yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {comments.map((comment) => (
-            <div key={comment.id} className="rounded-lg bg-dark-800/70 p-3">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                <span className="text-sm font-medium text-dark-100">
-                  {comment.display_name || comment.username}
-                </span>
-                <span className="text-xs text-dark-500">
-                  @{comment.username}
-                  {comment.created_at
-                    ? ` - ${new Date(comment.created_at).toLocaleString()}`
-                    : ''}
-                </span>
-              </div>
-              <p className="text-sm text-dark-300 whitespace-pre-wrap">
-                {comment.content}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {user ? (
-        <form onSubmit={handleSubmit} className="mt-4 space-y-2">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Write a comment..."
-            required
-            rows={3}
-            className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
-          />
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="submit"
-              disabled={submitting || !content.trim()}
-              className="self-start bg-dark-700 hover:bg-dark-600 text-dark-100 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50"
-            >
-              {submitting ? 'Commenting...' : 'Comment'}
-            </button>
-            {formMessage && (
-              <p className="text-sm text-dark-400">{formMessage}</p>
-            )}
-          </div>
-        </form>
-      ) : (
-        <p className="mt-4 text-sm text-dark-500">
-          Login and join this world to comment.
-        </p>
-      )}
+      {commentsContent}
+      {commentForm}
     </div>
   );
 }
