@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getApiErrorMessage } from '../services/api.js';
@@ -17,6 +18,19 @@ const statusClasses = {
   proposed: 'bg-yellow-900/40 text-yellow-300 border-yellow-800',
 };
 
+const userPropType = PropTypes.shape({
+  id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+});
+
+const getDisplayName = (item) => item.display_name || item.username;
+
+const formatDateTime = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString();
+};
+
 function LikeButton({ liked, count, disabled, onToggle }) {
   return (
     <button
@@ -33,6 +47,181 @@ function LikeButton({ liked, count, disabled, onToggle }) {
     </button>
   );
 }
+
+LikeButton.propTypes = {
+  liked: PropTypes.bool,
+  count: PropTypes.number,
+  disabled: PropTypes.bool,
+  onToggle: PropTypes.func.isRequired,
+};
+
+LikeButton.defaultProps = {
+  liked: false,
+  count: 0,
+  disabled: false,
+};
+
+function Comments({ postId, user, count, onCommentCreated }) {
+  const [expanded, setExpanded] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [content, setContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState('');
+
+  const fetchComments = useCallback(
+    async (signal) => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const res = await api.get(`/posts/${postId}/comments`, { signal });
+        if (signal?.aborted) return;
+        setComments(res.data);
+        setHasLoaded(true);
+      } catch (err) {
+        if (err.name === 'CanceledError') return;
+        setError(getApiErrorMessage(err, 'Failed to load comments'));
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    [postId],
+  );
+
+  useEffect(() => {
+    if (!expanded || hasLoaded) return undefined;
+
+    const controller = new AbortController();
+    fetchComments(controller.signal);
+
+    return () => controller.abort();
+  }, [expanded, fetchComments, hasLoaded]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return;
+
+    setSubmitting(true);
+    setFormMessage('');
+
+    try {
+      const res = await api.post(`/posts/${postId}/comments`, {
+        content: trimmedContent,
+      });
+      setComments((currentComments) => [...currentComments, res.data]);
+      setContent('');
+      onCommentCreated(postId);
+    } catch (err) {
+      setFormMessage(getApiErrorMessage(err, 'Failed to add comment'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const commentLabel = `${count || 0} ${count === 1 ? 'comment' : 'comments'}`;
+  const isLoadingComments = loading || (!hasLoaded && !error);
+
+  return (
+    <div className="mt-4 border-t border-dark-800 pt-4">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="text-sm font-medium text-primary-400 hover:text-primary-300"
+      >
+        {expanded ? 'Hide comments' : `View ${commentLabel}`}
+      </button>
+
+      {expanded && (
+        <div className="mt-3">
+          {isLoadingComments ? (
+            <p className="text-sm text-dark-500">Loading comments...</p>
+          ) : error ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-red-300">{error}</p>
+              <button
+                type="button"
+                onClick={() => fetchComments()}
+                className="self-start text-sm text-primary-400 hover:text-primary-300"
+              >
+                Retry
+              </button>
+            </div>
+          ) : comments.length === 0 ? (
+            <p className="text-sm text-dark-500">No comments yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {comments.map((comment) => (
+                <div key={comment.id} className="rounded-lg bg-dark-800/70 p-3">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                    <span className="text-sm font-medium text-dark-100">
+                      {getDisplayName(comment)}
+                    </span>
+                    <span className="text-xs text-dark-500">
+                      @{comment.username}
+                      {formatDateTime(comment.created_at)
+                        ? ` - ${formatDateTime(comment.created_at)}`
+                        : ''}
+                    </span>
+                  </div>
+                  <p className="text-sm text-dark-300 whitespace-pre-wrap">
+                    {comment.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {user ? (
+            <form onSubmit={handleSubmit} className="mt-4 space-y-2">
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write a comment..."
+                required
+                rows={3}
+                className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
+              />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="submit"
+                  disabled={submitting || !content.trim()}
+                  className="self-start bg-dark-700 hover:bg-dark-600 text-dark-100 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                >
+                  {submitting ? 'Commenting...' : 'Comment'}
+                </button>
+                {formMessage && (
+                  <p className="text-sm text-dark-400">{formMessage}</p>
+                )}
+              </div>
+            </form>
+          ) : (
+            <p className="mt-4 text-sm text-dark-500">
+              Login and join this world to comment.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+Comments.propTypes = {
+  postId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  user: userPropType,
+  count: PropTypes.number,
+  onCommentCreated: PropTypes.func.isRequired,
+};
+
+Comments.defaultProps = {
+  user: null,
+  count: 0,
+};
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -69,13 +258,17 @@ export default function EventDetail() {
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
+    const content = postContent.trim();
+    const image = imageUrl.trim();
+    if (!content) return;
+
     setSubmitting(true);
     setFormMessage('');
 
     try {
       const res = await api.post(`/posts/event/${eventId}`, {
-        content: postContent.trim(),
-        image_url: imageUrl.trim() || undefined,
+        content,
+        image_url: image || undefined,
       });
 
       setPostContent('');
@@ -107,7 +300,10 @@ export default function EventDetail() {
         return {
           ...post,
           liked,
-          like_count: Number(post.like_count || 0) + (liked ? 1 : -1),
+          like_count: Math.max(
+            0,
+            Number(post.like_count || 0) + (liked ? 1 : -1),
+          ),
         };
       }),
     );
@@ -120,8 +316,10 @@ export default function EventDetail() {
             ? {
                 ...post,
                 liked: res.data.liked,
-                like_count:
-                  Number(oldPost.like_count || 0) + (res.data.liked ? 1 : 0),
+                like_count: Math.max(
+                  0,
+                  Number(oldPost.like_count || 0) + (res.data.liked ? 1 : -1),
+                ),
               }
             : post,
         ),
@@ -129,6 +327,19 @@ export default function EventDetail() {
     } catch {
       await fetchEventData();
     }
+  };
+
+  const handleCommentCreated = (postId) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comment_count: Number(post.comment_count || 0) + 1,
+            }
+          : post,
+      ),
+    );
   };
 
   if (loading) {
@@ -273,12 +484,12 @@ export default function EventDetail() {
                 <div className="flex items-center justify-between gap-4 mb-3">
                   <div>
                     <p className="font-medium text-dark-100">
-                      {post.display_name || post.username}
+                      {getDisplayName(post)}
                     </p>
                     <p className="text-xs text-dark-500">
                       @{post.username}
-                      {post.created_at
-                        ? ` - ${new Date(post.created_at).toLocaleString()}`
+                      {formatDateTime(post.created_at)
+                        ? ` - ${formatDateTime(post.created_at)}`
                         : ''}
                     </p>
                   </div>
@@ -304,6 +515,13 @@ export default function EventDetail() {
                   count={post.like_count}
                   disabled={!user}
                   onToggle={() => handleToggleLike(post.id)}
+                />
+
+                <Comments
+                  postId={post.id}
+                  user={user}
+                  count={Number(post.comment_count || 0)}
+                  onCommentCreated={handleCommentCreated}
                 />
               </article>
             ))}
