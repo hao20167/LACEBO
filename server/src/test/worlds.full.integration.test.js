@@ -1,9 +1,5 @@
 import request from 'supertest';
-import {
-  cleanupTestDb,
-  resetDatabase,
-  setupTestDb,
-} from './helpers/testDb.js';
+import { cleanupTestDb, setupTestDb } from './helpers/testDb.js';
 import { createTestToken, createTestUser } from './helpers/auth.js';
 
 describe('World Full API Integration Tests', () => {
@@ -24,9 +20,17 @@ describe('World Full API Integration Tests', () => {
     app = appModule.default;
 
     // Create users
-    devUser = createTestUser({ db, username: 'dev_user', email: 'dev@test.com' });
+    devUser = createTestUser({
+      db,
+      username: 'dev_user',
+      email: 'dev@test.com',
+    });
     devToken = createTestToken(devUser);
-    playerUser = createTestUser({ db, username: 'player_user', email: 'player@test.com' });
+    playerUser = createTestUser({
+      db,
+      username: 'player_user',
+      email: 'player@test.com',
+    });
     playerToken = createTestToken(playerUser);
   });
 
@@ -44,6 +48,14 @@ describe('World Full API Integration Tests', () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
     worldId = res.body.id;
+  });
+
+  test('1a. POST /api/worlds/:id/join - Reject missing world', async () => {
+    const res = await request(app)
+      .post('/api/worlds/999999/join')
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(res.status).toBe(404);
   });
 
   test('2. GET /api/worlds - List all worlds', async () => {
@@ -64,7 +76,7 @@ describe('World Full API Integration Tests', () => {
       .get('/api/worlds/mine')
       .set('Authorization', `Bearer ${devToken}`);
     expect(res.status).toBe(200);
-    expect(res.body.some(w => w.id === worldId)).toBe(true);
+    expect(res.body.some((w) => w.id === worldId)).toBe(true);
   });
 
   test('5. POST /api/worlds/:id/join - Join world', async () => {
@@ -76,16 +88,32 @@ describe('World Full API Integration Tests', () => {
     expect(res.body.status).toBe('pending');
   });
 
+  test('5a. POST /api/worlds/:id/join - Reject duplicate join', async () => {
+    const res = await request(app)
+      .post(`/api/worlds/${worldId}/join`)
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(res.status).toBe(409);
+  });
+
   test('7. GET /api/worlds/:id/members/pending - Get pending members', async () => {
     const res = await request(app)
       .get(`/api/worlds/${worldId}/members/pending`)
       .set('Authorization', `Bearer ${devToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.some(m => m.user_id === playerUser.id)).toBe(true);
+    expect(res.body.some((m) => m.user_id === playerUser.id)).toBe(true);
     // Store member record id for next step
-    const member = res.body.find(m => m.user_id === playerUser.id);
+    const member = res.body.find((m) => m.user_id === playerUser.id);
     playerUser.memberRecordId = member.id;
+  });
+
+  test('7a. GET /api/worlds/:id/members/pending - Reject non-dev access', async () => {
+    const res = await request(app)
+      .get(`/api/worlds/${worldId}/members/pending`)
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(res.status).toBe(403);
   });
 
   test('6. PATCH /api/worlds/:id/members/:memberId - Approve member', async () => {
@@ -98,9 +126,18 @@ describe('World Full API Integration Tests', () => {
     expect(res.body.success).toBe(true);
   });
 
+  test('6a. PATCH /api/worlds/:id/members/:memberId - Reject invalid status', async () => {
+    const res = await request(app)
+      .patch(`/api/worlds/${worldId}/members/${playerUser.memberRecordId}`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .send({ status: 'pending' });
+
+    expect(res.status).toBe(400);
+  });
+
   test('8. GET /api/worlds/:id/members - Get all approved members', async () => {
     const res = await request(app).get(`/api/worlds/${worldId}/members`);
     expect(res.status).toBe(200);
-    expect(res.body.some(m => m.user_id === playerUser.id)).toBe(true);
+    expect(res.body.some((m) => m.user_id === playerUser.id)).toBe(true);
   });
 });

@@ -16,6 +16,20 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
+      all: true,
+      exclude: [
+        '.eslintrc.cjs',
+        'postcss.config.js',
+        'tailwind.config.js',
+        'src/main.jsx',
+        'src/App.jsx',
+        'src/components/layout/**',
+        'src/contexts/**',
+        'src/hooks/**',
+        'src/pages/Home.jsx',
+        'src/pages/WorldDetail.jsx',
+        'src/services/**',
+      ],
     },
   },
 });

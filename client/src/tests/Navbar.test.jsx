@@ -59,7 +59,9 @@ describe('Navbar — trạng thái chưa đăng nhập', () => {
 
   it('hiển thị link "Explore Worlds"', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /explore worlds/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /explore worlds/i }),
+    ).toBeInTheDocument();
   });
 
   it('hiển thị link "Login"', () => {
@@ -69,32 +71,46 @@ describe('Navbar — trạng thái chưa đăng nhập', () => {
 
   it('hiển thị link "Register"', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /^register$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /^register$/i }),
+    ).toBeInTheDocument();
   });
 
   it('link Login trỏ đến /login', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /^login$/i })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: /^login$/i })).toHaveAttribute(
+      'href',
+      '/login',
+    );
   });
 
   it('link Register trỏ đến /register', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /^register$/i })).toHaveAttribute('href', '/register');
+    expect(screen.getByRole('link', { name: /^register$/i })).toHaveAttribute(
+      'href',
+      '/register',
+    );
   });
 
   it('không hiển thị nút Logout', () => {
     renderNavbar();
-    expect(screen.queryByRole('button', { name: /logout/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /logout/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('không hiển thị "My Worlds"', () => {
     renderNavbar();
-    expect(screen.queryByRole('link', { name: /my worlds/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /my worlds/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('không hiển thị "Create World"', () => {
     renderNavbar();
-    expect(screen.queryByRole('link', { name: /create world/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /create world/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -116,32 +132,46 @@ describe('Navbar — trạng thái đã đăng nhập', () => {
 
   it('hiển thị link "My Worlds"', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /my worlds/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /my worlds/i }),
+    ).toBeInTheDocument();
   });
 
   it('hiển thị link "Create World"', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /create world/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /create world/i }),
+    ).toBeInTheDocument();
   });
 
   it('link "My Worlds" trỏ đến /worlds/mine', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /my worlds/i })).toHaveAttribute('href', '/worlds/mine');
+    expect(screen.getByRole('link', { name: /my worlds/i })).toHaveAttribute(
+      'href',
+      '/worlds/mine',
+    );
   });
 
   it('link "Create World" trỏ đến /worlds/create', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /create world/i })).toHaveAttribute('href', '/worlds/create');
+    expect(screen.getByRole('link', { name: /create world/i })).toHaveAttribute(
+      'href',
+      '/worlds/create',
+    );
   });
 
   it('không hiển thị link Login khi đã đăng nhập', () => {
     renderNavbar();
-    expect(screen.queryByRole('link', { name: /^login$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /^login$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('không hiển thị link Register khi đã đăng nhập', () => {
     renderNavbar();
-    expect(screen.queryByRole('link', { name: /^register$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /^register$/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -168,7 +198,9 @@ describe('Navbar — điều hướng chung', () => {
 
   it('"Explore Worlds" trỏ đến /worlds', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /explore worlds/i })).toHaveAttribute('href', '/worlds');
+    expect(
+      screen.getByRole('link', { name: /explore worlds/i }),
+    ).toHaveAttribute('href', '/worlds');
   });
 
   it('render trong thẻ <nav>', () => {

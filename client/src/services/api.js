@@ -12,7 +12,10 @@ const clearStoredSession = () => {
   localStorage.removeItem('user');
 };
 
-export const getApiErrorMessage = (error, fallback = 'Something went wrong') => {
+export const getApiErrorMessage = (
+  error,
+  fallback = 'Something went wrong',
+) => {
   return (
     error?.response?.data?.error ||
     error?.response?.data?.message ||
@@ -42,7 +45,7 @@ api.interceptors.response.use(
       clearStoredSession();
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 export default api;
