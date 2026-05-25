@@ -94,6 +94,17 @@ describe('Events API Integration Tests', () => {
       .send(payload);
   }
 
+  function expectEventTitles(events, expectedTitles) {
+    expect(events.map((event) => event.title).sort()).toEqual(
+      [...expectedTitles].sort(),
+    );
+  }
+
+  function expectCreatedEvent(response, expected) {
+    expect(response.status).toBe(expected.statusCode);
+    expect(response.body).toMatchObject(expected.body);
+  }
+
   function createWorldAndMemberships() {
     userSeq += 1;
     const stamp = `u${Date.now()}_${userSeq}`;
@@ -123,53 +134,65 @@ describe('Events API Integration Tests', () => {
     };
   }
 
-  test('A2.1: POST /api/events/world/:worldId - dev can create big event with open status', async () => {
-    const { worldId, devToken } = createWorldAndMemberships();
+  test.each([
+    {
+      caseName: 'dev can create big event with open status',
+      userRole: 'dev',
+      payload: {
+        title: 'Great War',
+        description: 'A major world event',
+        event_type: 'big',
+      },
+      expectedStatus: 201,
+      expectedBody: {
+        title: 'Great War',
+        event_type: 'big',
+        status: 'open',
+      },
+    },
+    {
+      caseName: 'player cannot create big event',
+      userRole: 'player',
+      payload: {
+        title: 'Forbidden Big Event',
+        event_type: 'big',
+      },
+      expectedStatus: 403,
+      expectedBody: { error: 'Only devs can create big events' },
+    },
+    {
+      caseName: 'player creates small event as proposed',
+      userRole: 'player',
+      payload: {
+        title: 'Small Tavern Story',
+        event_type: 'small',
+      },
+      expectedStatus: 201,
+      expectedBody: {
+        title: 'Small Tavern Story',
+        event_type: 'small',
+        status: 'proposed',
+      },
+    },
+  ])(
+    'A2.1: POST /api/events/world/:worldId - $caseName',
+    async ({ userRole, payload, expectedStatus, expectedBody }) => {
+      const { worldId, devToken, playerToken } = createWorldAndMemberships();
+      const token = userRole === 'dev' ? devToken : playerToken;
 
-    const res = await postEvent(worldId, devToken, {
-      title: 'Great War',
-      description: 'A major world event',
-      event_type: 'big',
-    });
+      const res = await postEvent(worldId, token, payload);
 
-    expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({
-      world_id: worldId,
-      title: 'Great War',
-      event_type: 'big',
-      status: 'open',
-    });
-  });
-
-  test('A2.1: POST /api/events/world/:worldId - player cannot create big event', async () => {
-    const { worldId, playerToken } = createWorldAndMemberships();
-
-    const res = await postEvent(worldId, playerToken, {
-      title: 'Forbidden Big Event',
-      event_type: 'big',
-    });
-
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Only devs can create big events' });
-  });
-
-  test('A2.1: POST /api/events/world/:worldId - player creates small event as proposed', async () => {
-    const { worldId, playerToken } = createWorldAndMemberships();
-
-    const res = await postEvent(worldId, playerToken, {
-      title: 'Small Tavern Story',
-      event_type: 'small',
-    });
-
-    expect(res.status).toBe(201);
-    expect(res.body.status).toBe('proposed');
-    expect(res.body.event_type).toBe('small');
-  });
+      expectCreatedEvent(res, {
+        statusCode: expectedStatus,
+        body: expectedStatus === 201 ? { world_id: worldId, ...expectedBody } : expectedBody,
+      });
+    },
+  );
 
   test('A2.2: GET /api/events/world/:worldId - returns only approved/open/closed timeline events', async () => {
     const { worldId, dev } = createWorldAndMemberships();
 
-    [
+    const seededEvents = [
       {
         title: 'Approved Event',
         eventType: 'small',
@@ -194,7 +217,9 @@ describe('Events API Integration Tests', () => {
         status: 'proposed',
         startDate: '2026-01-04',
       },
-    ].forEach((event) => {
+    ];
+
+    seededEvents.forEach((event) => {
       insertEvent(worldId, dev.id, event);
     });
 
@@ -202,36 +227,48 @@ describe('Events API Integration Tests', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.some((e) => e.title === 'Proposed Event')).toBe(false);
-    expect(res.body.some((e) => e.title === 'Approved Event')).toBe(true);
-    expect(res.body.some((e) => e.title === 'Open Event')).toBe(true);
-    expect(res.body.some((e) => e.title === 'Closed Event')).toBe(true);
+    expectEventTitles(res.body, ['Approved Event', 'Open Event', 'Closed Event']);
   });
 
-  test('A2.3: GET /api/events/world/:worldId/proposed - dev can read proposed events', async () => {
-    const { worldId, dev, devToken } = createWorldAndMemberships();
+  test.each([
+    {
+      caseName: 'dev can read proposed events',
+      userRole: 'dev',
+      expectedStatus: 200,
+      setup(worldId, dev) {
+        insertEvent(worldId, dev.id, {
+          title: 'Proposed Story',
+          eventType: 'small',
+          status: 'proposed',
+        });
+      },
+      assert(response) {
+        expect(response.body).toHaveLength(1);
+        expect(response.body[0].title).toBe('Proposed Story');
+      },
+    },
+    {
+      caseName: 'non-dev is forbidden',
+      userRole: 'player',
+      expectedStatus: 403,
+      setup() {},
+      assert(response) {
+        expect(response.body).toEqual({ error: 'Dev only' });
+      },
+    },
+  ])(
+    'A2.3: GET /api/events/world/:worldId/proposed - $caseName',
+    async ({ userRole, expectedStatus, setup, assert }) => {
+      const { worldId, dev, devToken, playerToken } = createWorldAndMemberships();
+      setup(worldId, dev);
+      const token = userRole === 'dev' ? devToken : playerToken;
 
-    insertEvent(worldId, dev.id, {
-      title: 'Proposed Story',
-      eventType: 'small',
-      status: 'proposed',
-    });
+      const res = await getProposed(worldId, token);
 
-    const res = await getProposed(worldId, devToken);
-
-    expect(res.status).toBe(200);
-    expect(res.body.length).toBe(1);
-    expect(res.body[0].title).toBe('Proposed Story');
-  });
-
-  test('A2.3: GET /api/events/world/:worldId/proposed - non-dev is forbidden', async () => {
-    const { worldId, playerToken } = createWorldAndMemberships();
-
-    const res = await getProposed(worldId, playerToken);
-
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Dev only' });
-  });
+      expect(res.status).toBe(expectedStatus);
+      assert(res);
+    },
+  );
 
   test('A2.4: GET /api/events/:eventId - returns event detail', async () => {
     const { worldId, dev } = createWorldAndMemberships();
@@ -256,43 +293,62 @@ describe('Events API Integration Tests', () => {
     expect(res.body).toEqual({ error: 'Event not found' });
   });
 
-  test('A2.5: PATCH /api/events/:eventId - dev can update status and metadata', async () => {
-    const { worldId, dev, devToken } = createWorldAndMemberships();
+  test.each([
+    {
+      caseName: 'dev can update status and metadata',
+      userRole: 'dev',
+      expectedStatus: 200,
+      setup(worldId, dev) {
+        return insertEvent(worldId, dev.id, {
+          title: 'Before Update',
+          description: 'old',
+          eventType: 'small',
+          status: 'proposed',
+        });
+      },
+      payload: {
+        status: 'approved',
+        title: 'After Update',
+        description: 'new',
+      },
+      assert(response, eventId) {
+        expect(response.body).toMatchObject({
+          id: eventId,
+          status: 'approved',
+          title: 'After Update',
+          description: 'new',
+        });
+      },
+    },
+    {
+      caseName: 'non-dev cannot update',
+      userRole: 'player',
+      expectedStatus: 403,
+      setup(worldId, dev) {
+        return insertEvent(worldId, dev.id, {
+          title: 'Locked Event',
+          eventType: 'small',
+          status: 'proposed',
+        });
+      },
+      payload: {
+        status: 'approved',
+      },
+      assert(response) {
+        expect(response.body).toEqual({ error: 'Dev only' });
+      },
+    },
+  ])(
+    'A2.5: PATCH /api/events/:eventId - $caseName',
+    async ({ userRole, expectedStatus, setup, payload, assert }) => {
+      const { worldId, dev, devToken, playerToken } = createWorldAndMemberships();
+      const eventId = setup(worldId, dev);
+      const token = userRole === 'dev' ? devToken : playerToken;
 
-    const eventId = insertEvent(worldId, dev.id, {
-      title: 'Before Update',
-      description: 'old',
-      eventType: 'small',
-      status: 'proposed',
-    });
+      const res = await patchEvent(eventId, token, payload);
 
-    const res = await patchEvent(eventId, devToken, {
-      status: 'approved',
-      title: 'After Update',
-      description: 'new',
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      id: eventId,
-      status: 'approved',
-      title: 'After Update',
-      description: 'new',
-    });
-  });
-
-  test('A2.5: PATCH /api/events/:eventId - non-dev cannot update', async () => {
-    const { worldId, dev, playerToken } = createWorldAndMemberships();
-
-    const eventId = insertEvent(worldId, dev.id, {
-      title: 'Locked Event',
-      eventType: 'small',
-      status: 'proposed',
-    });
-
-    const res = await patchEvent(eventId, playerToken, { status: 'approved' });
-
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Dev only' });
-  });
+      expect(res.status).toBe(expectedStatus);
+      assert(res, eventId);
+    },
+  );
 });
