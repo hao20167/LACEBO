@@ -2,10 +2,12 @@
 /.npm-cache/
 /client/node_modules/
 /client/coverage/
+/server/coverage/
 /client/dist/
 /server/target/
 /server/node_modules/
 /node_modules/
+/client/test-results/
 
 # pdf
 *.pdf 

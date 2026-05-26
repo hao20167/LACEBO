@@ -1,6 +1,10 @@
 import request from 'supertest';
 import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
-import { createEventsTestContext, expectCreatedEvent, expectEventTitles } from './helpers/events.js';
+import {
+  createEventsTestContext,
+  expectCreatedEvent,
+  expectEventTitles,
+} from './helpers/events.js';
 
 describe('Events API Integration Tests', () => {
   let app;
@@ -75,14 +79,18 @@ describe('Events API Integration Tests', () => {
   ])(
     'A2.1: POST /api/events/world/:worldId - $caseName',
     async ({ userRole, payload, expectedStatus, expectedBody }) => {
-      const { worldId, devToken, playerToken } = events.createWorldAndMemberships();
+      const { worldId, devToken, playerToken } =
+        events.createWorldAndMemberships();
       const token = userRole === 'dev' ? devToken : playerToken;
 
       const res = await events.postEvent(app, worldId, token, payload);
 
       expectCreatedEvent(res, {
         statusCode: expectedStatus,
-        body: expectedStatus === 201 ? { world_id: worldId, ...expectedBody } : expectedBody,
+        body:
+          expectedStatus === 201
+            ? { world_id: worldId, ...expectedBody }
+            : expectedBody,
       });
     },
   );
@@ -125,7 +133,11 @@ describe('Events API Integration Tests', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expectEventTitles(res.body, ['Approved Event', 'Open Event', 'Closed Event']);
+    expectEventTitles(res.body, [
+      'Approved Event',
+      'Open Event',
+      'Closed Event',
+    ]);
   });
 
   test.each([
@@ -157,7 +169,8 @@ describe('Events API Integration Tests', () => {
   ])(
     'A2.3: GET /api/events/world/:worldId/proposed - $caseName',
     async ({ userRole, expectedStatus, setup, assert }) => {
-      const { worldId, dev, devToken, playerToken } = events.createWorldAndMemberships();
+      const { worldId, dev, devToken, playerToken } =
+        events.createWorldAndMemberships();
       setup(worldId, dev);
       const token = userRole === 'dev' ? devToken : playerToken;
 
@@ -239,7 +252,8 @@ describe('Events API Integration Tests', () => {
   ])(
     'A2.5: PATCH /api/events/:eventId - $caseName',
     async ({ userRole, expectedStatus, setup, payload, assert }) => {
-      const { worldId, dev, devToken, playerToken } = events.createWorldAndMemberships();
+      const { worldId, dev, devToken, playerToken } =
+        events.createWorldAndMemberships();
       const eventId = setup(worldId, dev);
       const token = userRole === 'dev' ? devToken : playerToken;
 

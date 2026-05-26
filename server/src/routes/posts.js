@@ -120,23 +120,35 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
 
 // Get announcements for a world
 router.get('/world/:worldId/announcements', (req, res) => {
-  const announcements = db.prepare(`
+  const announcements = db
+    .prepare(
+      `
     SELECT a.*, u.username, u.display_name, u.avatar_url
     FROM announcements a JOIN users u ON u.id = a.user_id
     WHERE a.world_id = ?
     ORDER BY a.created_at DESC LIMIT 20
-  `).all(req.params.worldId);
+  `,
+    )
+    .all(req.params.worldId);
   res.json(announcements);
 });
 
 // Create announcement (dev only)
 router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
   const worldId = req.params.worldId;
-  if (!isDev(worldId, req.user.id)) return res.status(403).json({ error: 'Dev only' });
+  if (!isDev(worldId, req.user.id))
+    return res.status(403).json({ error: 'Dev only' });
   const { title, content } = req.body;
-  if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
-  const result = db.prepare('INSERT INTO announcements (world_id, user_id, title, content) VALUES (?, ?, ?, ?)').run(worldId, req.user.id, title, content);
-  const announcement = db.prepare('SELECT * FROM announcements WHERE id = ?').get(result.lastInsertRowid);
+  if (!title || !content)
+    return res.status(400).json({ error: 'Title and content required' });
+  const result = db
+    .prepare(
+      'INSERT INTO announcements (world_id, user_id, title, content) VALUES (?, ?, ?, ?)',
+    )
+    .run(worldId, req.user.id, title, content);
+  const announcement = db
+    .prepare('SELECT * FROM announcements WHERE id = ?')
+    .get(result.lastInsertRowid);
   res.status(201).json(announcement);
 });
 
