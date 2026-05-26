@@ -48,7 +48,11 @@ const renderLogin = () =>
   );
 
 // ─── Helper điền form ─────────────────────────────────────────────────────────
-const fillAndSubmit = async (user, username = 'alice', password = 'secret123') => {
+const fillAndSubmit = async (
+  user,
+  username = 'alice',
+  password = 'secret123',
+) => {
   await user.type(screen.getByLabelText(/username/i), username);
   await user.type(screen.getByLabelText(/password/i), password);
   await user.click(screen.getByRole('button', { name: /^login$/i }));
@@ -63,7 +67,9 @@ describe('Login — render', () => {
 
   it('hiển thị tiêu đề "Login to LACEBO"', () => {
     renderLogin();
-    expect(screen.getByRole('heading', { name: /login to lacebo/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /login to lacebo/i }),
+    ).toBeInTheDocument();
   });
 
   it('hiển thị field Username và Password', () => {
@@ -74,7 +80,9 @@ describe('Login — render', () => {
 
   it('hiển thị nút submit "Login"', () => {
     renderLogin();
-    expect(screen.getByRole('button', { name: /^login$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^login$/i }),
+    ).toBeInTheDocument();
   });
 
   it('hiển thị link điều hướng đến trang Register', () => {
@@ -114,7 +122,10 @@ describe('Login — nhập liệu', () => {
 
   it('input Password có type="password"', () => {
     renderLogin();
-    expect(screen.getByLabelText(/password/i)).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText(/password/i)).toHaveAttribute(
+      'type',
+      'password',
+    );
   });
 });
 
@@ -200,7 +211,9 @@ describe('Login — hiển thị lỗi', () => {
   it('xóa lỗi cũ và thử lại thành công', async () => {
     const failThenSuccess = vi
       .fn()
-      .mockRejectedValueOnce({ response: { data: { error: 'Wrong password' } } })
+      .mockRejectedValueOnce({
+        response: { data: { error: 'Wrong password' } },
+      })
       .mockResolvedValueOnce(undefined);
     mockAuthState = { login: failThenSuccess, user: null };
 
@@ -208,11 +221,15 @@ describe('Login — hiển thị lỗi', () => {
     renderLogin();
     await fillAndSubmit(user);
 
-    await waitFor(() => expect(screen.getByText('Wrong password')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('Wrong password')).toBeInTheDocument(),
+    );
 
     // Submit lần 2 — lỗi biến mất
     await user.click(screen.getByRole('button', { name: /^login$/i }));
-    await waitFor(() => expect(screen.queryByText('Wrong password')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText('Wrong password')).not.toBeInTheDocument(),
+    );
   });
 });
 
@@ -232,7 +249,9 @@ describe('Login — trạng thái loading', () => {
     await user.type(screen.getByLabelText(/password/i), 'pass');
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
-    expect(screen.getByRole('button', { name: /logging in/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /logging in/i }),
+    ).toBeInTheDocument();
   });
 
   it('nút bị disabled trong khi loading', async () => {

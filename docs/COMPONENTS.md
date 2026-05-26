@@ -294,8 +294,6 @@ Trang hien thi va tim kiem danh sach worlds.
 
 ### Props
 
-Khong co props.
-
 ### External dependencies
 
 | Dependency | Muc dich |

@@ -15,7 +15,7 @@ describe('CreateWorld Page Component', () => {
     render(
       <BrowserRouter>
         <CreateWorld />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
     expect(screen.getByText(/Create a New World/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/World Title/i)).toBeInTheDocument();
@@ -28,33 +28,39 @@ describe('CreateWorld Page Component', () => {
     render(
       <BrowserRouter>
         <CreateWorld />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/World Title/i), { target: { value: 'New World' } });
-    fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Best world ever' } });
+    fireEvent.change(screen.getByLabelText(/World Title/i), {
+      target: { value: 'New World' },
+    });
+    fireEvent.change(screen.getByLabelText(/Description/i), {
+      target: { value: 'Best world ever' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /Create World/i }));
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/worlds', {
         title: 'New World',
-        description: 'Best world ever'
+        description: 'Best world ever',
       });
     });
   });
 
   test('shows error message on failure', async () => {
     api.post.mockRejectedValue({
-      response: { data: { error: 'Title already exists' } }
+      response: { data: { error: 'Title already exists' } },
     });
 
     render(
       <BrowserRouter>
         <CreateWorld />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/World Title/i), { target: { value: 'Existing World' } });
+    fireEvent.change(screen.getByLabelText(/World Title/i), {
+      target: { value: 'Existing World' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /Create World/i }));
 
     await waitFor(() => {

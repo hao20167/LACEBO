@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import WorldList from './WorldList.jsx';
@@ -41,7 +47,7 @@ describe('WorldList', () => {
       render(
         <MemoryRouter>
           <WorldList />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -55,7 +61,7 @@ describe('WorldList', () => {
       render(
         <MemoryRouter>
           <WorldList />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -77,7 +83,7 @@ describe('WorldList', () => {
       render(
         <MemoryRouter>
           <WorldList />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -85,14 +91,18 @@ describe('WorldList', () => {
       expect(api.get).toHaveBeenCalledWith('/worlds', { params: {} });
     });
 
-    const searchInput = screen.getByPlaceholderText('Search worlds by title...');
+    const searchInput = screen.getByPlaceholderText(
+      'Search worlds by title...',
+    );
     const searchButton = screen.getByRole('button', { name: /search/i });
 
     fireEvent.change(searchInput, { target: { value: 'World 1' } });
     fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/worlds', { params: { search: 'World 1' } });
+      expect(api.get).toHaveBeenCalledWith('/worlds', {
+        params: { search: 'World 1' },
+      });
     });
 
     expect(screen.getByText('World 1')).toBeInTheDocument();
@@ -106,7 +116,7 @@ describe('WorldList', () => {
       render(
         <MemoryRouter>
           <WorldList />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -123,7 +133,7 @@ describe('WorldList', () => {
       render(
         <MemoryRouter>
           <WorldList />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 

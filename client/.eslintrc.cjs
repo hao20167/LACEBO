@@ -25,6 +25,7 @@ module.exports = {
   },
   plugins: ['react', 'react-hooks', 'react-refresh', 'vitest'],
   rules: {
+    'no-empty': ['error', { allowEmptyCatch: true }],
     'react/react-in-jsx-scope': 'off',
     'react-refresh/only-export-components': [
       'warn',
