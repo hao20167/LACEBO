@@ -7,6 +7,7 @@
 /server/target/
 /server/node_modules/
 /node_modules/
+/client/test-results/
 
 # pdf
 *.pdf 
