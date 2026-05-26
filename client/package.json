@@ -11,6 +11,7 @@
     "format": "prettier --write \"src/**/*.{js,jsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,css}\"",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
   },
@@ -26,6 +27,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.0.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "@playwright/test": "^1.54.2",
     "@vitest/coverage-v8": "^1.6.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
