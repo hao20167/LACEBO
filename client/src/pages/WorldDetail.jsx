@@ -574,8 +574,7 @@ export default function WorldDetail() {
                       <div className="text-xs text-dark-500 mt-2">
                         {event.start_date && (
                           <span>
-                            📅{' '}
-                            {new Date(event.start_date).toLocaleDateString()}
+                            📅 {new Date(event.start_date).toLocaleDateString()}
                           </span>
                         )}
                         {event.end_date && (
@@ -858,8 +857,7 @@ export default function WorldDetail() {
                       <td className="px-4 py-3">
                         <span className="text-dark-100 font-medium">
                           {m.display_name}
-                        </span>
-                        {' '}
+                        </span>{' '}
                         <span className="text-dark-500 text-sm ml-2">
                           @{m.username}
                         </span>

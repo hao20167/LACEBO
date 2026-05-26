@@ -32,15 +32,15 @@ describe('E2.2 Integration: Post Interactions and Credit Calculation', () => {
 
   function executeRequest(method, url, token, body) {
     const req = request(app)[method](url);
-    const withAuth = token
-      ? req.set('Authorization', `Bearer ${token}`)
-      : req;
+    const withAuth = token ? req.set('Authorization', `Bearer ${token}`) : req;
     return body ? withAuth.send(body) : withAuth;
   }
 
   function getMemberCredits(userId) {
     const row = db
-      .prepare('SELECT credits FROM world_members WHERE world_id = ? AND user_id = ?')
+      .prepare(
+        'SELECT credits FROM world_members WHERE world_id = ? AND user_id = ?',
+      )
       .get(worldId, userId);
     return row ? row.credits : null;
   }
@@ -79,7 +79,9 @@ describe('E2.2 Integration: Post Interactions and Credit Calculation', () => {
     interactorToken = createTestToken(interactor);
 
     const worldResult = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)',
+      )
       .run('E2.2 World', 'World for post interaction credits');
     worldId = Number(worldResult.lastInsertRowid);
 
@@ -155,7 +157,11 @@ describe('E2.2 Integration: Post Interactions and Credit Calculation', () => {
     expect(likeRes.status).toBe(200);
     expect(likeRes.body).toEqual({ liked: true });
 
-    const likedPostRes = await executeRequest('get', `/api/posts/event/${eventId}`, interactorToken);
+    const likedPostRes = await executeRequest(
+      'get',
+      `/api/posts/event/${eventId}`,
+      interactorToken,
+    );
     expect(likedPostRes.status).toBe(200);
     expect(Array.isArray(likedPostRes.body)).toBe(true);
     expect(likedPostRes.body).toHaveLength(1);
@@ -191,7 +197,10 @@ describe('E2.2 Integration: Post Interactions and Credit Calculation', () => {
     commentId = commentRes.body.id;
     expect(commentId).toBeDefined();
 
-    const commentsRes = await executeRequest('get', `/api/posts/${postId}/comments`);
+    const commentsRes = await executeRequest(
+      'get',
+      `/api/posts/${postId}/comments`,
+    );
     expect(commentsRes.status).toBe(200);
     expect(Array.isArray(commentsRes.body)).toBe(true);
     expect(commentsRes.body).toHaveLength(1);

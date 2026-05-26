@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { expect } from '@jest/globals';
 import { createTestToken, createTestUser } from './auth.js';
 
 export function compareStrings(left, right) {
@@ -21,7 +22,9 @@ export function createEventsTestContext(db) {
 
   function createWorld() {
     const worldResult = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)',
+      )
       .run('Events Test World', 'World used for events route tests');
     return Number(worldResult.lastInsertRowid);
   }

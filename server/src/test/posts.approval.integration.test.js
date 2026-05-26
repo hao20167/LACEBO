@@ -64,7 +64,9 @@ describe('E2.3 Integration: Post Approval and Dev-mediated Credit Reward', () =>
     devToken = createTestToken(dev);
 
     const worldResult = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)',
+      )
       .run('E2.3 World', 'World for post approval credit test');
     worldId = Number(worldResult.lastInsertRowid);
 
@@ -136,7 +138,10 @@ describe('E2.3 Integration: Post Approval and Dev-mediated Credit Reward', () =>
     expect(approveRes.status).toBe(200);
     expect(approveRes.body).toEqual({ success: true });
 
-    const approvedPostRes = await sendHttpRequest('get', `/api/posts/event/${eventId}`);
+    const approvedPostRes = await sendHttpRequest(
+      'get',
+      `/api/posts/event/${eventId}`,
+    );
 
     expect(approvedPostRes.status).toBe(200);
     expect(Array.isArray(approvedPostRes.body)).toBe(true);

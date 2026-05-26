@@ -25,16 +25,21 @@ describe('E2.1 Integration: Event Lifecycle', () => {
     closed: 'CLOSED',
   };
 
-  const toLifecycleStatus = (value) => statusMap[value] || String(value).toUpperCase();
+  const toLifecycleStatus = (value) =>
+    statusMap[value] || String(value).toUpperCase();
 
   function authedRequest(method, url, token, payload) {
-    const req = request(app)[method](url).set('Authorization', `Bearer ${token}`);
+    const req = request(app)
+      [method](url)
+      .set('Authorization', `Bearer ${token}`);
     return payload ? req.send(payload) : req;
   }
 
   function createWorldForLifecycle() {
     const result = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)',
+      )
       .run('E2.1 Test World', 'World for event lifecycle integration test');
 
     return Number(result.lastInsertRowid);
@@ -55,11 +60,17 @@ describe('E2.1 Integration: Event Lifecycle', () => {
     return authedRequest('patch', `/api/events/${eventId}`, token, { status });
   }
 
-  function expectLifecycleState({ response, expectedStatusCode, expectedStatus }) {
+  function expectLifecycleState({
+    response,
+    expectedStatusCode,
+    expectedStatus,
+  }) {
     expect(response.status).toBe(expectedStatusCode);
     expect(response.body.id).toBe(eventId);
     expect(toLifecycleStatus(response.body.status)).toBe(expectedStatus);
-    expect(toLifecycleStatus(getEventStatusFromDb(eventId))).toBe(expectedStatus);
+    expect(toLifecycleStatus(getEventStatusFromDb(eventId))).toBe(
+      expectedStatus,
+    );
   }
 
   beforeAll(async () => {

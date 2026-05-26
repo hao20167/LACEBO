@@ -7,6 +7,12 @@ describe('World Helper Unit Tests', () => {
     expect(result.error).toContain('Name is required');
   });
 
+  test('validateWorldData - Trả về hợp lệ khi có tên', () => {
+    const result = validateWorldData({ name: 'Test World' });
+    expect(result.isValid).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+
   test('formatWorldSlug - Chuyển tên thành slug', () => {
     expect(formatWorldSlug('Thế Giới 1')).toBe('the-gioi-1');
   });

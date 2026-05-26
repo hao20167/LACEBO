@@ -81,7 +81,9 @@ describe('E2.4 Integration: Role Authorization', () => {
     playerToken = createTestToken(player);
 
     const worldResult = db
-      .prepare('INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)')
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, 1)',
+      )
       .run('E2.4 World', 'World for RBAC authorization checks');
     worldId = Number(worldResult.lastInsertRowid);
 

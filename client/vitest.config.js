@@ -13,11 +13,14 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/setupTests.js',
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
+    exclude: ['e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       all: true,
       exclude: [
+        'e2e/**',
         '.eslintrc.cjs',
         'postcss.config.js',
         'tailwind.config.js',
