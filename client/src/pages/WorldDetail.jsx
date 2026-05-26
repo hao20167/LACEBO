@@ -1,7 +1,63 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api.js';
+
+const timelineStatusClasses = {
+  open: 'bg-green-900/50 text-green-300 border-green-800',
+  closed: 'bg-dark-800 text-dark-300 border-dark-700',
+  approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
+  proposed: 'bg-yellow-900/40 text-yellow-300 border-yellow-800',
+};
+
+const formatTimelineDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString();
+};
+
+const getTimelineDateLabel = (event) => {
+  const startDate = formatTimelineDate(event.start_date);
+  const endDate = formatTimelineDate(event.end_date);
+
+  if (startDate && endDate) return `${startDate} -> ${endDate}`;
+  if (startDate) return startDate;
+  if (endDate) return `Until ${endDate}`;
+  return 'Undated';
+};
+
+const getTimelineNodeClasses = (event) => {
+  if (event.status === 'open') {
+    return 'bg-green-500 border-green-300 shadow-lg shadow-green-900/40 ring-4 ring-green-500/15';
+  }
+
+  if (event.event_type === 'big') {
+    return 'bg-primary-500 border-primary-300 shadow-lg shadow-primary-900/40';
+  }
+
+  return 'bg-dark-600 border-dark-400';
+};
+
+const getTimelineCardBorder = (event) => {
+  if (event.status === 'open') return 'border-green-800 hover:border-green-600';
+  if (event.event_type === 'big')
+    return 'border-primary-800 hover:border-primary-600';
+  return 'border-dark-700 hover:border-dark-500';
+};
+
+const getTimelineTypeClasses = (event) => {
+  if (event.event_type === 'big') {
+    return 'bg-primary-900/50 text-primary-300 border-primary-800';
+  }
+
+  return 'bg-dark-800 text-dark-300 border-dark-700';
+};
+
+const getTimelineTitleClasses = (event) => {
+  if (event.event_type === 'big') return 'text-lg text-dark-100';
+  return 'text-base text-dark-200';
+};
 
 export default function WorldDetail() {
   const { id } = useParams();
@@ -11,6 +67,7 @@ export default function WorldDetail() {
   const [announcements, setAnnouncements] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [tab, setTab] = useState('lore');
+  const [eventSubTab, setEventSubTab] = useState('ongoing');
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
 
@@ -36,7 +93,12 @@ export default function WorldDetail() {
     description: '',
   });
 
-  const fetchData = async () => {
+  // Messages
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // FIX 1: Single fetchData definition with useCallback
+  const fetchData = useCallback(async () => {
     try {
       const [worldRes, eventsRes, annRes, lbRes] = await Promise.all([
         api.get(`/worlds/${id}`),
@@ -50,29 +112,47 @@ export default function WorldDetail() {
       setLeaderboard(lbRes.data);
     } catch {}
     setLoading(false);
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [fetchData]);
 
+  // Reset forms when switching event sub-tabs
+  useEffect(() => {
+    setShowEventForm(false);
+    setShowProposalForm(false);
+  }, [eventSubTab]);
+
+  // FIX 2: Single isDev declaration
   const isDev =
     world?.membership?.role === 'dev' &&
     world?.membership?.status === 'approved';
   const isMember = world?.membership?.status === 'approved';
   const isPending = world?.membership?.status === 'pending';
 
+  // FIX 3: handleJoin with correct catch structure
   const handleJoin = async () => {
     setJoining(true);
     try {
       await api.post(`/worlds/${id}/join`);
+      setSuccessMessage('Successfully joined the world!');
+      setTimeout(() => setSuccessMessage(''), 3000);
       fetchData();
-    } catch {}
+    } catch (err) {
+      setErrorMessage('Failed to join world. Please try again.');
+      console.error('Join error:', err);
+    }
     setJoining(false);
   };
 
+  // FIX 4: handleAnnouncement with correct catch structure
   const handleAnnouncement = async (e) => {
     e.preventDefault();
+    if (!annTitle.trim() || !annContent.trim()) {
+      setErrorMessage('Please fill in all fields');
+      return;
+    }
     try {
       await api.post(`/posts/world/${id}/announcements`, {
         title: annTitle,
@@ -81,12 +161,22 @@ export default function WorldDetail() {
       setShowAnnForm(false);
       setAnnTitle('');
       setAnnContent('');
+      setSuccessMessage('Announcement posted successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
       fetchData();
-    } catch {}
+    } catch (err) {
+      setErrorMessage('Failed to post announcement. Please try again.');
+      console.error('Announcement error:', err);
+    }
   };
 
+  // FIX 5: handleCreateEvent with setEventForm and fetchData inside try
   const handleCreateEvent = async (e) => {
     e.preventDefault();
+    if (!eventForm.title.trim() || !eventForm.description.trim()) {
+      setErrorMessage('Please fill in event title and description');
+      return;
+    }
     try {
       await api.post(`/events/world/${id}`, eventForm);
       setShowEventForm(false);
@@ -97,12 +187,22 @@ export default function WorldDetail() {
         start_date: '',
         end_date: '',
       });
+      setSuccessMessage('Event created successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
       fetchData();
-    } catch {}
+    } catch (err) {
+      setErrorMessage('Failed to create event. Please try again.');
+      console.error('Event creation error:', err);
+    }
   };
 
+  // FIX 6: handleProposal with correct structure, no stray alert
   const handleProposal = async (e) => {
     e.preventDefault();
+    if (!proposalForm.title.trim() || !proposalForm.description.trim()) {
+      setErrorMessage('Please fill in proposal title and description');
+      return;
+    }
     try {
       await api.post(`/events/world/${id}`, {
         ...proposalForm,
@@ -110,8 +210,13 @@ export default function WorldDetail() {
       });
       setShowProposalForm(false);
       setProposalForm({ title: '', description: '' });
-      alert('Small event proposed! Waiting for Dev approval.');
-    } catch {}
+      setSuccessMessage('Small event proposed! Waiting for Dev approval.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      fetchData();
+    } catch (err) {
+      setErrorMessage('Failed to submit proposal. Please try again.');
+      console.error('Proposal error:', err);
+    }
   };
 
   if (loading)
@@ -125,8 +230,23 @@ export default function WorldDetail() {
 
   const openEvents = events.filter((e) => e.status === 'open');
   const closedEvents = events.filter((e) => e.status === 'closed');
+  // FIX 8: Define approvedSmall (proposed events awaiting approval)
+  const proposedEvents = events.filter((e) => e.status === 'proposed');
+
   return (
     <div>
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-3 mb-4 text-green-300 text-sm">
+          ✓ {successMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3 mb-4 text-red-300 text-sm">
+          ✕ {errorMessage}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 mb-6">
         <div className="flex items-start justify-between">
@@ -195,80 +315,104 @@ export default function WorldDetail() {
 
       {/* Lore Tab - Timeline */}
       {tab === 'lore' && (
-        <div>
-          <h2 className="text-xl font-bold text-dark-100 mb-4">
-            World Lore Timeline
-          </h2>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-dark-100">
+                World Lore Timeline
+              </h2>
+              <p className="text-sm text-dark-500">
+                Follow the approved lore events that shape this world.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-dark-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-primary-500"></span>
+                Big event
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-dark-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-dark-600 border border-dark-400"></span>
+                Small event
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-dark-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-green-500"></span>
+                Open
+              </span>
+            </div>
+          </div>
           {events.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">
+            <div className="text-dark-400 text-center bg-dark-900 border border-dark-700 rounded-xl py-10">
               No events in this world&apos;s lore yet.
-            </p>
+            </div>
           ) : (
-            <div className="relative">
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
-              {events.map((event) => (
-                <div key={event.id} className="relative pl-14 pb-8">
+            <div className="relative pl-10 sm:pl-0">
+              <div className="absolute left-4 top-3 bottom-3 w-0.5 bg-dark-700 sm:left-1/2 sm:-translate-x-1/2"></div>
+              {events.map((event, index) => {
+                const alignRight = index % 2 === 0;
+                const itemAlignment = alignRight
+                  ? 'sm:ml-auto sm:pl-10'
+                  : 'sm:mr-auto sm:pr-10';
+
+                return (
                   <div
-                    className={`absolute left-4 w-5 h-5 rounded-full border-2 ${
-                      event.event_type === 'big'
-                        ? 'bg-primary-500 border-primary-400'
-                        : 'bg-dark-600 border-dark-500'
-                    } ${event.status === 'open' ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-dark-950' : ''}`}
-                  ></div>
-                  <Link
-                    to={`/events/${event.id}`}
-                    className={`block bg-dark-900 border rounded-xl p-4 transition hover:border-primary-600 ${
-                      event.event_type === 'big'
-                        ? 'border-primary-800'
-                        : 'border-dark-700'
-                    }`}
+                    key={event.id}
+                    className={`relative pb-8 last:pb-0 sm:w-1/2 ${itemAlignment}`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          event.event_type === 'big'
-                            ? 'bg-primary-900/50 text-primary-300'
-                            : 'bg-dark-700 text-dark-300'
-                        }`}
-                      >
-                        {event.event_type === 'big'
-                          ? 'BIG EVENT'
-                          : 'SMALL EVENT'}
-                      </span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          event.status === 'open'
-                            ? 'bg-green-900/50 text-green-300'
-                            : 'bg-dark-700 text-dark-400'
-                        }`}
-                      >
-                        {event.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <h3
-                      className={`font-semibold mb-1 ${event.event_type === 'big' ? 'text-lg text-dark-100' : 'text-base text-dark-200'}`}
+                    <div
+                      className={`absolute -left-[1.9rem] top-5 h-5 w-5 rounded-full border-2 sm:left-auto ${
+                        alignRight ? 'sm:-left-2.5' : 'sm:-right-2.5'
+                      } ${getTimelineNodeClasses(event)}`}
+                      aria-hidden="true"
+                    />
+                    <Link
+                      to={`/events/${event.id}`}
+                      className={`block bg-dark-900 border rounded-xl p-4 transition ${getTimelineCardBorder(event)}`}
                     >
-                      {event.title}
-                    </h3>
-                    <p className="text-dark-400 text-sm line-clamp-2">
-                      {event.description}
-                    </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-dark-500">
-                      {event.start_date && (
-                        <span>
-                          📅 {new Date(event.start_date).toLocaleDateString()}
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${getTimelineTypeClasses(event)}`}
+                        >
+                          {event.event_type === 'big'
+                            ? 'BIG EVENT'
+                            : 'SMALL EVENT'}
                         </span>
-                      )}
-                      {event.end_date && (
-                        <span>
-                          → {new Date(event.end_date).toLocaleDateString()}
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                            timelineStatusClasses[event.status] ||
+                            timelineStatusClasses.closed
+                          }`}
+                        >
+                          {event.status.toUpperCase()}
                         </span>
-                      )}
-                      <span>📝 {event.post_count} posts</span>
-                    </div>
-                  </Link>
-                </div>
-              ))}
+                        <span className="text-xs text-dark-500">
+                          {getTimelineDateLabel(event)}
+                        </span>
+                      </div>
+                      <h3
+                        className={`font-semibold mb-1 ${getTimelineTitleClasses(event)}`}
+                      >
+                        {event.title}
+                      </h3>
+                      <p className="text-dark-400 text-sm line-clamp-2">
+                        {event.description || 'No description'}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-dark-500">
+                        {event.start_date && (
+                          <span>
+                            📅 {new Date(event.start_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        {event.end_date && (
+                          <span>
+                            → {new Date(event.end_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span>📝 {event.post_count} posts</span>
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -277,145 +421,201 @@ export default function WorldDetail() {
       {/* Events Tab */}
       {tab === 'events' && (
         <div className="space-y-6">
-          {/* Ongoing Events */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-dark-100">
-                🔴 Ongoing Events
-              </h2>
-              {isDev && (
-                <button
-                  onClick={() => setShowEventForm(!showEventForm)}
-                  className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition"
-                >
-                  + New Event
-                </button>
-              )}
-            </div>
-
-            {showEventForm && (
-              <form
-                onSubmit={handleCreateEvent}
-                className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-4 space-y-3"
-              >
-                <input
-                  type="text"
-                  placeholder="Event title"
-                  value={eventForm.title}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, title: e.target.value })
-                  }
-                  required
-                  className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500"
-                />
-                <textarea
-                  placeholder="Event description"
-                  value={eventForm.description}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, description: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
-                />
-                <div className="flex gap-3">
-                  <select
-                    value={eventForm.event_type}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, event_type: e.target.value })
-                    }
-                    className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100"
-                  >
-                    <option value="big">Big Event</option>
-                    <option value="small">Small Event</option>
-                  </select>
-                  <input
-                    type="datetime-local"
-                    value={eventForm.start_date}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, start_date: e.target.value })
-                    }
-                    className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100"
-                  />
-                  <input
-                    type="datetime-local"
-                    value={eventForm.end_date}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, end_date: e.target.value })
-                    }
-                    className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                >
-                  Create Event
-                </button>
-              </form>
-            )}
-
-            {openEvents.length === 0 ? (
-              <p className="text-dark-400 text-sm">No ongoing events</p>
-            ) : (
-              <div className="space-y-3">
-                {openEvents.map((event) => (
-                  <Link
-                    key={event.id}
-                    to={`/events/${event.id}`}
-                    className="block bg-dark-900 border border-green-800 rounded-xl p-4 hover:border-green-600 transition"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'}`}
-                      >
-                        {event.event_type.toUpperCase()}
-                      </span>
-                      <span className="text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded-full">
-                        OPEN
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-dark-100">
-                      {event.title}
-                    </h3>
-                    <p className="text-dark-400 text-sm">{event.description}</p>
-                    <div className="text-xs text-dark-500 mt-2">
-                      {event.start_date && (
-                        <span>
-                          📅 {new Date(event.start_date).toLocaleDateString()}
-                        </span>
-                      )}
-                      {event.end_date && (
-                        <span>
-                          {' '}
-                          → {new Date(event.end_date).toLocaleDateString()}
-                        </span>
-                      )}
-                      <span className="ml-3">📝 {event.post_count} posts</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+          {/* Event Sub-Tabs */}
+          <div className="flex gap-2 bg-dark-900 rounded-xl p-2 border border-dark-700 w-fit">
+            <button
+              onClick={() => setEventSubTab('ongoing')}
+              className={`py-1.5 px-4 rounded-lg text-sm font-medium transition ${
+                eventSubTab === 'ongoing'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              🔴 Ongoing
+            </button>
+            <button
+              onClick={() => setEventSubTab('proposed')}
+              className={`py-1.5 px-4 rounded-lg text-sm font-medium transition ${
+                eventSubTab === 'proposed'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              💡 Proposed
+            </button>
+            <button
+              onClick={() => setEventSubTab('post')}
+              className={`py-1.5 px-4 rounded-lg text-sm font-medium transition ${
+                eventSubTab === 'post'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              📜 Past
+            </button>
           </div>
 
-          {/* Small Event Proposals */}
-          {isMember && !isDev && (
+          {/* FIX 7: Ongoing Events — single render block */}
+          {eventSubTab === 'ongoing' && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-bold text-dark-100">
-                  💡 Propose Small Event
+                  🔴 Ongoing Events
                 </h2>
-                <button
-                  onClick={() => setShowProposalForm(!showProposalForm)}
-                  className="bg-dark-700 hover:bg-dark-600 text-dark-200 px-4 py-1.5 rounded-lg text-sm font-medium transition"
-                >
-                  + Propose
-                </button>
+                {isDev && (
+                  <button
+                    onClick={() => setShowEventForm(!showEventForm)}
+                    className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition"
+                  >
+                    + New Event
+                  </button>
+                )}
               </div>
+
+              {showEventForm && (
+                <form
+                  onSubmit={handleCreateEvent}
+                  className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-4 space-y-3"
+                >
+                  <input
+                    type="text"
+                    placeholder="Event title"
+                    value={eventForm.title}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, title: e.target.value })
+                    }
+                    required
+                    className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500"
+                  />
+                  <textarea
+                    placeholder="Event description"
+                    value={eventForm.description}
+                    onChange={(e) =>
+                      setEventForm({
+                        ...eventForm,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
+                  />
+                  <div className="flex gap-3">
+                    <select
+                      value={eventForm.event_type}
+                      onChange={(e) =>
+                        setEventForm({
+                          ...eventForm,
+                          event_type: e.target.value,
+                        })
+                      }
+                      className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100"
+                    >
+                      <option value="big">Big Event</option>
+                      <option value="small">Small Event</option>
+                    </select>
+                    <input
+                      type="datetime-local"
+                      value={eventForm.start_date}
+                      onChange={(e) =>
+                        setEventForm({
+                          ...eventForm,
+                          start_date: e.target.value,
+                        })
+                      }
+                      className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={eventForm.end_date}
+                      onChange={(e) =>
+                        setEventForm({
+                          ...eventForm,
+                          end_date: e.target.value,
+                        })
+                      }
+                      className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                  >
+                    Create Event
+                  </button>
+                </form>
+              )}
+
+              {openEvents.length === 0 ? (
+                <p className="text-dark-400 text-sm">No ongoing events</p>
+              ) : (
+                <div className="space-y-3">
+                  {openEvents.map((event) => (
+                    <Link
+                      key={event.id}
+                      to={`/events/${event.id}`}
+                      className="block bg-dark-900 border border-green-800 rounded-xl p-4 hover:border-green-600 transition"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'}`}
+                        >
+                          {event.event_type.toUpperCase()}
+                        </span>
+                        <span className="text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded-full">
+                          OPEN
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-dark-100">
+                        {event.title}
+                      </h3>
+                      <p className="text-dark-400 text-sm">
+                        {event.description}
+                      </p>
+                      <div className="text-xs text-dark-500 mt-2">
+                        {event.start_date && (
+                          <span>
+                            📅{' '}
+                            {new Date(event.start_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        {event.end_date && (
+                          <span className="ml-1">
+                            → {new Date(event.end_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className="ml-3">
+                          📝 {event.post_count} posts
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* FIX 9: Proposed Events — single header, single form */}
+          {eventSubTab === 'proposed' && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-bold text-dark-100">
+                  💡 Proposed Events
+                </h2>
+                {isMember && (
+                  <button
+                    onClick={() => setShowProposalForm(!showProposalForm)}
+                    className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition"
+                  >
+                    + Propose Event
+                  </button>
+                )}
+              </div>
+
+              {/* FIX 10: Single proposal form */}
               {showProposalForm && (
                 <form
                   onSubmit={handleProposal}
-                  className="bg-dark-900 border border-dark-700 rounded-xl p-4 space-y-3"
+                  className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-4 space-y-3"
                 >
                   <input
                     type="text"
@@ -442,49 +642,101 @@ export default function WorldDetail() {
                     rows={3}
                     className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
                   />
-                  <button
-                    type="submit"
-                    className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                  >
-                    Submit Proposal
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                    >
+                      Submit Proposal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowProposalForm(false)}
+                      className="bg-dark-700 hover:bg-dark-600 text-dark-200 px-4 py-2 rounded-lg text-sm font-medium transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </form>
+              )}
+
+              {proposedEvents.length === 0 ? (
+                <p className="text-dark-400 text-sm">
+                  No proposed events waiting for approval yet.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {proposedEvents.map((event) => (
+                    <Link
+                      key={event.id}
+                      to={`/events/${event.id}`}
+                      className="block bg-dark-900 border border-yellow-800 rounded-xl p-4 hover:border-yellow-600 transition"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-900/50 text-yellow-300">
+                          SMALL EVENT
+                        </span>
+                        <span className="text-xs bg-yellow-900/50 text-yellow-300 px-2 py-0.5 rounded-full">
+                          PENDING
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-dark-100">
+                        {event.title}
+                      </h3>
+                      <p className="text-dark-400 text-sm">
+                        {event.description}
+                      </p>
+                      {event.created_by_name && (
+                        <div className="text-xs text-dark-500 mt-2">
+                          Proposed by:{' '}
+                          <span className="text-dark-300">
+                            {event.created_by_name}
+                          </span>
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
           )}
 
           {/* Past Events */}
-          {closedEvents.length > 0 && (
+          {eventSubTab === 'post' && (
             <div>
               <h2 className="text-xl font-bold text-dark-100 mb-3">
                 📜 Past Events
               </h2>
-              <div className="space-y-3">
-                {closedEvents.map((event) => (
-                  <Link
-                    key={event.id}
-                    to={`/events/${event.id}`}
-                    className="block bg-dark-900 border border-dark-700 rounded-xl p-4 hover:border-dark-500 transition opacity-75"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'}`}
-                      >
-                        {event.event_type.toUpperCase()}
+              {closedEvents.length === 0 ? (
+                <p className="text-dark-400 text-sm">No past events yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {closedEvents.map((event) => (
+                    <Link
+                      key={event.id}
+                      to={`/events/${event.id}`}
+                      className="block bg-dark-900 border border-dark-700 rounded-xl p-4 hover:border-dark-500 transition opacity-75"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'}`}
+                        >
+                          {event.event_type.toUpperCase()}
+                        </span>
+                        <span className="text-xs bg-dark-700 text-dark-400 px-2 py-0.5 rounded-full">
+                          CLOSED
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-dark-200">
+                        {event.title}
+                      </h3>
+                      <span className="text-xs text-dark-500 mt-2 block">
+                        📝 {event.post_count} posts
                       </span>
-                      <span className="text-xs bg-dark-700 text-dark-400 px-2 py-0.5 rounded-full">
-                        CLOSED
-                      </span>
-                    </div>
-                    <h3 className="font-semibold text-dark-200">
-                      {event.title}
-                    </h3>
-                    <span className="text-xs text-dark-500">
-                      📝 {event.post_count} posts
-                    </span>
-                  </Link>
-                ))}
-              </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -607,6 +859,7 @@ export default function WorldDetail() {
                         <span className="text-dark-100 font-medium">
                           {m.display_name}
                         </span>
+                        {' '}
                         <span className="text-dark-500 text-sm ml-2">
                           @{m.username}
                         </span>
