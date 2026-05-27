@@ -30,7 +30,8 @@ export default function WorldManage() {
 
   const handleMember = async (memberId, status) => {
     try {
-      await api.patch(`/worlds/${id}/members/${memberId}`, { status });
+      const safeMemberId = encodeURIComponent(String(memberId));
+      await api.patch(`/worlds/${id}/members/${safeMemberId}`, { status });
       setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
     } catch {}
   };
