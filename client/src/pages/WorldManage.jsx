@@ -4,7 +4,8 @@ import api from '../services/api.js';
 
 export default function WorldManage() {
   const { id } = useParams();
-  const safeWorldId = encodeURIComponent(String(id));
+  const worldId = Number(id);
+  const hasValidWorldId = Number.isInteger(worldId) && worldId > 0;
   const [pendingMembers, setPendingMembers] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
   const [proposedEvents, setProposedEvents] = useState([]);
@@ -12,11 +13,16 @@ export default function WorldManage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
+    if (!hasValidWorldId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const [membersRes, postsRes, eventsRes] = await Promise.all([
-        api.get(`/worlds/${safeWorldId}/members/pending`),
-        api.get(`/posts/world/${safeWorldId}/pending`),
-        api.get(`/events/world/${safeWorldId}/proposed`),
+        api.get(`/worlds/${worldId}/members/pending`),
+        api.get(`/posts/world/${worldId}/pending`),
+        api.get(`/events/world/${worldId}/proposed`),
       ]);
       setPendingMembers(membersRes.data);
       setPendingPosts(postsRes.data);
@@ -30,9 +36,13 @@ export default function WorldManage() {
   }, [id]);
 
   const handleMember = async (memberId, status) => {
+    const safeMemberId = Number(memberId);
+    if (!Number.isInteger(safeMemberId) || safeMemberId <= 0 || !hasValidWorldId) {
+      return;
+    }
+
     try {
-      const safeMemberId = encodeURIComponent(String(memberId));
-      await api.patch(`/worlds/${safeWorldId}/members/${safeMemberId}`, {
+      await api.patch(`/worlds/${worldId}/members/${safeMemberId}`, {
         status,
       });
       setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
@@ -40,8 +50,12 @@ export default function WorldManage() {
   };
 
   const handlePost = async (postId, action) => {
+    const safePostId = Number(postId);
+    if (!Number.isInteger(safePostId) || safePostId <= 0) {
+      return;
+    }
+
     try {
-      const safePostId = encodeURIComponent(String(postId));
       if (action === 'approve') {
         await api.patch(`/posts/${safePostId}/approve`);
       } else if (action === 'reject') {
@@ -52,8 +66,12 @@ export default function WorldManage() {
   };
 
   const handleEvent = async (eventId, status) => {
+    const safeEventId = Number(eventId);
+    if (!Number.isInteger(safeEventId) || safeEventId <= 0) {
+      return;
+    }
+
     try {
-      const safeEventId = encodeURIComponent(String(eventId));
       await api.patch(`/events/${safeEventId}`, { status });
       setProposedEvents(proposedEvents.filter((e) => e.id !== eventId));
     } catch {}
@@ -66,7 +84,7 @@ export default function WorldManage() {
     <div>
       <div className="flex items-center gap-4 mb-6">
         <Link
-          to={`/worlds/${safeWorldId}`}
+          to={`/worlds/${worldId}`}
           className="text-dark-400 hover:text-dark-200 transition"
         >
           ← Back to World
