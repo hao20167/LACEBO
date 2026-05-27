@@ -4,6 +4,7 @@ import api from '../services/api.js';
 
 export default function WorldManage() {
   const { id } = useParams();
+  const safeWorldId = encodeURIComponent(String(id));
   const [pendingMembers, setPendingMembers] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
   const [proposedEvents, setProposedEvents] = useState([]);
@@ -13,9 +14,9 @@ export default function WorldManage() {
   const fetchData = async () => {
     try {
       const [membersRes, postsRes, eventsRes] = await Promise.all([
-        api.get(`/worlds/${id}/members/pending`),
-        api.get(`/posts/world/${id}/pending`),
-        api.get(`/events/world/${id}/proposed`),
+        api.get(`/worlds/${safeWorldId}/members/pending`),
+        api.get(`/posts/world/${safeWorldId}/pending`),
+        api.get(`/events/world/${safeWorldId}/proposed`),
       ]);
       setPendingMembers(membersRes.data);
       setPendingPosts(postsRes.data);
@@ -31,17 +32,20 @@ export default function WorldManage() {
   const handleMember = async (memberId, status) => {
     try {
       const safeMemberId = encodeURIComponent(String(memberId));
-      await api.patch(`/worlds/${id}/members/${safeMemberId}`, { status });
+      await api.patch(`/worlds/${safeWorldId}/members/${safeMemberId}`, {
+        status,
+      });
       setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
     } catch {}
   };
 
   const handlePost = async (postId, action) => {
     try {
+      const safePostId = encodeURIComponent(String(postId));
       if (action === 'approve') {
-        await api.patch(`/posts/${postId}/approve`);
+        await api.patch(`/posts/${safePostId}/approve`);
       } else if (action === 'reject') {
-        await api.patch(`/posts/${postId}/reject`);
+        await api.patch(`/posts/${safePostId}/reject`);
       }
       setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
     } catch {}
@@ -49,7 +53,8 @@ export default function WorldManage() {
 
   const handleEvent = async (eventId, status) => {
     try {
-      await api.patch(`/events/${eventId}`, { status });
+      const safeEventId = encodeURIComponent(String(eventId));
+      await api.patch(`/events/${safeEventId}`, { status });
       setProposedEvents(proposedEvents.filter((e) => e.id !== eventId));
     } catch {}
   };
@@ -61,7 +66,7 @@ export default function WorldManage() {
     <div>
       <div className="flex items-center gap-4 mb-6">
         <Link
-          to={`/worlds/${id}`}
+          to={`/worlds/${safeWorldId}`}
           className="text-dark-400 hover:text-dark-200 transition"
         >
           ← Back to World
