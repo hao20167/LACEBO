@@ -94,7 +94,33 @@ export default function WorldDetail() {
 
   const openEvents = events.filter(e => e.status === 'open');
   const closedEvents = events.filter(e => e.status === 'closed');
-  const approvedSmall = events.filter(e => e.event_type === 'small' && e.status === 'approved');
+  // Đã xóa biến approvedSmall không sử dụng ở đây
+
+  // Hàm xử lý hiển thị các nút thao tác ở Header
+  const renderActionButtons = () => {
+    if (!user) {
+      return <Link to="/login" className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Login to Join</Link>;
+    }
+    if (isPending) {
+      return <span className="bg-yellow-900/30 text-yellow-300 px-4 py-2 rounded-lg text-sm">Pending Approval</span>;
+    }
+    if (!isMember) {
+      return (
+        <button onClick={handleJoin} disabled={joining} className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
+          {joining ? 'Joining...' : 'Join World'}
+        </button>
+      );
+    }
+    return null;
+  };
+
+  // Hàm xử lý hiển thị thứ hạng trong Leaderboard
+  const getRankDisplay = (index) => {
+    if (index === 0) return '🥇';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return index + 1;
+  };
 
   return (
     <div>
@@ -113,15 +139,7 @@ export default function WorldDetail() {
             </div>
           </div>
           <div className="flex gap-2">
-            {!user ? (
-              <Link to="/login" className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Login to Join</Link>
-            ) : isPending ? (
-              <span className="bg-yellow-900/30 text-yellow-300 px-4 py-2 rounded-lg text-sm">Pending Approval</span>
-            ) : !isMember ? (
-              <button onClick={handleJoin} disabled={joining} className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
-                {joining ? 'Joining...' : 'Join World'}
-              </button>
-            ) : null}
+            {renderActionButtons()}
             {isDev && (
               <Link to={`/worlds/${id}/manage`} className="bg-dark-700 hover:bg-dark-600 text-dark-200 px-4 py-2 rounded-lg text-sm font-medium transition">
                 Manage
@@ -367,7 +385,7 @@ export default function WorldDetail() {
                   {leaderboard.map((m, i) => (
                     <tr key={m.id} className="border-b border-dark-800 hover:bg-dark-800/50 transition">
                       <td className="px-4 py-3 text-dark-400 font-medium">
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                        {getRankDisplay(i)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-dark-100 font-medium">{m.display_name}</span>
