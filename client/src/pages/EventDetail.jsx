@@ -1,175 +1,7 @@
-/* eslint-disable react/prop-types */
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api, { getApiErrorMessage } from '../services/api.js';
-
-const formatDate = (value) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString();
-};
-
-const statusClasses = {
-  open: 'bg-green-900/50 text-green-300 border-green-800',
-  closed: 'bg-dark-800 text-dark-300 border-dark-700',
-  approved: 'bg-blue-900/50 text-blue-300 border-blue-800',
-  proposed: 'bg-yellow-900/40 text-yellow-300 border-yellow-800',
-};
-
-function LikeButton({ liked, count, disabled, onToggle }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      disabled={disabled}
-      className={`text-sm px-3 py-1.5 rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-60 ${
-        liked
-          ? 'bg-primary-900/50 text-primary-300 border-primary-700'
-          : 'bg-dark-800 text-dark-300 border-dark-700 hover:border-dark-500'
-      }`}
-    >
-      {liked ? 'Liked' : 'Like'} ({count || 0})
-    </button>
-  );
-}
-
-function Comments({ postId, user, onCommentCreated }) {
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [content, setContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [formMessage, setFormMessage] = useState('');
-
-  const fetchComments = useCallback(async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await api.get(`/posts/${postId}/comments`);
-      setComments(res.data);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load comments'));
-    } finally {
-      setLoading(false);
-    }
-  }, [postId]);
-
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const trimmedContent = content.trim();
-    if (!trimmedContent) return;
-
-    setSubmitting(true);
-    setFormMessage('');
-
-    try {
-      const res = await api.post(`/posts/${postId}/comments`, {
-        content: trimmedContent,
-      });
-      setComments((currentComments) => [...currentComments, res.data]);
-      setContent('');
-      onCommentCreated(postId);
-    } catch (err) {
-      setFormMessage(getApiErrorMessage(err, 'Failed to add comment'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  let commentsContent;
-  if (loading) {
-    commentsContent = (
-      <p className="text-sm text-dark-500">Loading comments...</p>
-    );
-  } else if (error) {
-    commentsContent = (
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-red-300">{error}</p>
-        <button
-          type="button"
-          onClick={fetchComments}
-          className="self-start text-sm text-primary-400 hover:text-primary-300"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  } else if (comments.length === 0) {
-    commentsContent = <p className="text-sm text-dark-500">No comments yet.</p>;
-  } else {
-    commentsContent = (
-      <div className="space-y-3">
-        {comments.map((comment) => (
-          <div key={comment.id} className="rounded-lg bg-dark-800/70 p-3">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-              <span className="text-sm font-medium text-dark-100">
-                {comment.display_name || comment.username}
-              </span>
-              <span className="text-xs text-dark-500">
-                @{comment.username}
-                {comment.created_at
-                  ? ` - ${new Date(comment.created_at).toLocaleString()}`
-                  : ''}
-              </span>
-            </div>
-            <p className="text-sm text-dark-300 whitespace-pre-wrap">
-              {comment.content}
-            </p>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  let commentForm;
-  if (user) {
-    commentForm = (
-      <form onSubmit={handleSubmit} className="mt-4 space-y-2">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write a comment..."
-          required
-          rows={3}
-          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
-        />
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="submit"
-            disabled={submitting || !content.trim()}
-            className="self-start bg-dark-700 hover:bg-dark-600 text-dark-100 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50"
-          >
-            {submitting ? 'Commenting...' : 'Comment'}
-          </button>
-          {formMessage && (
-            <p className="text-sm text-dark-400">{formMessage}</p>
-          )}
-        </div>
-      </form>
-    );
-  } else {
-    commentForm = (
-      <p className="mt-4 text-sm text-dark-500">
-        Login and join this world to comment.
-      </p>
-    );
-  }
-
-  return (
-    <div className="mt-4 border-t border-dark-800 pt-4">
-      <h3 className="text-sm font-semibold text-dark-200 mb-3">Comments</h3>
-      {commentsContent}
-      {commentForm}
-    </div>
-  );
-}
+import api from '../services/api';
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -177,310 +9,197 @@ export default function EventDetail() {
   const [event, setEvent] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [postContent, setPostContent] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [formMessage, setFormMessage] = useState('');
+  const [newPost, setNewPost] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [expandedComments, setExpandedComments] = useState({});
+  const [comments, setComments] = useState({});
+  const [newComment, setNewComment] = useState({});
 
-  const fetchEventData = useCallback(async () => {
-    setLoading(true);
-    setError('');
-
+  const fetchData = async () => {
     try {
       const [eventRes, postsRes] = await Promise.all([
         api.get(`/events/${eventId}`),
-        api.get(`/posts/event/${eventId}`),
+        api.get(`/posts/event/${eventId}`)
       ]);
       setEvent(eventRes.data);
       setPosts(postsRes.data);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load event'));
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    fetchEventData();
-  }, [fetchEventData]);
-
-  const handleCreatePost = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setFormMessage('');
-
-    try {
-      const res = await api.post(`/posts/event/${eventId}`, {
-        content: postContent.trim(),
-        image_url: imageUrl.trim() || undefined,
-      });
-
-      setPostContent('');
-      setImageUrl('');
-
-      if (res.data?.status === 'approved') {
-        setFormMessage('Post published.');
-        await fetchEventData();
-      } else {
-        setFormMessage('Post submitted and waiting for dev approval.');
-      }
-    } catch (err) {
-      setFormMessage(getApiErrorMessage(err, 'Failed to create post'));
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { }
+    setLoading(false);
   };
 
-  const handleToggleLike = async (postId) => {
-    if (!user) return;
+  useEffect(() => { fetchData(); }, [eventId]);
 
-    const oldPost = posts.find((post) => post.id === postId);
-    if (!oldPost) return;
+  const handlePost = async (e) => {
+    e.preventDefault();
+    if (!newPost.trim()) return;
+    setPosting(true);
+    try {
+      await api.post(`/posts/event/${eventId}`, { content: newPost });
+      setNewPost('');
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to create post');
+    }
+    setPosting(false);
+  };
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) => {
-        if (post.id !== postId) return post;
-        const liked = !post.liked;
-        return {
-          ...post,
-          liked,
-          like_count: Number(post.like_count || 0) + (liked ? 1 : -1),
-        };
-      }),
-    );
-
+  const handleLike = async (postId) => {
     try {
       const res = await api.post(`/posts/${postId}/like`);
-      setPosts((currentPosts) =>
-        currentPosts.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                liked: res.data.liked,
-                like_count:
-                  Number(oldPost.like_count || 0) + (res.data.liked ? 1 : 0),
-              }
-            : post,
-        ),
-      );
-    } catch {
-      await fetchEventData();
+      setPosts(posts.map(p => {
+        if (p.id === postId) {
+          return { ...p, liked: res.data.liked, like_count: p.like_count + (res.data.liked ? 1 : -1) };
+        }
+        return p;
+      }));
+    } catch { }
+  };
+
+  const toggleComments = async (postId) => {
+    if (expandedComments[postId]) {
+      setExpandedComments({ ...expandedComments, [postId]: false });
+      return;
     }
+    try {
+      const res = await api.get(`/posts/${postId}/comments`);
+      setComments({ ...comments, [postId]: res.data });
+      setExpandedComments({ ...expandedComments, [postId]: true });
+    } catch { }
   };
 
-  const handleCommentCreated = (postId) => {
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comment_count: Number(post.comment_count || 0) + 1,
-            }
-          : post,
-      ),
-    );
+  const handleComment = async (postId) => {
+    const content = newComment[postId];
+    if (!content?.trim()) return;
+    try {
+      const res = await api.post(`/posts/${postId}/comments`, { content });
+      setComments({ ...comments, [postId]: [...(comments[postId] || []), res.data] });
+      setNewComment({ ...newComment, [postId]: '' });
+      setPosts(posts.map(p => p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p));
+    } catch { }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center text-dark-400 py-12">Loading event...</div>
-    );
-  }
+  if (loading) return <div className="text-center text-dark-400 py-12">Loading event...</div>;
+  if (!event) return <div className="text-center text-dark-400 py-12">Event not found</div>;
 
-  if (error || !event) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-dark-300 mb-4">{error || 'Event not found'}</p>
-        <Link to="/worlds" className="text-primary-400 hover:underline">
-          Back to worlds
-        </Link>
-      </div>
-    );
-  }
-
-  const startDate = formatDate(event.start_date);
-  const endDate = formatDate(event.end_date);
   const isOpen = event.status === 'open';
 
-  let createPostContent;
-  if (user) {
-    createPostContent = (
-      <form onSubmit={handleCreatePost} className="space-y-3">
-        <textarea
-          value={postContent}
-          onChange={(e) => setPostContent(e.target.value)}
-          placeholder="Write a post for this event..."
-          required
-          rows={4}
-          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none"
-        />
-        <input
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="Image URL (optional)"
-          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500"
-        />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="submit"
-            disabled={submitting || !postContent.trim()}
-            className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
-          >
-            {submitting ? 'Posting...' : 'Post'}
-          </button>
-          {formMessage && (
-            <p className="text-sm text-dark-400">{formMessage}</p>
-          )}
-        </div>
-      </form>
-    );
-  } else {
-    createPostContent = (
-      <p className="text-sm text-dark-400">
-        You need to login and be an approved member of this world to post.
-      </p>
-    );
-  }
-
-  let postsContent;
-  if (posts.length === 0) {
-    postsContent = (
-      <div className="text-center text-dark-400 bg-dark-900 border border-dark-700 rounded-xl py-10">
-        No approved posts for this event yet.
-      </div>
-    );
-  } else {
-    postsContent = (
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <article
-            key={post.id}
-            className="bg-dark-900 border border-dark-700 rounded-xl p-4"
-          >
-            <div className="flex items-center justify-between gap-4 mb-3">
-              <div>
-                <p className="font-medium text-dark-100">
-                  {post.display_name || post.username}
-                </p>
-                <p className="text-xs text-dark-500">
-                  @{post.username}
-                  {post.created_at
-                    ? ` - ${new Date(post.created_at).toLocaleString()}`
-                    : ''}
-                </p>
-              </div>
-              <span className="text-xs text-dark-500">
-                {post.comment_count || 0} comments
-              </span>
-            </div>
-
-            <p className="text-dark-300 whitespace-pre-wrap mb-3">
-              {post.content}
-            </p>
-
-            {post.image_url && (
-              <img
-                src={post.image_url}
-                alt=""
-                className="max-h-96 w-full object-cover rounded-lg border border-dark-700 mb-3"
-              />
-            )}
-
-            <LikeButton
-              liked={post.liked}
-              count={post.like_count}
-              disabled={!user}
-              onToggle={() => handleToggleLike(post.id)}
-            />
-
-            <Comments
-              postId={post.id}
-              user={user}
-              onCommentCreated={handleCommentCreated}
-            />
-          </article>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <Link
-        to={`/worlds/${event.world_id}`}
-        className="inline-flex text-sm text-primary-400 hover:text-primary-300"
-      >
-        Back to world
-      </Link>
-
-      <section className="bg-dark-900 border border-dark-700 rounded-2xl p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-900/50 text-primary-300">
-                {event.event_type === 'big' ? 'BIG EVENT' : 'SMALL EVENT'}
-              </span>
-              <span
-                className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                  statusClasses[event.status] || statusClasses.closed
-                }`}
-              >
-                {event.status?.toUpperCase()}
-              </span>
-            </div>
-
-            <h1 className="text-3xl font-bold text-dark-100 mb-3">
-              {event.title}
-            </h1>
-            <p className="text-dark-300 whitespace-pre-wrap">
-              {event.description || 'No description'}
-            </p>
-          </div>
-
-          <div className="md:text-right text-sm text-dark-500 space-y-1 shrink-0">
-            {startDate && (
-              <p>
-                <span className="text-dark-400">Start:</span> {startDate}
-              </p>
-            )}
-            {endDate && (
-              <p>
-                <span className="text-dark-400">End:</span> {endDate}
-              </p>
-            )}
-            <p>
-              <span className="text-dark-400">Created by:</span>{' '}
-              {event.creator_display_name || event.creator_name}
-            </p>
-          </div>
+    <div className="max-w-3xl mx-auto">
+      {/* Event Header */}
+      <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'
+          }`}>
+            {event.event_type === 'big' ? 'BIG EVENT' : 'SMALL EVENT'}
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            isOpen ? 'bg-green-900/50 text-green-300' : 'bg-dark-700 text-dark-400'
+          }`}>
+            {event.status.toUpperCase()}
+          </span>
         </div>
-      </section>
+        <h1 className="text-2xl font-bold text-dark-100 mb-2">{event.title}</h1>
+        <p className="text-dark-300 whitespace-pre-wrap mb-3">{event.description}</p>
+        <div className="flex items-center gap-4 text-sm text-dark-500">
+          <span>By {event.creator_display_name}</span>
+          {event.start_date && <span>📅 {new Date(event.start_date).toLocaleDateString()}</span>}
+          {event.end_date && <span>→ {new Date(event.end_date).toLocaleDateString()}</span>}
+        </div>
+      </div>
 
-      {isOpen && (
-        <section className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-dark-100">Create post</h2>
-            {!user && (
-              <Link to="/login" className="text-sm text-primary-400">
-                Login to post
-              </Link>
-            )}
+      {/* Create Post */}
+      {isOpen && user && (
+        <form onSubmit={handlePost} className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-6">
+          <textarea
+            value={newPost} onChange={e => setNewPost(e.target.value)}
+            placeholder="Share your thoughts about this event..."
+            rows={3}
+            className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition resize-none mb-3"
+          />
+          <div className="flex justify-end">
+            <button type="submit" disabled={posting || !newPost.trim()}
+              className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
+              {posting ? 'Posting...' : 'Post'}
+            </button>
           </div>
-
-          {createPostContent}
-        </section>
+        </form>
       )}
 
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-dark-100">Event posts</h2>
-          <span className="text-sm text-dark-500">{posts.length} posts</span>
+      {!isOpen && (
+        <div className="bg-dark-800 border border-dark-700 rounded-xl p-4 mb-6 text-center text-dark-400 text-sm">
+          This event is closed. You can still view the posts.
         </div>
+      )}
 
-        {postsContent}
-      </section>
+      {/* Posts */}
+      {posts.length === 0 ? (
+        <div className="text-center text-dark-400 py-8">No posts yet. Be the first to post!</div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map(post => (
+            <div key={post.id} className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+              {/* Post header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-primary-800 flex items-center justify-center text-sm font-medium text-primary-200">
+                  {post.display_name?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-dark-200">{post.display_name}</span>
+                  <span className="text-xs text-dark-500 ml-2">@{post.username}</span>
+                </div>
+                <span className="text-xs text-dark-500 ml-auto">{new Date(post.created_at).toLocaleString()}</span>
+              </div>
+
+              {/* Post content */}
+              <p className="text-dark-200 whitespace-pre-wrap mb-3">{post.content}</p>
+
+              {/* Post actions */}
+              <div className="flex items-center gap-4 text-sm">
+                <button onClick={() => handleLike(post.id)} 
+                  className={`flex items-center gap-1 transition ${post.liked ? 'text-red-400' : 'text-dark-400 hover:text-red-400'}`}>
+                  {post.liked ? '❤️' : '🤍'} {post.like_count}
+                </button>
+                <button onClick={() => toggleComments(post.id)}
+                  className="flex items-center gap-1 text-dark-400 hover:text-primary-400 transition">
+                  💬 {post.comment_count}
+                </button>
+              </div>
+
+              {/* Comments */}
+              {expandedComments[post.id] && (
+                <div className="mt-3 pt-3 border-t border-dark-700">
+                  {(comments[post.id] || []).map(c => (
+                    <div key={c.id} className="flex gap-2 mb-3">
+                      <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5">
+                        {c.display_name?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
+                        <span className="text-xs text-dark-500 ml-2">{new Date(c.created_at).toLocaleString()}</span>
+                        <p className="text-dark-300 text-sm">{c.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {user && (
+                    <div className="flex gap-2 mt-2">
+                      <input type="text" placeholder="Write a comment..."
+                        value={newComment[post.id] || ''}
+                        onChange={e => setNewComment({ ...newComment, [post.id]: e.target.value })}
+                        onKeyDown={e => e.key === 'Enter' && handleComment(post.id)}
+                        className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition" />
+                      <button onClick={() => handleComment(post.id)}
+                        className="bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
+                        Send
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
