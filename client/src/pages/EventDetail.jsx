@@ -207,7 +207,7 @@ export default function EventDetail() {
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                   <span className="text-xs text-dark-500">{new Date(post.created_at).toLocaleString()}</span>
-                  {user?.id === post.user_id && (
+                  {post.can_delete && (
                     <div className="relative">
                       <button
                         type="button"
@@ -218,13 +218,15 @@ export default function EventDetail() {
                       </button>
                       {openMenuPostId === post.id && (
                         <div className="absolute right-0 z-20 mt-2 w-36 overflow-hidden rounded-2xl border border-dark-700 bg-dark-900 shadow-2xl">
-                          <button
-                            type="button"
-                            onClick={() => startEditingPost(post)}
-                            className="w-full px-4 py-3 text-left text-sm text-dark-100 hover:bg-dark-800"
-                          >
-                            Sửa
-                          </button>
+                          {post.user_id === user?.id && (
+                            <button
+                              type="button"
+                              onClick={() => startEditingPost(post)}
+                              className="w-full px-4 py-3 text-left text-sm text-dark-100 hover:bg-dark-800"
+                            >
+                              Sửa
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => confirmDeletePost(post)}

@@ -115,6 +115,16 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
       post.liked = false;
     }
   }
+  // Add permission info: whether current user can delete/manage the post
+  if (req.user) {
+    for (const post of posts) {
+      post.can_delete = post.user_id === req.user.id || isDev(post.world_id, req.user.id);
+    }
+  } else {
+    for (const post of posts) {
+      post.can_delete = false;
+    }
+  }
   res.json(posts);
 });
 
@@ -250,7 +260,7 @@ router.post('/:postId/like', authMiddleware, (req, res) => {
 router.delete('/:postId', authMiddleware, (req, res) => {
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (post.user_id !== req.user.id)
+  if (post.user_id !== req.user.id && !isDev(post.world_id, req.user.id))
     return res.status(403).json({ error: 'You can only delete your own posts' });
 
   db.prepare('DELETE FROM posts WHERE id = ?').run(post.id);
