@@ -246,8 +246,34 @@ router.post('/:postId/like', authMiddleware, (req, res) => {
   }
 });
 
+// Delete a post if the requesting user is the author
+router.delete('/:postId', authMiddleware, (req, res) => {
+  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  if (post.user_id !== req.user.id)
+    return res.status(403).json({ error: 'You can only delete your own posts' });
+
+  db.prepare('DELETE FROM posts WHERE id = ?').run(post.id);
+  res.json({ success: true });
+});
+// Update a post's content if the requesting user is the author
+router.patch('/:postId', authMiddleware, (req, res) => {
+  const { content } = req.body;
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: 'Content required' });
+  }
+
+  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  if (post.user_id !== req.user.id)
+    return res.status(403).json({ error: 'You can only edit your own posts' });
+
+  db.prepare('UPDATE posts SET content = ? WHERE id = ?').run(content.trim(), post.id);
+  const updatedPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(post.id);
+  res.json(updatedPost);
+});
 // Get comments for a post
-router.get('/:postId/comments', optionalAuth, (req, res) => {
+router.get('/:postId/comments', optionalAuth, (req, res) =>{
   const comments = db
     .prepare(
       `
