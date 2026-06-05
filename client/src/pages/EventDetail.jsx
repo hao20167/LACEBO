@@ -14,6 +14,10 @@ export default function EventDetail() {
   const [expandedComments, setExpandedComments] = useState({});
   const [comments, setComments] = useState({});
   const [newComment, setNewComment] = useState({});
+  const [postToDelete, setPostToDelete] = useState(null);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [openMenuPostId, setOpenMenuPostId] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -53,6 +57,59 @@ export default function EventDetail() {
         return p;
       }));
     } catch { }
+  };
+
+  const confirmDeletePost = (post) => {
+    setPostToDelete(post);
+    setOpenMenuPostId(null);
+  };
+
+  const cancelDeletePost = () => {
+    setPostToDelete(null);
+  };
+
+  const togglePostMenu = (postId) => {
+    setOpenMenuPostId(openMenuPostId === postId ? null : postId);
+  };
+
+  const startEditingPost = (post) => {
+    setOpenMenuPostId(null);
+    setEditingPostId(post.id);
+    setEditContent(post.content || '');
+  };
+
+  const cancelEditingPost = () => {
+    setEditingPostId(null);
+    setEditContent('');
+  };
+
+  const saveEditedPost = async () => {
+    if (!editingPostId || !editContent.trim()) return;
+
+    try {
+      const res = await api.patch(`/posts/${editingPostId}`, {
+        content: editContent.trim(),
+      });
+      setPosts(posts.map((post) =>
+        post.id === editingPostId ? { ...post, content: res.data.content } : post,
+      ));
+      setEditingPostId(null);
+      setEditContent('');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update post');
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+
+    try {
+      await api.delete(`/posts/${postToDelete.id}`);
+      setPosts(posts.filter((post) => post.id !== postToDelete.id));
+      setPostToDelete(null);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete post');
+    }
   };
 
   const toggleComments = async (postId) => {
@@ -148,11 +205,72 @@ export default function EventDetail() {
                   <span className="text-sm font-medium text-dark-200">{post.display_name}</span>
                   <span className="text-xs text-dark-500 ml-2">@{post.username}</span>
                 </div>
-                <span className="text-xs text-dark-500 ml-auto">{new Date(post.created_at).toLocaleString()}</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-dark-500">{new Date(post.created_at).toLocaleString()}</span>
+                  {post.can_delete && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => togglePostMenu(post.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-dark-800 text-dark-400 hover:bg-dark-700 hover:text-dark-100 transition"
+                      >
+                        ...
+                      </button>
+                      {openMenuPostId === post.id && (
+                        <div className="absolute right-0 z-20 mt-2 w-36 overflow-hidden rounded-2xl border border-dark-700 bg-dark-900 shadow-2xl">
+                          {post.user_id === user?.id && (
+                            <button
+                              type="button"
+                              onClick={() => startEditingPost(post)}
+                              className="w-full px-4 py-3 text-left text-sm text-dark-100 hover:bg-dark-800"
+                            >
+                              Sửa
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => confirmDeletePost(post)}
+                            className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-dark-800"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Post content */}
-              <p className="text-dark-200 whitespace-pre-wrap mb-3">{post.content}</p>
+              {editingPostId === post.id ? (
+                <div className="space-y-3 mb-3">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={4}
+                    className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-dark-100 focus:outline-none focus:border-primary-500 transition resize-none"
+                  />
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={cancelEditingPost}
+                      className="rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 text-sm font-medium text-dark-200 hover:border-dark-500"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveEditedPost}
+                      disabled={!editContent.trim()}
+                      className="rounded-2xl bg-primary-600 px-4 py-3 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Lưu
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-dark-200 whitespace-pre-wrap mb-3">{post.content}</p>
+              )}
 
               {/* Post actions */}
               <div className="flex items-center gap-4 text-sm">
@@ -198,6 +316,38 @@ export default function EventDetail() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {postToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-[28px] border border-dark-700 bg-dark-900 p-6 shadow-2xl">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-dark-100">Xác nhận xóa bài viết</h2>
+              <p className="mt-2 text-sm text-dark-300">
+                Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div className="mb-5 rounded-2xl border border-dark-700 bg-dark-800 p-4 text-sm text-dark-200 whitespace-pre-wrap">
+              {postToDelete.content}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={cancelDeletePost}
+                className="rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 text-sm font-medium text-dark-200 hover:border-dark-500"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleDeletePost}
+                className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-medium text-white hover:bg-red-400"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
