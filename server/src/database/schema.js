@@ -18,6 +18,7 @@ export function initDatabase() {
       description TEXT,
       cover_image TEXT DEFAULT NULL,
       is_public INTEGER DEFAULT 1,
+      deletion_scheduled_at DATETIME DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -98,4 +99,10 @@ export function initDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
   `);
+
+  const columns = db.prepare("PRAGMA table_info(worlds)").all();
+  const hasDeletionColumn = columns.some((column) => column.name === 'deletion_scheduled_at');
+  if (!hasDeletionColumn) {
+    db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
+  }
 }

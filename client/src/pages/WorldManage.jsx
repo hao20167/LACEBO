@@ -4,23 +4,34 @@ import api from '../services/api.js';
 
 export default function WorldManage() {
   const { id } = useParams();
+  const [world, setWorld] = useState(null);
   const [pendingMembers, setPendingMembers] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
   const [proposedEvents, setProposedEvents] = useState([]);
   const [tab, setTab] = useState('members');
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const [membersRes, postsRes, eventsRes] = await Promise.all([
+      const [worldRes, membersRes, postsRes, eventsRes] = await Promise.all([
+        api.get(`/worlds/${id}`),
         api.get(`/worlds/${id}/members/pending`),
         api.get(`/posts/world/${id}/pending`),
         api.get(`/events/world/${id}/proposed`),
       ]);
+      setWorld(worldRes.data);
       setPendingMembers(membersRes.data);
       setPendingPosts(postsRes.data);
       setProposedEvents(eventsRes.data);
-    } catch {}
+    } catch {
+      setWorld(null);
+      setPendingMembers([]);
+      setPendingPosts([]);
+      setProposedEvents([]);
+    }
     setLoading(false);
   };
 
@@ -53,6 +64,58 @@ export default function WorldManage() {
     } catch {}
   };
 
+  const scheduleWorldDeletion = async () => {
+    try {
+      const response = await api.post(`/worlds/${id}/schedule-delete`);
+      setWorld(response.data);
+      setActionMessage('World sẽ được xóa sau 3 phút.');
+    } catch {
+      setActionMessage('Không thể xóa world. Vui lòng thử lại.');
+    }
+  };
+
+  const undoWorldDeletion = async () => {
+    try {
+      const response = await api.post(`/worlds/${id}/undo-delete`);
+      setWorld(response.data);
+      setActionMessage('Yêu cầu xóa đã được hủy.');
+    } catch {
+      setActionMessage('Không thể hoàn tác. Vui lòng thử lại.');
+    }
+  };
+
+  const formatVietnamTime = (value) => {
+    if (!value) return '';
+    const normalizedValue =
+      typeof value === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+        ? `${value.replace(' ', 'T')}Z`
+        : value;
+    const dateValue = new Date(normalizedValue);
+    if (Number.isNaN(dateValue.getTime())) return value;
+    return dateValue.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      dateStyle: 'short',
+      timeStyle: 'short',
+      hour12: false,
+    });
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    await scheduleWorldDeletion();
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const isDev = world?.membership?.role === 'dev' && world?.membership?.status === 'approved';
+  const isDeletionScheduled = Boolean(world?.deletion_scheduled_at);
+
   if (loading)
     return <div className="text-center text-dark-400 py-12">Loading...</div>;
 
@@ -67,6 +130,59 @@ export default function WorldManage() {
         </Link>
         <h1 className="text-2xl font-bold text-dark-100">World Management</h1>
       </div>
+
+      {actionMessage && (
+        <div className="mb-4 rounded-xl border border-yellow-700 bg-yellow-950/80 p-4 text-yellow-100">
+          {actionMessage}
+        </div>
+      )}
+
+      {isDev && (
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-dark-700 bg-dark-900 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-dark-100">Quản lý xóa world</h2>
+              <p className="text-dark-400 text-sm">
+                Chỉ Dev mới có quyền xóa world. Khi xóa, world sẽ bị xóa sau 3 phút.
+              </p>
+            </div>
+            <button
+              onClick={isDeletionScheduled ? undoWorldDeletion : handleDeleteClick}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${isDeletionScheduled ? 'bg-yellow-700 hover:bg-yellow-600 text-dark-950' : 'bg-red-800 hover:bg-red-700 text-white'}`}
+            >
+              {isDeletionScheduled ? 'Hoàn tác xóa world' : 'Xóa world'}
+            </button>
+          </div>
+          {isDeletionScheduled && world?.deletion_scheduled_at && (
+            <p className="text-dark-400 text-sm">
+              World đã lên lịch xóa vào {formatVietnamTime(world.deletion_scheduled_at)} (giờ Việt Nam).
+            </p>
+          )}
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-dark-950 border border-dark-700 p-6 shadow-xl">
+            <h3 className="text-xl font-semibold text-dark-100 mb-4">Bạn chắc chắn muốn xóa world?</h3>
+            <p className="text-dark-400 mb-6">World sẽ được xóa hoàn toàn sau 3 phút nếu bạn xác nhận.</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={cancelDelete}
+                className="w-full sm:w-auto rounded-lg border border-dark-700 bg-dark-900 px-4 py-2 text-sm text-dark-200 hover:bg-dark-800 transition"
+              >
+                No
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="w-full sm:w-auto rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-dark-900 rounded-xl p-1 border border-dark-700">

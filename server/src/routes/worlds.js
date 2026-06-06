@@ -3,9 +3,40 @@ import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
 
 const router = Router();
+// Change this value to adjust when a scheduled delete happens.
+// Valid SQLite datetime modifiers include '3 minutes', '10 days', '1 hour', etc.
+const SCHEDULED_DELETE_DELAY = '3 minutes';
+
+const cleanupExpiredWorld = (worldId) => {
+  const expiredWorld = db
+    .prepare(
+      `SELECT id FROM worlds WHERE id = ? AND deletion_scheduled_at IS NOT NULL AND datetime(deletion_scheduled_at) <= CURRENT_TIMESTAMP`,
+    )
+    .get(worldId);
+  if (expiredWorld) {
+    db.prepare('DELETE FROM worlds WHERE id = ?').run(worldId);
+    return true;
+  }
+  return false;
+};
+
+const cleanupExpiredWorlds = () => {
+  db.prepare(
+    `DELETE FROM worlds WHERE deletion_scheduled_at IS NOT NULL AND datetime(deletion_scheduled_at) <= CURRENT_TIMESTAMP`,
+  ).run();
+};
+
+const requireDev = (worldId, userId) => {
+  return db
+    .prepare(
+      "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
+    )
+    .get(worldId, userId);
+};
 
 // List all worlds (with search)
 router.get('/', optionalAuth, (req, res) => {
+  cleanupExpiredWorlds();
   const { search, page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
   let worlds;
@@ -16,7 +47,7 @@ router.get('/', optionalAuth, (req, res) => {
       SELECT w.*, 
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
       FROM worlds w 
-      WHERE w.title LIKE ? AND w.is_public = 1
+      WHERE w.title LIKE ? AND w.is_public = 1 AND (w.deletion_scheduled_at IS NULL OR datetime(w.deletion_scheduled_at) > CURRENT_TIMESTAMP)
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
@@ -28,7 +59,7 @@ router.get('/', optionalAuth, (req, res) => {
       SELECT w.*,
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
       FROM worlds w 
-      WHERE w.is_public = 1
+      WHERE w.is_public = 1 AND (w.deletion_scheduled_at IS NULL OR datetime(w.deletion_scheduled_at) > CURRENT_TIMESTAMP)
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
@@ -39,6 +70,7 @@ router.get('/', optionalAuth, (req, res) => {
 
 // Get my worlds
 router.get('/mine', authMiddleware, (req, res) => {
+  cleanupExpiredWorlds();
   const worlds = db
     .prepare(
       `
@@ -74,6 +106,11 @@ router.post('/', authMiddleware, (req, res) => {
 
 // Get single world
 router.get('/:id', optionalAuth, (req, res) => {
+  const worldId = req.params.id;
+  if (cleanupExpiredWorld(worldId)) {
+    return res.status(404).json({ error: 'World not found' });
+  }
+
   const world = db
     .prepare(
       `
@@ -82,7 +119,7 @@ router.get('/:id', optionalAuth, (req, res) => {
     FROM worlds w WHERE w.id = ?
   `,
     )
-    .get(req.params.id);
+    .get(worldId);
   if (!world) return res.status(404).json({ error: 'World not found' });
 
   let membership = null;
@@ -164,6 +201,45 @@ router.get('/:id/members/pending', authMiddleware, (req, res) => {
     )
     .all(req.params.id);
   res.json(members);
+});
+
+// Schedule world deletion (dev only)
+router.post('/:id/schedule-delete', authMiddleware, (req, res) => {
+  const worldId = req.params.id;
+  if (cleanupExpiredWorld(worldId)) {
+    return res.status(404).json({ error: 'World not found' });
+  }
+
+  if (!requireDev(worldId, req.user.id)) {
+    return res.status(403).json({ error: 'Only devs can delete worlds' });
+  }
+
+  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
+  if (!world) return res.status(404).json({ error: 'World not found' });
+
+  const result = db
+    .prepare(
+      `UPDATE worlds SET deletion_scheduled_at = datetime('now', '+${SCHEDULED_DELETE_DELAY}') WHERE id = ?`,
+    )
+    .run(worldId);
+
+  const updatedWorld = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
+  res.json({ ...updatedWorld });
+});
+
+router.post('/:id/undo-delete', authMiddleware, (req, res) => {
+  const worldId = req.params.id;
+  if (cleanupExpiredWorld(worldId)) {
+    return res.status(404).json({ error: 'World not found' });
+  }
+
+  if (!requireDev(worldId, req.user.id)) {
+    return res.status(403).json({ error: 'Only devs can undo world deletion' });
+  }
+
+  db.prepare('UPDATE worlds SET deletion_scheduled_at = NULL WHERE id = ?').run(worldId);
+  const updatedWorld = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
+  res.json({ ...updatedWorld });
 });
 
 // Get leaderboard
