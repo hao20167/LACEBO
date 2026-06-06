@@ -2,6 +2,13 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
 import { isDev, addCredits } from '../helpers/world.js';
+import { validate } from '../middleware/validate.js';
+import {
+  createPostValidators,
+  createCommentValidators,
+  createAnnouncementValidators,
+  updatePostValidators,
+} from '../middleware/validators/posts.js';
 
 const router = Router();
 
@@ -57,13 +64,9 @@ router.get('/world/:worldId/announcements', optionalAuth, (req, res) => {
 });
 
 // Create an announcement (dev only)
-router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
+router.post('/world/:worldId/announcements', authMiddleware, validate(createAnnouncementValidators), (req, res) => {
   const { worldId } = req.params;
   const { title, content } = req.body;
-
-  if (!title || !content) {
-    return res.status(400).json({ error: 'Title and content required' });
-  }
 
   if (!isDev(worldId, req.user.id)) {
     return res.status(403).json({ error: 'Dev only' });
@@ -163,7 +166,7 @@ router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
 });
 
 // Create post in event
-router.post('/event/:eventId', authMiddleware, (req, res) => {
+router.post('/event/:eventId', authMiddleware, validate(createPostValidators), (req, res) => {
   const event = db
     .prepare('SELECT * FROM events WHERE id = ?')
     .get(req.params.eventId);
@@ -267,11 +270,8 @@ router.delete('/:postId', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 // Update a post's content if the requesting user is the author
-router.patch('/:postId', authMiddleware, (req, res) => {
+router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, res) => {
   const { content } = req.body;
-  if (!content || !content.trim()) {
-    return res.status(400).json({ error: 'Content required' });
-  }
 
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
@@ -299,7 +299,7 @@ router.get('/:postId/comments', optionalAuth, (req, res) =>{
 });
 
 // Add comment
-router.post('/:postId/comments', authMiddleware, (req, res) => {
+router.post('/:postId/comments', authMiddleware, validate(createCommentValidators), (req, res) => {
   const post = db
     .prepare('SELECT * FROM posts WHERE id = ?')
     .get(req.params.postId);
