@@ -2,10 +2,11 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db from '../database/connection.js';
 import { generateToken, authMiddleware } from '../config/auth.js';
+import { authRateLimiter, registerRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', registerRateLimiter, (req, res) => {
   const { username, email, password, display_name } = req.body;
   if (!username || !email || !password || !display_name) {
     return res.status(400).json({ error: 'All fields are required' });
@@ -26,7 +27,7 @@ router.post('/register', (req, res) => {
   res.status(201).json({ user, token: generateToken(user) });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', authRateLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
