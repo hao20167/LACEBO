@@ -1,5 +1,7 @@
 import rateLimit from 'express-rate-limit';
 
+const skipRateLimitInTests = () => process.env.NODE_ENV === 'test';
+
 const rateLimitHandler = (req, res) => {
   res.status(429).json({
     error: 'RATE_LIMIT_EXCEEDED',
@@ -13,6 +15,7 @@ export const authRateLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipRateLimitInTests,
   handler: rateLimitHandler,
   message: 'Too many authentication attempts, please try again after 15 minutes.',
 });
@@ -22,6 +25,7 @@ export const registerRateLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipRateLimitInTests,
   handler: rateLimitHandler,
   message: 'Too many registration attempts, please try again after 1 hour.',
 });
@@ -31,5 +35,6 @@ export const globalApiRateLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipRateLimitInTests,
   handler: rateLimitHandler,
 });

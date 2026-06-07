@@ -3,14 +3,13 @@ import bcrypt from 'bcryptjs';
 import db from '../database/connection.js';
 import { generateToken, authMiddleware } from '../config/auth.js';
 import { authRateLimiter, registerRateLimiter } from '../middleware/rateLimiter.js';
+import { validate } from '../middleware/validate.js';
+import { registerValidators, loginValidators } from '../middleware/validators/users.js';
 
 const router = Router();
 
-router.post('/register', registerRateLimiter, (req, res) => {
+router.post('/register', registerRateLimiter, validate(registerValidators), (req, res) => {
   const { username, email, password, display_name } = req.body;
-  if (!username || !email || !password || !display_name) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
   const existing = db
     .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
     .get(username, email);
@@ -27,11 +26,8 @@ router.post('/register', registerRateLimiter, (req, res) => {
   res.status(201).json({ user, token: generateToken(user) });
 });
 
-router.post('/login', authRateLimiter, (req, res) => {
+router.post('/login', authRateLimiter, validate(loginValidators), (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
   const user = db
     .prepare('SELECT * FROM users WHERE username = ?')
     .get(username);
