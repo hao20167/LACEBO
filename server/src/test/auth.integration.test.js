@@ -131,6 +131,73 @@ describe('Auth API Integration Tests', () => {
     expect(res.status).toBe(400);
   });
 
+  test('PATCH /api/users/me - Should update current user profile', async () => {
+    const registerRes = await request(app).post('/api/users/register').send({
+      username: 'edit_profile',
+      email: 'edit_profile@example.com',
+      password: 'Password123!',
+      display_name: 'Before Edit',
+    });
+
+    const res = await request(app)
+      .patch('/api/users/me')
+      .set('Authorization', `Bearer ${registerRes.body.token}`)
+      .send({
+        display_name: 'After Edit',
+        avatar: '/uploads/images/avatar.png',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: registerRes.body.user.id,
+      username: 'edit_profile',
+      email: 'edit_profile@example.com',
+      display_name: 'After Edit',
+      avatar_url: '/uploads/images/avatar.png',
+    });
+    expect(res.body).not.toHaveProperty('password');
+  });
+
+  test('PATCH /api/users/me - Should require authentication', async () => {
+    const res = await request(app)
+      .patch('/api/users/me')
+      .send({ display_name: 'No Auth' });
+
+    expect(res.status).toBe(401);
+  });
+
+  test('PATCH /api/users/me - Should reject empty updates', async () => {
+    const registerRes = await request(app).post('/api/users/register').send({
+      username: 'empty_profile_update',
+      email: 'empty_profile_update@example.com',
+      password: 'Password123!',
+      display_name: 'Empty Update',
+    });
+
+    const res = await request(app)
+      .patch('/api/users/me')
+      .set('Authorization', `Bearer ${registerRes.body.token}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH /api/users/me - Should validate display name and avatar', async () => {
+    const registerRes = await request(app).post('/api/users/register').send({
+      username: 'invalid_profile_update',
+      email: 'invalid_profile_update@example.com',
+      password: 'Password123!',
+      display_name: 'Invalid Update',
+    });
+
+    const res = await request(app)
+      .patch('/api/users/me')
+      .set('Authorization', `Bearer ${registerRes.body.token}`)
+      .send({ display_name: '   ', avatar: '' });
+
+    expect(res.status).toBe(400);
+  });
+
   test('E1.4 Integration: register -> login -> get current user info', async () => {
     const username = 'e14_user';
     const email = 'e14_user@example.com';
