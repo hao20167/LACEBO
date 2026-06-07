@@ -2,12 +2,13 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db from '../database/connection.js';
 import { generateToken, authMiddleware } from '../config/auth.js';
+import { authRateLimiter, registerRateLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
 import { registerValidators, loginValidators } from '../middleware/validators/users.js';
 
 const router = Router();
 
-router.post('/register', validate(registerValidators), (req, res) => {
+router.post('/register', registerRateLimiter, validate(registerValidators), (req, res) => {
   const { username, email, password, display_name } = req.body;
   const existing = db
     .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
@@ -25,7 +26,7 @@ router.post('/register', validate(registerValidators), (req, res) => {
   res.status(201).json({ user, token: generateToken(user) });
 });
 
-router.post('/login', validate(loginValidators), (req, res) => {
+router.post('/login', authRateLimiter, validate(loginValidators), (req, res) => {
   const { username, password } = req.body;
   const user = db
     .prepare('SELECT * FROM users WHERE username = ?')
