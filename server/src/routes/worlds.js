@@ -2,6 +2,8 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validate.js';
+import { createWorldValidators, updateMemberValidators } from '../middleware/validators/worlds.js';
 
 const router = Router();
 
@@ -61,7 +63,7 @@ router.get('/mine', authMiddleware, (req, res) => {
 });
 
 // Create world
-router.post('/', authMiddleware, (req, res) => {
+router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => {
   const { title, description, is_public = 1 } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
   const result = db
@@ -126,7 +128,7 @@ router.post('/:id/join', authMiddleware, (req, res) => {
 });
 
 // Approve/reject player (dev only)
-router.patch('/:id/members/:memberId', authMiddleware, (req, res) => {
+router.patch('/:id/members/:memberId', authMiddleware, validate(updateMemberValidators), (req, res) => {
   const { status } = req.body; // 'approved' or 'rejected'
   if (!['approved', 'rejected'].includes(status)) {
     return res
