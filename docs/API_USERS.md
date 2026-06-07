@@ -71,3 +71,30 @@ This document describes user authentication and profile endpoints in LACEBO API 
 - **Errors:**
   - `400 Bad Request` when `id` is not a positive integer.
   - `404 Not Found` when the user does not exist.
+
+---
+
+## 5. Update Current User Profile
+- **Endpoint:** `PATCH /api/users/me`
+- **Authentication:** Required.
+- **Request Body:** At least one field is required.
+  ```json
+  {
+    "display_name": "New Display Name",
+    "avatar": "/uploads/images/avatar.png"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "id": 1,
+    "username": "player_one",
+    "email": "player@example.com",
+    "display_name": "New Display Name",
+    "avatar_url": "/uploads/images/avatar.png",
+    "created_at": "2026-06-07 12:00:00"
+  }
+  ```
+- **Errors:**
+  - `400 Bad Request` when no editable fields are provided or validation fails.
+  - `401 Unauthorized` when the token is missing or invalid.
