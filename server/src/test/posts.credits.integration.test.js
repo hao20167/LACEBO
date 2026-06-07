@@ -163,9 +163,9 @@ describe('E2.2 Integration: Post Interactions and Credit Calculation', () => {
       interactorToken,
     );
     expect(likedPostRes.status).toBe(200);
-    expect(Array.isArray(likedPostRes.body)).toBe(true);
-    expect(likedPostRes.body).toHaveLength(1);
-    expect(likedPostRes.body[0]).toMatchObject({
+    expect(Array.isArray(likedPostRes.body.data)).toBe(true);
+    expect(likedPostRes.body.data).toHaveLength(1);
+    expect(likedPostRes.body.data[0]).toMatchObject({
       id: postId,
       like_count: 1,
       comment_count: 0,
@@ -202,9 +202,9 @@ describe('E2.2 Integration: Post Interactions and Credit Calculation', () => {
       `/api/posts/${postId}/comments`,
     );
     expect(commentsRes.status).toBe(200);
-    expect(Array.isArray(commentsRes.body)).toBe(true);
-    expect(commentsRes.body).toHaveLength(1);
-    expect(commentsRes.body[0]).toMatchObject({
+    expect(Array.isArray(commentsRes.body.data)).toBe(true);
+    expect(commentsRes.body.data).toHaveLength(1);
+    expect(commentsRes.body.data[0]).toMatchObject({
       id: commentId,
       post_id: postId,
       user_id: interactor.id,
