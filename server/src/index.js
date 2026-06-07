@@ -7,6 +7,7 @@ import worldsRouter from './routes/worlds.js';
 import eventsRouter from './routes/events.js';
 import postsRouter from './routes/posts.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { globalApiRateLimiter } from './middleware/rateLimiter.js';
 
 // Initialize database tables
 initDatabase();
@@ -15,6 +16,7 @@ const app = express();
 
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
+app.use(globalApiRateLimiter);
 
 app.use('/api/users', usersRouter);
 app.use('/api/worlds', worldsRouter);

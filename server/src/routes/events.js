@@ -2,6 +2,8 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware } from '../config/auth.js';
 import { isDev, isMember } from '../helpers/world.js';
+import { validate } from '../middleware/validate.js';
+import { createEventValidators, updateEventValidators } from '../middleware/validators/events.js';
 
 const router = Router();
 
@@ -41,7 +43,7 @@ router.get('/world/:worldId/proposed', authMiddleware, (req, res) => {
 });
 
 // Create event
-router.post('/world/:worldId', authMiddleware, (req, res) => {
+router.post('/world/:worldId', authMiddleware, validate(createEventValidators), (req, res) => {
   const { title, description, event_type, start_date, end_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title required' });
 
@@ -80,7 +82,7 @@ router.post('/world/:worldId', authMiddleware, (req, res) => {
 });
 
 // Approve/open/close event (dev only)
-router.patch('/:eventId', authMiddleware, (req, res) => {
+router.patch('/:eventId', authMiddleware, validate(updateEventValidators), (req, res) => {
   const event = db
     .prepare('SELECT * FROM events WHERE id = ?')
     .get(req.params.eventId);
