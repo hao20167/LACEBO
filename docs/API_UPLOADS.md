@@ -14,7 +14,7 @@ This document describes file upload endpoints in LACEBO API v2.
 - **Authentication:** Required.
 - **Content Type:** `multipart/form-data`
 - **Form Fields:**
-  - `image`: Required image file. The server accepts MIME types beginning with `image/`.
+  - `image`: Required image file. The server accepts PNG, JPEG, GIF, and WebP files.
 - **Limits:**
   - Maximum file size: 5 MB.
 - **Response (201 Created):**

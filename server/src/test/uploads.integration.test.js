@@ -1,6 +1,6 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import request from 'supertest';
 import { cleanupTestDb, resetDatabase, setupTestDb } from './helpers/testDb.js';
 import { createTestToken, createTestUser } from './helpers/auth.js';
@@ -90,6 +90,18 @@ describe('Uploads API Integration Tests', () => {
       .attach('image', Buffer.from('plain text'), {
         filename: 'note.txt',
         contentType: 'text/plain',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('POST /api/uploads/images - Should reject mismatched image extensions', async () => {
+    const res = await request(app)
+      .post('/api/uploads/images')
+      .set('Authorization', `Bearer ${token}`)
+      .attach('image', Buffer.from('<svg></svg>'), {
+        filename: 'avatar.svg',
+        contentType: 'image/png',
       });
 
     expect(res.status).toBe(400);

@@ -1,5 +1,6 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import multer from 'multer';
 import config from '../config/index.js';
@@ -7,6 +8,12 @@ import { authMiddleware } from '../config/auth.js';
 
 const router = Router();
 const imageUploadDir = path.join(config.uploadDir, 'images');
+const allowedImageTypes = new Map([
+  ['image/jpeg', new Set(['.jpg', '.jpeg'])],
+  ['image/png', new Set(['.png'])],
+  ['image/gif', new Set(['.gif'])],
+  ['image/webp', new Set(['.webp'])],
+]);
 
 if (!fs.existsSync(imageUploadDir)) {
   fs.mkdirSync(imageUploadDir, { recursive: true });
@@ -18,7 +25,7 @@ const storage = multer.diskStorage({
   },
   filename: (_req, file, cb) => {
     const extension = path.extname(file.originalname).toLowerCase();
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`;
+    const uniqueName = `${crypto.randomUUID()}${extension}`;
     cb(null, uniqueName);
   },
 });
@@ -29,9 +36,13 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
+    const extension = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = allowedImageTypes.get(file.mimetype);
+
+    if (!allowedExtensions?.has(extension)) {
       return cb(new Error('Only image files are allowed'));
     }
+
     cb(null, true);
   },
 });

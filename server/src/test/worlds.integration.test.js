@@ -6,6 +6,7 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
   let app;
   let db;
   let testDbPath;
+  let userSequence;
 
   beforeAll(async () => {
     testDbPath = setupTestDb();
@@ -22,6 +23,7 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
 
   beforeEach(() => {
     resetDatabase(db);
+    userSequence = 0;
   });
 
   afterAll(() => {
@@ -32,24 +34,38 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
     delete process.env.DB_PATH;
   });
 
-  test('should create a world, find it by search, and fetch detail with membership', async () => {
+  const createAuthedUser = (prefix, displayName) => {
+    userSequence += 1;
+    const username = `${prefix}_${userSequence}`;
     const user = createTestUser({
       db,
-      username: 'e15_creator',
-      email: 'e15_creator@example.com',
+      username,
+      email: `${username}@example.com`,
       password: 'Password123!',
-      displayName: 'E1.5 Creator',
+      displayName,
     });
-    const token = createTestToken(user);
-    const title = `E1.5 World ${Date.now()}`;
 
-    const createRes = await request(app)
+    return {
+      user,
+      token: createTestToken(user),
+    };
+  };
+
+  const createWorld = (token, payload) => {
+    return request(app)
       .post('/api/worlds')
       .set('Authorization', `Bearer ${token}`)
-      .send({
-        title,
-        description: 'Integration flow test world',
-      });
+      .send(payload);
+  };
+
+  test('should create a world, find it by search, and fetch detail with membership', async () => {
+    const { user, token } = createAuthedUser('e15_creator', 'E1.5 Creator');
+    const title = `E1.5 World ${Date.now()}`;
+
+    const createRes = await createWorld(token, {
+      title,
+      description: 'Integration flow test world',
+    });
 
     expect(createRes.status).toBe(201);
     expect(createRes.body).toMatchObject({
@@ -85,22 +101,14 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
   });
 
   test('PATCH /api/worlds/:id - Should allow owner to update a world', async () => {
-    const owner = createTestUser({
-      db,
-      username: 'world_owner',
-      email: 'world_owner@example.com',
-      password: 'Password123!',
-      displayName: 'World Owner',
+    const { user: owner, token: ownerToken } = createAuthedUser(
+      'world_owner',
+      'World Owner',
+    );
+    const createRes = await createWorld(ownerToken, {
+      title: 'Original World',
+      description: 'Before update',
     });
-    const ownerToken = createTestToken(owner);
-
-    const createRes = await request(app)
-      .post('/api/worlds')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({
-        title: 'Original World',
-        description: 'Before update',
-      });
 
     const res = await request(app)
       .patch(`/api/worlds/${createRes.body.id}`)
@@ -124,27 +132,17 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
   });
 
   test('PATCH /api/worlds/:id - Should reject non-owner updates', async () => {
-    const owner = createTestUser({
-      db,
-      username: 'world_owner_reject',
-      email: 'world_owner_reject@example.com',
-      password: 'Password123!',
-      displayName: 'World Owner Reject',
+    const { token: ownerToken } = createAuthedUser(
+      'world_owner_reject',
+      'World Owner Reject',
+    );
+    const { token: otherToken } = createAuthedUser(
+      'world_other',
+      'World Other',
+    );
+    const createRes = await createWorld(ownerToken, {
+      title: 'Owner Only World',
     });
-    const ownerToken = createTestToken(owner);
-    const other = createTestUser({
-      db,
-      username: 'world_other',
-      email: 'world_other@example.com',
-      password: 'Password123!',
-      displayName: 'World Other',
-    });
-    const otherToken = createTestToken(other);
-
-    const createRes = await request(app)
-      .post('/api/worlds')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ title: 'Owner Only World' });
 
     const res = await request(app)
       .patch(`/api/worlds/${createRes.body.id}`)
@@ -155,19 +153,13 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
   });
 
   test('PATCH /api/worlds/:id - Should reject empty updates', async () => {
-    const owner = createTestUser({
-      db,
-      username: 'world_empty_update',
-      email: 'world_empty_update@example.com',
-      password: 'Password123!',
-      displayName: 'World Empty Update',
+    const { token: ownerToken } = createAuthedUser(
+      'world_empty_update',
+      'World Empty Update',
+    );
+    const createRes = await createWorld(ownerToken, {
+      title: 'Empty Update World',
     });
-    const ownerToken = createTestToken(owner);
-
-    const createRes = await request(app)
-      .post('/api/worlds')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ title: 'Empty Update World' });
 
     const res = await request(app)
       .patch(`/api/worlds/${createRes.body.id}`)
@@ -178,19 +170,13 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
   });
 
   test('DELETE /api/worlds/:id - Should allow owner to delete a world', async () => {
-    const owner = createTestUser({
-      db,
-      username: 'world_delete_owner',
-      email: 'world_delete_owner@example.com',
-      password: 'Password123!',
-      displayName: 'World Delete Owner',
+    const { token: ownerToken } = createAuthedUser(
+      'world_delete_owner',
+      'World Delete Owner',
+    );
+    const createRes = await createWorld(ownerToken, {
+      title: 'Delete World',
     });
-    const ownerToken = createTestToken(owner);
-
-    const createRes = await request(app)
-      .post('/api/worlds')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ title: 'Delete World' });
 
     const res = await request(app)
       .delete(`/api/worlds/${createRes.body.id}`)
@@ -198,31 +184,23 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(db.prepare('SELECT * FROM worlds WHERE id = ?').get(createRes.body.id)).toBeUndefined();
+    expect(
+      db.prepare('SELECT * FROM worlds WHERE id = ?').get(createRes.body.id),
+    ).toBeUndefined();
   });
 
   test('DELETE /api/worlds/:id - Should reject non-owner deletes', async () => {
-    const owner = createTestUser({
-      db,
-      username: 'world_delete_reject_owner',
-      email: 'world_delete_reject_owner@example.com',
-      password: 'Password123!',
-      displayName: 'World Delete Reject Owner',
+    const { token: ownerToken } = createAuthedUser(
+      'world_delete_reject_owner',
+      'World Delete Reject Owner',
+    );
+    const { token: otherToken } = createAuthedUser(
+      'world_delete_other',
+      'World Delete Other',
+    );
+    const createRes = await createWorld(ownerToken, {
+      title: 'Protected World',
     });
-    const ownerToken = createTestToken(owner);
-    const other = createTestUser({
-      db,
-      username: 'world_delete_other',
-      email: 'world_delete_other@example.com',
-      password: 'Password123!',
-      displayName: 'World Delete Other',
-    });
-    const otherToken = createTestToken(other);
-
-    const createRes = await request(app)
-      .post('/api/worlds')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ title: 'Protected World' });
 
     const res = await request(app)
       .delete(`/api/worlds/${createRes.body.id}`)

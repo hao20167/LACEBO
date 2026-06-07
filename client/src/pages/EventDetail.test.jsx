@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, beforeEach, test, expect } from 'vitest';
+import { vi, describe, beforeEach, afterEach, test, expect } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import EventDetail from './EventDetail';
 import api from '../services/api.js';
@@ -84,7 +84,11 @@ function renderEventDetail() {
 describe('EventDetail Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   test('displays loading state, error message, or not found appropriately', async () => {
@@ -243,7 +247,7 @@ describe('EventDetail Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Post' }));
 
     await waitFor(() =>
-      expect(window.alert).toHaveBeenCalledWith('Failed to create post'),
+      expect(globalThis.alert).toHaveBeenCalledWith('Failed to create post'),
     );
   });
 });
