@@ -2,9 +2,28 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createWorldValidators, updateMemberValidators } from '../middleware/validators/worlds.js';
+import {
+  createWorldValidators,
+  updateWorldValidators,
+  updateMemberValidators,
+} from '../middleware/validators/worlds.js';
 
 const router = Router();
+
+const getWorldOwnerId = (world) => {
+  if (world.owner_id) return world.owner_id;
+
+  const ownerMembership = db
+    .prepare(
+      "SELECT user_id FROM world_members WHERE world_id = ? AND role = 'dev' AND status = 'approved' ORDER BY id ASC LIMIT 1",
+    )
+    .get(world.id);
+  return ownerMembership?.user_id || null;
+};
+
+const requireWorldOwner = (world, userId) => {
+  return getWorldOwnerId(world) === userId;
+};
 
 // List all worlds (with search)
 router.get('/', optionalAuth, (req, res) => {
@@ -62,9 +81,9 @@ router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => 
   if (!title) return res.status(400).json({ error: 'Title is required' });
   const result = db
     .prepare(
-      'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, ?)',
+      'INSERT INTO worlds (title, description, is_public, owner_id) VALUES (?, ?, ?, ?)',
     )
-    .run(title, description || '', is_public ? 1 : 0);
+    .run(title, description || '', is_public ? 1 : 0, req.user.id);
   const worldId = result.lastInsertRowid;
   // Creator becomes dev
   db.prepare(
@@ -95,6 +114,60 @@ router.get('/:id', optionalAuth, (req, res) => {
   }
   world.membership = membership;
   res.json(world);
+});
+
+router.patch('/:id', authMiddleware, validate(updateWorldValidators), (req, res) => {
+  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(req.params.id);
+  if (!world) return res.status(404).json({ error: 'World not found' });
+  if (!requireWorldOwner(world, req.user.id)) {
+    return res.status(403).json({ error: 'Only the world owner can edit this world' });
+  }
+
+  const { title, description, cover_image, is_public } = req.body;
+  const updates = [];
+  const values = [];
+
+  if (title !== undefined) {
+    updates.push('title = ?');
+    values.push(title.trim());
+  }
+
+  if (description !== undefined) {
+    updates.push('description = ?');
+    values.push(description.trim());
+  }
+
+  if (cover_image !== undefined) {
+    updates.push('cover_image = ?');
+    values.push(cover_image.trim());
+  }
+
+  if (is_public !== undefined) {
+    updates.push('is_public = ?');
+    values.push(is_public ? 1 : 0);
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No world fields provided' });
+  }
+
+  db.prepare(`UPDATE worlds SET ${updates.join(', ')} WHERE id = ?`).run(
+    ...values,
+    world.id,
+  );
+  const updatedWorld = db.prepare('SELECT * FROM worlds WHERE id = ?').get(world.id);
+  res.json(updatedWorld);
+});
+
+router.delete('/:id', authMiddleware, validate(updateWorldValidators), (req, res) => {
+  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(req.params.id);
+  if (!world) return res.status(404).json({ error: 'World not found' });
+  if (!requireWorldOwner(world, req.user.id)) {
+    return res.status(403).json({ error: 'Only the world owner can delete this world' });
+  }
+
+  db.prepare('DELETE FROM worlds WHERE id = ?').run(world.id);
+  res.json({ success: true });
 });
 
 // Join world

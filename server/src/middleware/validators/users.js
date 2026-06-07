@@ -1,4 +1,4 @@
-import { body } from 'express-validator';
+import { body, param } from 'express-validator';
 
 export const registerValidators = [
   body('username')
@@ -23,4 +23,21 @@ export const registerValidators = [
 export const loginValidators = [
   body('username').trim().notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
+];
+
+export const updateProfileValidators = [
+  body('display_name')
+    .optional()
+    .trim()
+    .notEmpty().withMessage('Display name cannot be empty')
+    .isLength({ max: 50 }).withMessage('Display name must be at most 50 characters'),
+  body('avatar')
+    .optional()
+    .trim()
+    .notEmpty().withMessage('Avatar cannot be empty')
+    .isLength({ max: 2048 }).withMessage('Avatar must be at most 2048 characters'),
+];
+
+export const userIdParamValidators = [
+  param('id').isInt({ min: 1 }).withMessage('User ID must be a positive integer'),
 ];
