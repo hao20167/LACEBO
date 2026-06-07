@@ -3,7 +3,11 @@ import bcrypt from 'bcryptjs';
 import db from '../database/connection.js';
 import { generateToken, authMiddleware } from '../config/auth.js';
 import { validate } from '../middleware/validate.js';
-import { registerValidators, loginValidators } from '../middleware/validators/users.js';
+import {
+  registerValidators,
+  loginValidators,
+  userIdParamValidators,
+} from '../middleware/validators/users.js';
 
 const router = Router();
 
@@ -44,6 +48,16 @@ router.get('/me', authMiddleware, (req, res) => {
       'SELECT id, username, email, display_name, avatar_url, created_at FROM users WHERE id = ?',
     )
     .get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+router.get('/:id', validate(userIdParamValidators), (req, res) => {
+  const user = db
+    .prepare(
+      'SELECT id, username, display_name, avatar_url, created_at FROM users WHERE id = ?',
+    )
+    .get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);
 });

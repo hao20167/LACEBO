@@ -1,4 +1,4 @@
-import { body } from 'express-validator';
+import { body, param } from 'express-validator';
 
 export const registerValidators = [
   body('username')
@@ -23,4 +23,8 @@ export const registerValidators = [
 export const loginValidators = [
   body('username').trim().notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
+];
+
+export const userIdParamValidators = [
+  param('id').isInt({ min: 1 }).withMessage('User ID must be a positive integer'),
 ];
