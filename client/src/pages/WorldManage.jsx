@@ -100,7 +100,7 @@ export default function WorldManage() {
               {pendingMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="bg-dark-900 border border-dark-700 rounded-xl p-4 flex items-center justify-between"
+                  className="bg-dark-900 border border-dark-700 rounded-xl p-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between"
                 >
                   <div>
                     <span className="font-medium text-dark-200">
