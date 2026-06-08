@@ -271,14 +271,34 @@ router.delete('/:postId', authMiddleware, (req, res) => {
 });
 // Update a post's content if the requesting user is the author
 router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, res) => {
-  const { content } = req.body;
+  const { content, image_url } = req.body;
 
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
   if (post.user_id !== req.user.id)
     return res.status(403).json({ error: 'You can only edit your own posts' });
 
-  db.prepare('UPDATE posts SET content = ? WHERE id = ?').run(content.trim(), post.id);
+  const updates = [];
+  const values = [];
+
+  if (content !== undefined) {
+    updates.push('content = ?');
+    values.push(content.trim());
+  }
+
+  if (image_url !== undefined) {
+    updates.push('image_url = ?');
+    values.push(image_url.trim());
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No post fields provided' });
+  }
+
+  db.prepare(`UPDATE posts SET ${updates.join(', ')} WHERE id = ?`).run(
+    ...values,
+    post.id,
+  );
   const updatedPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(post.id);
   res.json(updatedPost);
 });

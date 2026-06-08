@@ -7,6 +7,7 @@ import worldsRouter from './routes/worlds.js';
 import eventsRouter from './routes/events.js';
 import postsRouter from './routes/posts.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import uploadsRouter from './routes/uploads.js';
 import { globalApiRateLimiter } from './middleware/rateLimiter.js';
 
 // Initialize database tables
@@ -16,12 +17,14 @@ const app = express();
 
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
+app.use('/uploads', express.static(config.uploadDir));
 app.use(globalApiRateLimiter);
 
 app.use('/api/users', usersRouter);
 app.use('/api/worlds', worldsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/posts', postsRouter);
+app.use('/api/uploads', uploadsRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
