@@ -8,19 +8,26 @@ import { useState, useCallback } from 'react';
 
 let _nextId = 0;
 
+// Named helpers to avoid deep nesting inside callbacks
+function withoutId(id) {
+  return (t) => t.id !== id;
+}
+
+function appendToast(id, message, type) {
+  return (prev) => [...prev, { id, message, type }];
+}
+
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
   const push = useCallback((message, type = 'info', duration = 4000) => {
     const id = ++_nextId;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, duration);
+    setToasts(appendToast(id, message, type));
+    setTimeout(() => setToasts((prev) => prev.filter(withoutId(id))), duration);
   }, []);
 
   const dismiss = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.filter(withoutId(id)));
   }, []);
 
   const toast = {
