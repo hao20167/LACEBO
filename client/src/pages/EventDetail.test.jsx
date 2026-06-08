@@ -98,7 +98,7 @@ describe('EventDetail Component', () => {
     // 1. Loading
     api.get.mockImplementation(() => new Promise(() => {}));
     const { unmount } = renderEventDetail();
-    expect(screen.getByText('Loading event...')).toBeInTheDocument();
+    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
     unmount();
 
     // 2. Error: the current component falls back to the not-found state.

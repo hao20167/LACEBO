@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getApiCollection } from '../services/api';
+import { EventDetailSkeleton } from '../components/SkeletonLoader';
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -135,7 +136,7 @@ export default function EventDetail() {
     } catch { }
   };
 
-  if (loading) return <div className="text-center text-dark-400 py-12">Loading event...</div>;
+  if (loading) return <EventDetailSkeleton />;
   if (!event) return <div className="text-center text-dark-400 py-12">Event not found</div>;
 
   const isOpen = event.status === 'open';

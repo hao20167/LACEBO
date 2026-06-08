@@ -54,7 +54,7 @@ describe('WorldList', () => {
       );
     });
 
-    expect(screen.getByText('Loading worlds...')).toBeInTheDocument();
+    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
   });
 
   it('fetches and displays worlds on mount', async () => {

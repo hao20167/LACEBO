@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getApiCollection } from '../services/api.js';
+import { WorldListSkeleton } from '../components/SkeletonLoader';
 
 export default function WorldList() {
   const [worlds, setWorlds] = useState([]);
@@ -48,7 +49,7 @@ export default function WorldList() {
       </form>
 
       {loading ? (
-        <div className="text-center text-dark-400 py-12">Loading worlds...</div>
+        <WorldListSkeleton count={6} />
       ) : worlds.length === 0 ? (
         <div className="text-center text-dark-400 py-12">
           <p className="text-lg mb-2">No worlds found</p>
@@ -90,3 +91,4 @@ export default function WorldList() {
     </div>
   );
 }
+

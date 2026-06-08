@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { WorldDetailSkeleton } from '../components/SkeletonLoader';
 
 export default function WorldDetail() {
   const { id } = useParams();
@@ -89,7 +90,7 @@ export default function WorldDetail() {
     } catch { }
   };
 
-  if (loading) return <div className="text-center text-dark-400 py-12">Loading world...</div>;
+  if (loading) return <WorldDetailSkeleton />;
   if (!world) return <div className="text-center text-dark-400 py-12">World not found</div>;
 
   const openEvents = events.filter(e => e.status === 'open');

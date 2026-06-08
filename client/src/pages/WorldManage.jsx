@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api.js';
+import { WorldManageSkeleton } from '../components/SkeletonLoader';
 
 export default function WorldManage() {
   const { id } = useParams();
@@ -53,8 +54,7 @@ export default function WorldManage() {
     } catch {}
   };
 
-  if (loading)
-    return <div className="text-center text-dark-400 py-12">Loading...</div>;
+  if (loading) return <WorldManageSkeleton />;
 
   return (
     <div>

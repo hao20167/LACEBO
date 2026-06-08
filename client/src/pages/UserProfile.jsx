@@ -6,6 +6,7 @@ import api, {
   getApiCollection,
   getApiErrorMessage,
 } from '../services/api.js';
+import { UserProfileSkeleton } from '../components/SkeletonLoader';
 
 const roleStyles = {
   dev: 'bg-purple-900/50 text-purple-300 border-purple-700/60',
@@ -164,9 +165,7 @@ export default function UserProfile() {
   };
 
   if (loading) {
-    return (
-      <div className="text-center text-dark-400 py-12">Loading profile...</div>
-    );
+    return <UserProfileSkeleton />;
   }
 
   if (error) {
