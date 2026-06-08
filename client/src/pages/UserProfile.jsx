@@ -79,7 +79,7 @@ export default function UserProfile() {
         <p className="text-red-300 mb-4">{error}</p>
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={() => globalThis.location.reload()}
           className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
         >
           Try again
