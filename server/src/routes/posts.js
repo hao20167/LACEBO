@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
 import { isDev, addCredits } from '../helpers/world.js';
+import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { validate } from '../middleware/validate.js';
 import {
   createPostValidators,
@@ -87,6 +88,7 @@ router.post('/world/:worldId/announcements', authMiddleware, validate(createAnno
 
 // Get posts for an event
 router.get('/event/:eventId', optionalAuth, (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
   const posts = db
     .prepare(
       `
@@ -96,9 +98,14 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
     FROM posts p JOIN users u ON u.id = p.user_id
     WHERE p.event_id = ? AND p.status = 'approved'
     ORDER BY p.created_at DESC
+    LIMIT ? OFFSET ?
   `,
     )
-    .all(req.params.eventId);
+    .all(req.params.eventId, limit, offset);
+
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM posts WHERE event_id = ? AND status = 'approved'`)
+    .get(req.params.eventId).count;
 
   if (req.user && posts.length > 0) {
     const postIds = posts.map((post) => post.id);
@@ -128,7 +135,7 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
       post.can_delete = false;
     }
   }
-  res.json(posts);
+  paginatedResponse(res, posts, total, page, limit);
 });
 
 // Get announcements for a world
@@ -303,7 +310,8 @@ router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, r
   res.json(updatedPost);
 });
 // Get comments for a post
-router.get('/:postId/comments', optionalAuth, (req, res) =>{
+router.get('/:postId/comments', optionalAuth, (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
   const comments = db
     .prepare(
       `
@@ -312,10 +320,14 @@ router.get('/:postId/comments', optionalAuth, (req, res) =>{
     FROM comments c JOIN users u ON u.id = c.user_id
     WHERE c.post_id = ?
     ORDER BY c.created_at ASC
+    LIMIT ? OFFSET ?
   `,
     )
-    .all(req.params.postId);
-  res.json(comments);
+    .all(req.params.postId, limit, offset);
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM comments WHERE post_id = ?`)
+    .get(req.params.postId).count;
+  paginatedResponse(res, comments, total, page, limit);
 });
 
 // Add comment

@@ -61,8 +61,8 @@ describe('World Full API Integration Tests', () => {
   test('2. GET /api/worlds - List all worlds', async () => {
     const res = await request(app).get('/api/worlds');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThan(0);
   });
 
   test('3. GET /api/worlds/:id - Get world detail', async () => {
@@ -138,6 +138,6 @@ describe('World Full API Integration Tests', () => {
   test('8. GET /api/worlds/:id/members - Get all approved members', async () => {
     const res = await request(app).get(`/api/worlds/${worldId}/members`);
     expect(res.status).toBe(200);
-    expect(res.body.some((m) => m.user_id === playerUser.id)).toBe(true);
+    expect(res.body.data.some((m) => m.user_id === playerUser.id)).toBe(true);
   });
 });

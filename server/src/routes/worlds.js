@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
+import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { validate } from '../middleware/validate.js';
 import {
   createWorldValidators,
@@ -25,37 +26,42 @@ const requireWorldOwner = (world, userId) => {
   return getWorldOwnerId(world) === userId;
 };
 
-// List all worlds (with search)
+// List all worlds (with search and pagination)
 router.get('/', optionalAuth, (req, res) => {
-  const { search, page = 1, limit = 20 } = req.query;
-  const offset = (page - 1) * limit;
-  let worlds;
+  const { search } = req.query;
+  const { page, limit, offset } = parsePagination(req.query);
+
+  let worlds, total;
   if (search) {
     worlds = db
       .prepare(
         `
-      SELECT w.*, 
+      SELECT w.*,
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
-      FROM worlds w 
+      FROM worlds w
       WHERE w.title LIKE ? AND w.is_public = 1
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
-      .all(`%${search}%`, Number(limit), Number(offset));
+      .all(`%${search}%`, limit, offset);
+    total = db
+      .prepare(`SELECT COUNT(*) as count FROM worlds WHERE title LIKE ? AND is_public = 1`)
+      .get(`%${search}%`).count;
   } else {
     worlds = db
       .prepare(
         `
       SELECT w.*,
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
-      FROM worlds w 
+      FROM worlds w
       WHERE w.is_public = 1
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
-      .all(Number(limit), Number(offset));
+      .all(limit, offset);
+    total = db.prepare(`SELECT COUNT(*) as count FROM worlds WHERE is_public = 1`).get().count;
   }
-  res.json(worlds);
+  paginatedResponse(res, worlds, total, page, limit);
 });
 
 // Get my worlds
@@ -258,6 +264,7 @@ router.get('/:id/leaderboard', (req, res) => {
 
 // Get all members
 router.get('/:id/members', (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
   const members = db
     .prepare(
       `
@@ -265,10 +272,14 @@ router.get('/:id/members', (req, res) => {
     FROM world_members wm JOIN users u ON u.id = wm.user_id
     WHERE wm.world_id = ? AND wm.status = 'approved'
     ORDER BY wm.role ASC, wm.credits DESC
+    LIMIT ? OFFSET ?
   `,
     )
-    .all(req.params.id);
-  res.json(members);
+    .all(req.params.id, limit, offset);
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM world_members WHERE world_id = ? AND status = 'approved'`)
+    .get(req.params.id).count;
+  paginatedResponse(res, members, total, page, limit);
 });
 
 export default router;

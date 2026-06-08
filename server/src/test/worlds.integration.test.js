@@ -81,8 +81,8 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
       .query({ search: title });
 
     expect(searchRes.status).toBe(200);
-    expect(Array.isArray(searchRes.body)).toBe(true);
-    const foundWorld = searchRes.body.find((w) => w.id === worldId);
+    expect(Array.isArray(searchRes.body.data)).toBe(true);
+    const foundWorld = searchRes.body.data.find((w) => w.id === worldId);
     expect(foundWorld).toBeDefined();
     expect(foundWorld.title).toBe(title);
 

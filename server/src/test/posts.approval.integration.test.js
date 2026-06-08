@@ -144,9 +144,9 @@ describe('E2.3 Integration: Post Approval and Dev-mediated Credit Reward', () =>
     );
 
     expect(approvedPostRes.status).toBe(200);
-    expect(Array.isArray(approvedPostRes.body)).toBe(true);
-    expect(approvedPostRes.body).toHaveLength(1);
-    expect(approvedPostRes.body[0]).toMatchObject({
+    expect(Array.isArray(approvedPostRes.body.data)).toBe(true);
+    expect(approvedPostRes.body.data).toHaveLength(1);
+    expect(approvedPostRes.body.data[0]).toMatchObject({
       id: postId,
       event_id: eventId,
       user_id: player.id,
