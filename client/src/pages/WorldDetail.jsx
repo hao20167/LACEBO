@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { WorldDetailSkeleton } from '../components/SkeletonLoader';
+import { useToastContext } from '../components/Toast';
 
 export default function WorldDetail() {
   const { id } = useParams();
@@ -14,6 +15,7 @@ export default function WorldDetail() {
   const [tab, setTab] = useState('lore');
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const toast = useToastContext();
 
   // Announcement form
   const [showAnnForm, setShowAnnForm] = useState(false);
@@ -86,8 +88,10 @@ export default function WorldDetail() {
       await api.post(`/events/world/${id}`, { ...proposalForm, event_type: 'small' });
       setShowProposalForm(false);
       setProposalForm({ title: '', description: '' });
-      alert('Small event proposed! Waiting for Dev approval.');
-    } catch { }
+      toast.success('Small event proposed! Waiting for Dev approval.');
+    } catch {
+      toast.error('Failed to submit proposal. Please try again.');
+    }
   };
 
   if (loading) return <WorldDetailSkeleton />;

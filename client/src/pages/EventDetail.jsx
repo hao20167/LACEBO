@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getApiCollection } from '../services/api';
 import { EventDetailSkeleton } from '../components/SkeletonLoader';
+import { useToastContext } from '../components/Toast';
 
 export default function EventDetail() {
   const { eventId } = useParams();
   const { user } = useAuth();
+  const toast = useToastContext();
   const [event, setEvent] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function EventDetail() {
       setNewPost('');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to create post');
+      toast.error(err.response?.data?.error || 'Failed to create post');
     }
     setPosting(false);
   };
@@ -97,7 +99,7 @@ export default function EventDetail() {
       setEditingPostId(null);
       setEditContent('');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update post');
+      toast.error(err.response?.data?.error || 'Failed to update post');
     }
   };
 
@@ -109,7 +111,7 @@ export default function EventDetail() {
       setPosts(posts.filter((post) => post.id !== postToDelete.id));
       setPostToDelete(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete post');
+      toast.error(err.response?.data?.error || 'Failed to delete post');
     }
   };
 

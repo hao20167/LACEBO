@@ -22,6 +22,11 @@ vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 1, username: 'tester' } }),
 }));
 
+const mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+vi.mock('../components/Toast', () => ({
+  useToastContext: () => mockToast,
+}));
+
 // ─── Mock data ───────────────────────────────────────────────────────────────
 
 const mockEvent = {
@@ -87,7 +92,6 @@ function renderEventDetail() {
 describe('EventDetail Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(globalThis, 'alert').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -250,7 +254,7 @@ describe('EventDetail Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Post' }));
 
     await waitFor(() =>
-      expect(globalThis.alert).toHaveBeenCalledWith('Failed to create post'),
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to create post'),
     );
   });
 });

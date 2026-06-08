@@ -11,9 +11,19 @@ export default {
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
+        'toast-in': {
+          '0%':   { opacity: '0', transform: 'translateY(12px) scale(0.97)' },
+          '100%': { opacity: '1', transform: 'translateY(0)   scale(1)' },
+        },
+        'toast-progress': {
+          '0%':   { width: '100%' },
+          '100%': { width: '0%' },
+        },
       },
       animation: {
-        shimmer: 'shimmer 1.5s infinite',
+        shimmer:          'shimmer 1.5s infinite',
+        'toast-in':       'toast-in 0.2s ease-out both',
+        'toast-progress': 'toast-progress 4s linear forwards',
       },
     }
   },
