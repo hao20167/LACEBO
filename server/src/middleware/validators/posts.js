@@ -32,7 +32,13 @@ export const createAnnouncementValidators = [
 export const updatePostValidators = [
   param('postId').isInt({ min: 1 }).withMessage('Post ID must be a positive integer'),
   body('content')
+    .optional()
     .trim()
-    .notEmpty().withMessage('Content is required')
+    .notEmpty().withMessage('Content cannot be empty')
     .isLength({ max: 5000 }).withMessage('Content must be at most 5000 characters'),
+  body('image_url')
+    .optional()
+    .trim()
+    .notEmpty().withMessage('image_url cannot be empty')
+    .isLength({ max: 2048 }).withMessage('image_url must be at most 2048 characters'),
 ];

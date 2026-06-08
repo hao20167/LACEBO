@@ -181,6 +181,107 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
 
       expect(secondApproveRes.status).toBe(400);
     });
+
+    it('should allow the author to update post content and image', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Original post' });
+
+      const res = await request(app)
+        .patch(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({
+          content: 'Updated post',
+          image_url: '/uploads/images/post.png',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        id: createRes.body.id,
+        content: 'Updated post',
+        image_url: '/uploads/images/post.png',
+      });
+    });
+
+    it('should reject post updates from non-authors', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Owned by dev' });
+
+      const res = await request(app)
+        .patch(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Player edit' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should reject empty post updates', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'No fields update' });
+
+      const res = await request(app)
+        .patch(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should allow the author to delete a post', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Delete my own post' });
+
+      const res = await request(app)
+        .delete(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${playerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(db.prepare('SELECT * FROM posts WHERE id = ?').get(createRes.body.id)).toBeUndefined();
+    });
+
+    it('should allow a dev to delete posts in their world', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Dev can delete this' });
+
+      const res = await request(app)
+        .delete(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should reject post deletes from non-authors and non-devs', async () => {
+      const otherUser = createTestUser({
+        db,
+        username: 'other_player',
+        email: 'other@test.com',
+        password: 'Password123!',
+        displayName: 'Other Player',
+      });
+      const otherToken = createTestToken(otherUser);
+
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Cannot delete this' });
+
+      const res = await request(app)
+        .delete(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(403);
+    });
   });
 
   describe('Announcements', () => {
