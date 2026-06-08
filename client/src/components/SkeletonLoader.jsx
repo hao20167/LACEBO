@@ -3,6 +3,7 @@
  * Reusable skeleton screen components for loading states across all pages.
  * Uses Tailwind CSS animate-pulse with shimmer effects.
  */
+import PropTypes from 'prop-types';
 
 // ─── Base skeleton block ──────────────────────────────────────────────────────
 function Skeleton({ className = '' }) {
@@ -12,6 +13,8 @@ function Skeleton({ className = '' }) {
     />
   );
 }
+
+Skeleton.propTypes = { className: PropTypes.string };
 
 // ─── Full-page centered spinner / pulse ───────────────────────────────────────
 export function PageLoader() {
@@ -39,7 +42,7 @@ export function WorldListSkeleton({ count = 6 }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: count }).map((_, i) => (
           <div
-            key={i}
+            key={`world-skeleton-${i}`}
             className="bg-dark-900 border border-dark-700 rounded-xl p-5 space-y-3"
           >
             <Skeleton className="h-5 w-3/4" />
@@ -55,6 +58,8 @@ export function WorldListSkeleton({ count = 6 }) {
     </div>
   );
 }
+
+WorldListSkeleton.propTypes = { count: PropTypes.number };
 
 // ─── WorldDetail skeleton ─────────────────────────────────────────────────────
 export function WorldDetailSkeleton() {
@@ -216,7 +221,7 @@ export function MyWorldsSkeleton({ count = 4 }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {Array.from({ length: count }).map((_, i) => (
           <div
-            key={i}
+            key={`myworld-skeleton-${i}`}
             className="bg-dark-900 border border-dark-700 rounded-xl p-5 space-y-3"
           >
             <div className="flex items-center justify-between">
@@ -235,6 +240,8 @@ export function MyWorldsSkeleton({ count = 4 }) {
     </div>
   );
 }
+
+MyWorldsSkeleton.propTypes = { count: PropTypes.number };
 
 // ─── WorldManage skeleton ─────────────────────────────────────────────────────
 export function WorldManageSkeleton() {
