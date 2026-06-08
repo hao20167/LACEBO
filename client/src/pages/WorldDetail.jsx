@@ -154,11 +154,14 @@ export default function WorldDetail() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-dark-900 rounded-xl p-1 border border-dark-700">
-        {['lore', 'events', 'announcements', 'leaderboard'].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition capitalize ${tab === t ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}`}>
+      {/* Tabs — 2×2 on mobile, 1 row on sm+ */}
+      <div className="grid grid-cols-2 sm:flex gap-1 mb-6 bg-dark-900 rounded-xl p-1 border border-dark-700">
+        {['lore', 'events', 'announcements', 'leaderboard'].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`py-2 px-3 rounded-lg text-sm font-medium transition capitalize ${tab === t ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}`}
+          >
             {t}
           </button>
         ))}
@@ -169,11 +172,11 @@ export default function WorldDetail() {
         <div>
           <h2 className="text-xl font-bold text-dark-100 mb-4">World Lore Timeline</h2>
           {events.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">No events in this world's lore yet.</p>
+            <p className="text-dark-400 text-center py-8">No events in this world&apos;s lore yet.</p>
           ) : (
             <div className="relative">
               <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
-              {events.map((event, i) => (
+              {events.map((event) => (
                 <div key={event.id} className="relative pl-14 pb-8">
                   <div className={`absolute left-4 w-5 h-5 rounded-full border-2 ${
                     event.event_type === 'big' 
@@ -236,7 +239,7 @@ export default function WorldDetail() {
                 <textarea placeholder="Event description" value={eventForm.description}
                   onChange={e => setEventForm({ ...eventForm, description: e.target.value })} rows={3}
                   className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 focus:outline-none focus:border-primary-500 resize-none" />
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <select value={eventForm.event_type} onChange={e => setEventForm({ ...eventForm, event_type: e.target.value })}
                     className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100">
                     <option value="big">Big Event</option>
@@ -244,10 +247,10 @@ export default function WorldDetail() {
                   </select>
                   <input type="datetime-local" value={eventForm.start_date}
                     onChange={e => setEventForm({ ...eventForm, start_date: e.target.value })}
-                    className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100" />
+                    className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100" />
                   <input type="datetime-local" value={eventForm.end_date}
                     onChange={e => setEventForm({ ...eventForm, end_date: e.target.value })}
-                    className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100" />
+                    className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100" />
                 </div>
                 <button type="submit" className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Create Event</button>
               </form>
