@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../services/api.js';
+import api, { getApiCollection } from '../services/api.js';
 
 export default function WorldList() {
   const [worlds, setWorlds] = useState([]);
@@ -11,7 +11,7 @@ export default function WorldList() {
     setLoading(true);
     try {
       const res = await api.get('/worlds', { params: q ? { search: q } : {} });
-      setWorlds(res.data);
+      setWorlds(getApiCollection(res.data));
     } catch {}
     setLoading(false);
   };

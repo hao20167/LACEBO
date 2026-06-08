@@ -13,6 +13,9 @@ vi.mock('../services/api.js', () => ({
     delete: vi.fn(),
   },
   getApiErrorMessage: vi.fn((err, fallback) => err?.message || fallback),
+  getApiCollection: vi.fn((payload) =>
+    Array.isArray(payload) ? payload : payload?.data || [],
+  ),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({

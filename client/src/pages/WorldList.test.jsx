@@ -15,6 +15,9 @@ vi.mock('../services/api.js', () => ({
   default: {
     get: vi.fn(),
   },
+  getApiCollection: vi.fn((payload) =>
+    Array.isArray(payload) ? payload : payload?.data || [],
+  ),
 }));
 
 const mockWorlds = [

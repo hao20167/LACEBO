@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { getApiCollection } from '../services/api';
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -26,7 +26,7 @@ export default function EventDetail() {
         api.get(`/posts/event/${eventId}`)
       ]);
       setEvent(eventRes.data);
-      setPosts(postsRes.data);
+      setPosts(getApiCollection(postsRes.data));
     } catch { }
     setLoading(false);
   };
@@ -119,7 +119,7 @@ export default function EventDetail() {
     }
     try {
       const res = await api.get(`/posts/${postId}/comments`);
-      setComments({ ...comments, [postId]: res.data });
+      setComments({ ...comments, [postId]: getApiCollection(res.data) });
       setExpandedComments({ ...expandedComments, [postId]: true });
     } catch { }
   };

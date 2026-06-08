@@ -30,6 +30,12 @@ export default function Navbar() {
                   My Worlds
                 </Link>
                 <Link
+                  to="/profile"
+                  className="text-dark-300 hover:text-dark-100 transition text-sm font-medium"
+                >
+                  Profile
+                </Link>
+                <Link
                   to="/worlds/create"
                   className="text-dark-300 hover:text-dark-100 transition text-sm font-medium"
                 >
@@ -42,11 +48,12 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <span className="text-sm text-dark-300">
-                <span className="text-primary-400 font-medium">
-                  {user.display_name}
-                </span>
-              </span>
+              <Link
+                to="/profile"
+                className="text-sm text-primary-400 hover:text-primary-300 font-medium transition"
+              >
+                {user.display_name || user.username}
+              </Link>
               <button
                 onClick={logout}
                 className="text-sm text-dark-400 hover:text-red-400 transition"

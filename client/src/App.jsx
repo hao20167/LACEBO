@@ -10,6 +10,7 @@ import WorldDetail from './pages/WorldDetail';
 import EventDetail from './pages/EventDetail';
 import CreateWorld from './pages/CreateWorld';
 import MyWorlds from './pages/MyWorlds';
+import UserProfile from './pages/UserProfile';
 import WorldManage from './pages/WorldManage';
 
 function ProtectedRoute({ children }) {
@@ -51,6 +52,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MyWorlds />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <UserProfile />
               </ProtectedRoute>
             }
           />
