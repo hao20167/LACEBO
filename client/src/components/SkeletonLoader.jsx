@@ -40,9 +40,9 @@ export function WorldListSkeleton({ count = 6 }) {
       </div>
       {/* Grid skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: count }).map((_, i) => (
+        {Array.from({ length: count }, (_, i) => `wl-${i}`).map((id) => (
           <div
-            key={`world-skeleton-${i}`}
+            key={id}
             className="bg-dark-900 border border-dark-700 rounded-xl p-5 space-y-3"
           >
             <Skeleton className="h-5 w-3/4" />
@@ -219,9 +219,9 @@ export function MyWorldsSkeleton({ count = 4 }) {
         <Skeleton className="h-9 w-32 rounded-lg" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: count }).map((_, i) => (
+        {Array.from({ length: count }, (_, i) => `mw-${i}`).map((id) => (
           <div
-            key={`myworld-skeleton-${i}`}
+            key={id}
             className="bg-dark-900 border border-dark-700 rounded-xl p-5 space-y-3"
           >
             <div className="flex items-center justify-between">
