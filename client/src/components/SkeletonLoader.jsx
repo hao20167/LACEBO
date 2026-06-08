@@ -64,7 +64,7 @@ WorldListSkeleton.propTypes = { count: PropTypes.number };
 // ─── WorldDetail skeleton ─────────────────────────────────────────────────────
 export function WorldDetailSkeleton() {
   return (
-    <div>
+    <div data-testid="skeleton-loader">
       {/* Header card */}
       <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 mb-6 space-y-4">
         <div className="flex items-start justify-between">
@@ -161,7 +161,7 @@ export function EventDetailSkeleton() {
 // ─── UserProfile skeleton ─────────────────────────────────────────────────────
 export function UserProfileSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="skeleton-loader">
       {/* Profile card */}
       <section className="bg-dark-900 border border-dark-700 rounded-xl p-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
@@ -246,7 +246,7 @@ MyWorldsSkeleton.propTypes = { count: PropTypes.number };
 // ─── WorldManage skeleton ─────────────────────────────────────────────────────
 export function WorldManageSkeleton() {
   return (
-    <div>
+    <div data-testid="skeleton-loader">
       {/* Back + title */}
       <div className="flex items-center gap-4 mb-6">
         <Skeleton className="h-4 w-28" />

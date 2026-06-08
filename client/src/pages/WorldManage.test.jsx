@@ -22,6 +22,12 @@ describe('WorldManage Page Component', () => {
     window.history.pushState({}, 'Test', '/worlds/1/manage');
   });
 
+  test('renders loading state initially', () => {
+    api.get.mockImplementation(() => new Promise(() => {}));
+    renderWorldManage();
+    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
+  });
+
   test('renders pending members', async () => {
     api.get.mockImplementation((url) => {
       if (url.includes('/members/pending'))
