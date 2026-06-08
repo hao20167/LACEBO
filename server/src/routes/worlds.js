@@ -142,6 +142,16 @@ router.post('/:id/join', authMiddleware, (req, res) => {
     .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
     .get(worldId, req.user.id);
   if (existing) {
+    if (existing.status === 'rejected') {
+      db.prepare(
+        "UPDATE world_members SET status = 'pending', role = 'player' WHERE id = ?",
+      ).run(existing.id);
+      const membership = db
+        .prepare('SELECT * FROM world_members WHERE id = ?')
+        .get(existing.id);
+      return res.status(201).json(membership);
+    }
+
     return res
       .status(409)
       .json({ error: 'Already a member or pending', membership: existing });

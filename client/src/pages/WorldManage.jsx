@@ -10,7 +10,8 @@ export default function WorldManage() {
   const [proposedEvents, setProposedEvents] = useState([]);
   const [tab, setTab] = useState('members');
   const [loading, setLoading] = useState(true);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [confirming, setConfirming] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
 
   const fetchData = async () => {
@@ -101,20 +102,73 @@ export default function WorldManage() {
   };
 
   const handleDeleteClick = () => {
-    setShowDeleteConfirm(true);
+    setConfirmDialog({ mode: 'delete-world' });
   };
 
-  const confirmDelete = async () => {
-    setShowDeleteConfirm(false);
-    await scheduleWorldDeletion();
+  const confirmRejectMember = (member) => {
+    setConfirmDialog({ mode: 'reject-member', itemId: member.id, itemLabel: member.display_name });
   };
 
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
+  const confirmRejectPost = (post) => {
+    setConfirmDialog({ mode: 'reject-post', itemId: post.id, itemLabel: post.content });
+  };
+
+  const confirmRejectEvent = (event) => {
+    setConfirmDialog({ mode: 'reject-event', itemId: event.id, itemLabel: event.title });
+  };
+
+  const confirmDialogAction = async () => {
+    if (!confirmDialog) return;
+    const dialog = confirmDialog;
+    setConfirming(true);
+
+    try {
+      if (dialog.mode === 'delete-world') {
+        await scheduleWorldDeletion();
+      } else if (dialog.mode === 'reject-member') {
+        await handleMember(dialog.itemId, 'rejected');
+      } else if (dialog.mode === 'reject-post') {
+        await handlePost(dialog.itemId, 'reject');
+      } else if (dialog.mode === 'reject-event') {
+        await handleEvent(dialog.itemId, 'rejected');
+      }
+      setConfirmDialog(null);
+    } catch {
+      // keep current actionMessage or let existing handlers surface errors
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const cancelConfirmDialog = () => {
+    setConfirmDialog(null);
   };
 
   const isDev = world?.membership?.role === 'dev' && world?.membership?.status === 'approved';
   const isDeletionScheduled = Boolean(world?.deletion_scheduled_at);
+  const dialogCopy = {
+    'delete-world': {
+      title: 'Xác nhận xóa world',
+      description: 'World sẽ được lên lịch xóa hoàn toàn sau 3 phút nếu bạn xác nhận.',
+      confirmLabel: 'Xóa world',
+    },
+    'reject-member': {
+      title: 'Xác nhận từ chối thành viên',
+      description: 'Thành viên này sẽ bị từ chối tham gia world.',
+      confirmLabel: 'Từ chối',
+    },
+    'reject-post': {
+      title: 'Xác nhận từ chối bài viết',
+      description: 'Bài viết này sẽ bị từ chối và không được đăng trong world.',
+      confirmLabel: 'Từ chối',
+    },
+    'reject-event': {
+      title: 'Xác nhận từ chối sự kiện',
+      description: 'Đề xuất sự kiện này sẽ bị từ chối.',
+      confirmLabel: 'Từ chối',
+    },
+  };
+  const currentDialogCopy = confirmDialog ? dialogCopy[confirmDialog.mode] : null;
 
   if (loading)
     return <div className="text-center text-dark-400 py-12">Loading...</div>;
@@ -147,6 +201,7 @@ export default function WorldManage() {
               </p>
             </div>
             <button
+              type="button"
               onClick={isDeletionScheduled ? undoWorldDeletion : handleDeleteClick}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${isDeletionScheduled ? 'bg-yellow-700 hover:bg-yellow-600 text-dark-950' : 'bg-red-800 hover:bg-red-700 text-white'}`}
             >
@@ -161,23 +216,39 @@ export default function WorldManage() {
         </div>
       )}
 
-      {showDeleteConfirm && (
+      {confirmDialog && currentDialogCopy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-dark-950 border border-dark-700 p-6 shadow-xl">
-            <h3 className="text-xl font-semibold text-dark-100 mb-4">Bạn chắc chắn muốn xóa world?</h3>
-            <p className="text-dark-400 mb-6">World sẽ được xóa hoàn toàn sau 3 phút nếu bạn xác nhận.</p>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-dialog-title"
+            className="w-full max-w-md rounded-2xl bg-dark-950 border border-dark-700 p-6 shadow-xl"
+          >
+            <h3 id="confirm-dialog-title" className="text-xl font-semibold text-dark-100 mb-4">
+              {currentDialogCopy.title}
+            </h3>
+            <p className="text-dark-400 mb-4">{currentDialogCopy.description}</p>
+            {confirmDialog.itemLabel && confirmDialog.mode !== 'delete-world' && (
+              <div className="max-h-40 overflow-y-auto rounded-xl border border-dark-700 bg-dark-900 p-3 text-sm text-dark-200 mb-4 whitespace-pre-wrap">
+                {confirmDialog.itemLabel}
+              </div>
+            )}
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
-                onClick={cancelDelete}
-                className="w-full sm:w-auto rounded-lg border border-dark-700 bg-dark-900 px-4 py-2 text-sm text-dark-200 hover:bg-dark-800 transition"
+                type="button"
+                onClick={cancelConfirmDialog}
+                disabled={confirming}
+                className="w-full sm:w-auto rounded-lg border border-dark-700 bg-dark-900 px-4 py-2 text-sm text-dark-200 hover:bg-dark-800 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                No
+                Hủy
               </button>
               <button
-                onClick={confirmDelete}
-                className="w-full sm:w-auto rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition"
+                type="button"
+                onClick={confirmDialogAction}
+                disabled={confirming}
+                className="w-full sm:w-auto rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Yes
+                {confirming ? 'Đang xử lý...' : currentDialogCopy.confirmLabel}
               </button>
             </div>
           </div>
@@ -193,6 +264,7 @@ export default function WorldManage() {
         ].map((t) => (
           <button
             key={t.key}
+            type="button"
             onClick={() => setTab(t.key)}
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${tab === t.key ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}`}
           >
@@ -228,13 +300,15 @@ export default function WorldManage() {
                   </div>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => handleMember(member.id, 'approved')}
                       className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
                     >
                       Approve
                     </button>
                     <button
-                      onClick={() => handleMember(member.id, 'rejected')}
+                      type="button"
+                      onClick={() => confirmRejectMember(member)}
                       className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
                     >
                       Reject
@@ -273,13 +347,15 @@ export default function WorldManage() {
                   <p className="text-dark-300 text-sm mb-3">{post.content}</p>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => handlePost(post.id, 'approve')}
                       className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
                     >
                       Approve
                     </button>
                     <button
-                      onClick={() => handlePost(post.id, 'reject')}
+                      type="button"
+                      onClick={() => confirmRejectPost(post)}
                       className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
                     >
                       Reject
@@ -323,13 +399,15 @@ export default function WorldManage() {
                   </p>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => handleEvent(event.id, 'open')}
                       className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
                     >
                       Approve & Open
                     </button>
                     <button
-                      onClick={() => handleEvent(event.id, 'rejected')}
+                      type="button"
+                      onClick={() => confirmRejectEvent(event)}
                       className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
                     >
                       Reject

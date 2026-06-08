@@ -83,4 +83,65 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
       status: 'approved',
     });
   });
+
+  test('should allow a rejected member to request joining again', async () => {
+    const dev = createTestUser({
+      db,
+      username: 'rejoin_dev',
+      email: 'rejoin_dev@example.com',
+      displayName: 'Rejoin Dev',
+    });
+    const player = createTestUser({
+      db,
+      username: 'rejoin_player',
+      email: 'rejoin_player@example.com',
+      displayName: 'Rejoin Player',
+    });
+    const devToken = createTestToken(dev);
+    const playerToken = createTestToken(player);
+
+    const createRes = await request(app)
+      .post('/api/worlds')
+      .set('Authorization', `Bearer ${devToken}`)
+      .send({
+        title: 'Rejoin World',
+        description: 'World for rejoin flow',
+      });
+    const worldId = createRes.body.id;
+
+    const firstJoinRes = await request(app)
+      .post(`/api/worlds/${worldId}/join`)
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(firstJoinRes.status).toBe(201);
+    expect(firstJoinRes.body.status).toBe('pending');
+
+    const rejectRes = await request(app)
+      .patch(`/api/worlds/${worldId}/members/${firstJoinRes.body.id}`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .send({ status: 'rejected' });
+
+    expect(rejectRes.status).toBe(200);
+
+    const rejoinRes = await request(app)
+      .post(`/api/worlds/${worldId}/join`)
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(rejoinRes.status).toBe(201);
+    expect(rejoinRes.body.id).toBe(firstJoinRes.body.id);
+    expect(rejoinRes.body.status).toBe('pending');
+    expect(rejoinRes.body.role).toBe('player');
+
+    const pendingRes = await request(app)
+      .get(`/api/worlds/${worldId}/members/pending`)
+      .set('Authorization', `Bearer ${devToken}`);
+
+    expect(pendingRes.status).toBe(200);
+    expect(pendingRes.body).toHaveLength(1);
+    expect(pendingRes.body[0]).toMatchObject({
+      id: firstJoinRes.body.id,
+      user_id: player.id,
+      status: 'pending',
+    });
+  });
 });
