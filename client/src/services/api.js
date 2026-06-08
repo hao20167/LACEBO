@@ -30,6 +30,18 @@ export const getApiCollection = (payload) => {
   return [];
 };
 
+export const getApiAssetUrl = (path) => {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+
+  try {
+    const apiUrl = new URL(API_URL);
+    return `${apiUrl.origin}${path}`;
+  } catch {
+    return path;
+  }
+};
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: REQUEST_TIMEOUT_MS,
