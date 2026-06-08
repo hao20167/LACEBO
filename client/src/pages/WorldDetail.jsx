@@ -178,24 +178,20 @@ export default function WorldDetail() {
               <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
               {events.map((event) => (
                 <div key={event.id} className="relative pl-14 pb-8">
-                  <div className={`absolute left-4 w-5 h-5 rounded-full border-2 ${
-                    event.event_type === 'big' 
-                      ? 'bg-primary-500 border-primary-400' 
+                  <div className={`absolute left-4 w-5 h-5 rounded-full border-2 ${event.event_type === 'big'
+                      ? 'bg-primary-500 border-primary-400'
                       : 'bg-dark-600 border-dark-500'
-                  } ${event.status === 'open' ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-dark-950' : ''}`}></div>
+                    } ${event.status === 'open' ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-dark-950' : ''}`}></div>
                   <Link to={`/events/${event.id}`}
-                    className={`block bg-dark-900 border rounded-xl p-4 transition hover:border-primary-600 ${
-                      event.event_type === 'big' ? 'border-primary-800' : 'border-dark-700'
-                    }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'
+                    className={`block bg-dark-900 border rounded-xl p-4 transition hover:border-primary-600 ${event.event_type === 'big' ? 'border-primary-800' : 'border-dark-700'
                       }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${event.event_type === 'big' ? 'bg-primary-900/50 text-primary-300' : 'bg-dark-700 text-dark-300'
+                        }`}>
                         {event.event_type === 'big' ? 'BIG EVENT' : 'SMALL EVENT'}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        event.status === 'open' ? 'bg-green-900/50 text-green-300' : 'bg-dark-700 text-dark-400'
-                      }`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'open' ? 'bg-green-900/50 text-green-300' : 'bg-dark-700 text-dark-400'
+                        }`}>
                         {event.status.toUpperCase()}
                       </span>
                     </div>
