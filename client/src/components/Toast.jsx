@@ -17,17 +17,17 @@ export function useToastContext() {
 // ─── Styles per type ─────────────────────────────────────────────────────────
 const STYLES = {
   success: {
-    bar:  'bg-green-500',
+    bar: 'bg-green-500',
     icon: '✓',
     ring: 'border-green-700/60 bg-green-900/30 text-green-200',
   },
   error: {
-    bar:  'bg-red-500',
+    bar: 'bg-red-500',
     icon: '✕',
     ring: 'border-red-700/60 bg-red-900/30 text-red-200',
   },
   info: {
-    bar:  'bg-primary-500',
+    bar: 'bg-primary-500',
     icon: 'ℹ',
     ring: 'border-primary-700/60 bg-primary-900/30 text-primary-200',
   },
@@ -42,7 +42,9 @@ function ToastItem({ id, message, type, onDismiss }) {
       className={`relative flex items-start gap-3 rounded-xl border px-4 py-3 pr-10 shadow-2xl text-sm font-medium animate-toast-in ${s.ring}`}
     >
       {/* Colored left bar */}
-      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${s.bar}`}>
+      <span
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${s.bar}`}
+      >
         {s.icon}
       </span>
       <span className="flex-1 leading-snug">{message}</span>
@@ -55,15 +57,17 @@ function ToastItem({ id, message, type, onDismiss }) {
         ×
       </button>
       {/* Auto-progress bar */}
-      <div className={`absolute bottom-0 left-0 h-0.5 w-full rounded-b-xl ${s.bar} opacity-40 animate-toast-progress`} />
+      <div
+        className={`absolute bottom-0 left-0 h-0.5 w-full rounded-b-xl ${s.bar} opacity-40 animate-toast-progress`}
+      />
     </div>
   );
 }
 
 ToastItem.propTypes = {
-  id:        PropTypes.number.isRequired,
-  message:   PropTypes.string.isRequired,
-  type:      PropTypes.oneOf(['success', 'error', 'info']).isRequired,
+  id: PropTypes.number.isRequired,
+  message: PropTypes.string.isRequired,
+  type: PropTypes.oneOf(['success', 'error', 'info']).isRequired,
   onDismiss: PropTypes.func.isRequired,
 };
 
@@ -83,7 +87,7 @@ export function ToastContainer({ toasts, dismiss }) {
 }
 
 ToastContainer.propTypes = {
-  toasts:  PropTypes.array.isRequired,
+  toasts: PropTypes.array.isRequired,
   dismiss: PropTypes.func.isRequired,
 };
 

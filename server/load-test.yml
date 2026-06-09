@@ -1,0 +1,61 @@
+config:
+  target: "http://localhost:3001"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up phase"
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 30
+      name: "Ramp up load"
+    - duration: 60
+      arrivalRate: 30
+      name: "High constant load (Sustained)"
+  defaults:
+    headers:
+      x-bypass-ratelimit: "QA-Secret-Token-2026"
+  variables:
+    postId: ["1", "2", "3"]
+    worldId: ["1", "2"]
+
+scenarios:
+  - name: "Browsing & Interaction Flow (Read-Heavy 70%)"
+    weight: 7
+    flow:
+      - get:
+          url: "/api/worlds"
+      - get:
+          url: "/api/worlds/{{ worldId }}"
+      - get:
+          url: "/api/events/world/{{ worldId }}"
+      - get:
+          url: "/api/posts/1/comments"
+
+  - name: "Active User Post & Comment Flow (Write-Heavy 30%)"
+    weight: 3
+    flow:
+      - post:
+          url: "/api/users/login"
+          json:
+            username: "testuser"
+            password: "password123"
+          capture:
+            json: "$.token"
+            as: "authToken"
+      - log: "User authenticated successfully, simulating content interactions"
+      - post:
+          url: "/api/posts/event/1"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            content: "Simulated load test post message at high concurrency."
+          capture:
+            json: "$.id"
+            as: "newPostId"
+      - think: 1
+      - post:
+          url: "/api/posts/{{ newPostId }}/comments"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            content: "Automated test comment payload."

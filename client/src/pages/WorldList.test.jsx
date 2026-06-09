@@ -69,7 +69,9 @@ describe('WorldList', () => {
     });
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/worlds', { params: { page: 1, limit: 12 } });
+      expect(api.get).toHaveBeenCalledWith('/worlds', {
+        params: { page: 1, limit: 12 },
+      });
     });
 
     expect(screen.getByText('World 1')).toBeInTheDocument();
@@ -91,7 +93,9 @@ describe('WorldList', () => {
     });
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/worlds', { params: { page: 1, limit: 12 } });
+      expect(api.get).toHaveBeenCalledWith('/worlds', {
+        params: { page: 1, limit: 12 },
+      });
     });
 
     const searchInput = screen.getByPlaceholderText(

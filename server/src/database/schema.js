@@ -124,4 +124,3 @@ export function initDatabase() {
     db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
   }
 }
-

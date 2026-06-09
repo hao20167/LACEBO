@@ -37,7 +37,7 @@ export const stmts = {
     "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND status = 'approved'",
   ),
   insertMember: db.prepare(
-    "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, ?, ?)",
+    'INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, ?, ?)',
   ),
   updateMemberStatus: db.prepare(
     'UPDATE world_members SET status = ? WHERE id = ? AND world_id = ?',
@@ -63,12 +63,8 @@ export const stmts = {
   ),
 
   // likes
-  getLike: db.prepare(
-    'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
-  ),
-  insertLike: db.prepare(
-    'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
-  ),
+  getLike: db.prepare('SELECT id FROM likes WHERE post_id = ? AND user_id = ?'),
+  insertLike: db.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)'),
   deleteLike: db.prepare('DELETE FROM likes WHERE id = ?'),
 
   // events

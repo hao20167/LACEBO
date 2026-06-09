@@ -46,9 +46,7 @@ describe('Uploads API Integration Tests', () => {
   });
 
   test('POST /api/uploads/images - Should upload an image file', async () => {
-    const image = Buffer.from([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ]);
+    const image = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
     const res = await request(app)
       .post('/api/uploads/images')

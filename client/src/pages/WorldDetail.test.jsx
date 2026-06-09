@@ -10,7 +10,9 @@ vi.mock('../services/api.js', () => ({
     get: vi.fn(),
     post: vi.fn(),
   },
-  getApiCollection: vi.fn((payload) => (Array.isArray(payload) ? payload : payload?.data || [])),
+  getApiCollection: vi.fn((payload) =>
+    Array.isArray(payload) ? payload : payload?.data || [],
+  ),
   getApiAssetUrl: vi.fn((path) => path),
 }));
 
@@ -58,7 +60,8 @@ describe('WorldDetail Page', () => {
     api.get.mockImplementation((url) => {
       if (url === '/worlds/1') return Promise.resolve({ data: mockWorld });
       if (url === '/events/world/1') return Promise.resolve({ data: [] });
-      if (url === '/posts/world/1/announcements') return Promise.resolve({ data: [] });
+      if (url === '/posts/world/1/announcements')
+        return Promise.resolve({ data: [] });
       if (url === '/worlds/1/leaderboard') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: null });
     });

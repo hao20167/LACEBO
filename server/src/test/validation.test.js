@@ -13,7 +13,8 @@ describe('Input Validation Tests', () => {
 
   describe('POST /api/users/register', () => {
     test('rejects missing username', async () => {
-      const { username, ...body } = validUser;
+      const body = { ...validUser };
+      delete body.username;
       const res = await request(ctx.app).post('/api/users/register').send(body);
       expect(res.status).toBe(400);
       expect(res.body.error).toBeDefined();
@@ -48,13 +49,16 @@ describe('Input Validation Tests', () => {
     });
 
     test('rejects missing display_name', async () => {
-      const { display_name, ...body } = validUser;
+      const body = { ...validUser };
+      delete body.display_name;
       const res = await request(ctx.app).post('/api/users/register').send(body);
       expect(res.status).toBe(400);
     });
 
     test('accepts valid registration payload', async () => {
-      const res = await request(ctx.app).post('/api/users/register').send(validUser);
+      const res = await request(ctx.app)
+        .post('/api/users/register')
+        .send(validUser);
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty('token');
     });
@@ -62,12 +66,16 @@ describe('Input Validation Tests', () => {
 
   describe('POST /api/users/login', () => {
     test('rejects missing username', async () => {
-      const res = await request(ctx.app).post('/api/users/login').send({ password: 'pass' });
+      const res = await request(ctx.app)
+        .post('/api/users/login')
+        .send({ password: 'pass' });
       expect(res.status).toBe(400);
     });
 
     test('rejects missing password', async () => {
-      const res = await request(ctx.app).post('/api/users/login').send({ username: 'user' });
+      const res = await request(ctx.app)
+        .post('/api/users/login')
+        .send({ username: 'user' });
       expect(res.status).toBe(400);
     });
 

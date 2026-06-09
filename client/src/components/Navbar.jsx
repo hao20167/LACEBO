@@ -65,7 +65,9 @@ export default function Navbar() {
           <div className="hidden sm:flex items-center gap-4">
             {user ? (
               <>
-                <NavLink to="/profile">{user.display_name || user.username}</NavLink>
+                <NavLink to="/profile">
+                  {user.display_name || user.username}
+                </NavLink>
                 <button
                   type="button"
                   onClick={logout}
@@ -95,9 +97,15 @@ export default function Navbar() {
             aria-expanded={menuOpen}
             className="sm:hidden flex flex-col justify-center items-center w-9 h-9 gap-1.5 rounded-lg hover:bg-dark-800 transition"
           >
-            <span className={`block h-0.5 w-5 bg-dark-300 transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
-            <span className={`block h-0.5 w-5 bg-dark-300 transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
-            <span className={`block h-0.5 w-5 bg-dark-300 transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+            <span
+              className={`block h-0.5 w-5 bg-dark-300 transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`}
+            />
+            <span
+              className={`block h-0.5 w-5 bg-dark-300 transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`}
+            />
+            <span
+              className={`block h-0.5 w-5 bg-dark-300 transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`}
+            />
           </button>
         </div>
       </div>
@@ -105,19 +113,30 @@ export default function Navbar() {
       {/* Mobile dropdown menu */}
       {menuOpen && (
         <div className="sm:hidden border-t border-dark-700 bg-dark-900 px-4 py-4 flex flex-col gap-3">
-          <NavLink to="/worlds" onClick={close}>Explore Worlds</NavLink>
+          <NavLink to="/worlds" onClick={close}>
+            Explore Worlds
+          </NavLink>
           {user ? (
             <>
-              <NavLink to="/worlds/mine" onClick={close}>My Worlds</NavLink>
-              <NavLink to="/profile" onClick={close}>Profile</NavLink>
-              <NavLink to="/worlds/create" onClick={close}>Create World</NavLink>
+              <NavLink to="/worlds/mine" onClick={close}>
+                My Worlds
+              </NavLink>
+              <NavLink to="/profile" onClick={close}>
+                Profile
+              </NavLink>
+              <NavLink to="/worlds/create" onClick={close}>
+                Create World
+              </NavLink>
               <hr className="border-dark-700" />
               <span className="text-sm text-primary-400 font-medium">
                 {user.display_name || user.username}
               </span>
               <button
                 type="button"
-                onClick={() => { logout(); close(); }}
+                onClick={() => {
+                  logout();
+                  close();
+                }}
                 className="text-sm text-dark-400 hover:text-red-400 transition text-left"
               >
                 Logout
@@ -125,7 +144,9 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <NavLink to="/login" onClick={close}>Login</NavLink>
+              <NavLink to="/login" onClick={close}>
+                Login
+              </NavLink>
               <Link
                 to="/register"
                 onClick={close}
