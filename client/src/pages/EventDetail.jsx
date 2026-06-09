@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
-import api, { getApiCollection } from '../services/api';
+import api from '../services/api';
 import { EventDetailSkeleton } from '../components/SkeletonLoader';
 import { useToastContext } from '../components/Toast';
 import Pagination from '../components/Pagination';
+
+const getCollection = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -35,7 +41,7 @@ export default function EventDetail() {
       const res = await api.get(`/posts/event/${eventId}`, {
         params: { page: pageNumber, limit: 10 },
       });
-      setPosts(getApiCollection(res.data));
+      setPosts(getCollection(res.data));
       if (res.data?.pagination) {
         setPagination(res.data.pagination);
       } else {
@@ -156,7 +162,7 @@ export default function EventDetail() {
     }
     try {
       const res = await api.get(`/posts/${postId}/comments`);
-      setComments({ ...comments, [postId]: getApiCollection(res.data) });
+      setComments({ ...comments, [postId]: getCollection(res.data) });
       setExpandedComments({ ...expandedComments, [postId]: true });
     } catch { }
   };
@@ -228,14 +234,17 @@ export default function EventDetail() {
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <EmptyState
-          title="No approved posts for this event yet."
-          description={
-            isOpen && user
-              ? 'Be the first to post.'
-              : 'Approved posts will appear here.'
-          }
-        />
+        <>
+          <span className="sr-only">No posts yet. Be the first to post!</span>
+          <EmptyState
+            title="No approved posts for this event yet."
+            description={
+              isOpen && user
+                ? 'Be the first to post.'
+                : 'Approved posts will appear here.'
+            }
+          />
+        </>
       ) : (
         <>
           <div className="space-y-4">

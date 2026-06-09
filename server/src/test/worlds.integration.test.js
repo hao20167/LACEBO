@@ -188,7 +188,7 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
 
     const listRes = await request(app).get('/api/worlds');
     expect(listRes.status).toBe(200);
-    expect(listRes.body.some((world) => world.id === worldId)).toBe(false);
+    expect(listRes.body.data.some((world) => world.id === worldId)).toBe(false);
 
     const mineRes = await request(app)
       .get('/api/worlds/mine')

@@ -62,6 +62,7 @@ router.get('/', optionalAuth, (req, res) => {
   const { search, page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
   let worlds;
+  let total;
   if (search) {
     worlds = db
       .prepare(
