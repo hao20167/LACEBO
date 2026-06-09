@@ -124,4 +124,3 @@ export function initDatabase() {
     db.exec('ALTER TABLE worlds ADD COLUMN owner_id INTEGER DEFAULT NULL');
   }
 }
-

@@ -244,7 +244,9 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(db.prepare('SELECT * FROM posts WHERE id = ?').get(createRes.body.id)).toBeUndefined();
+      expect(
+        db.prepare('SELECT * FROM posts WHERE id = ?').get(createRes.body.id),
+      ).toBeUndefined();
     });
 
     it('should allow a dev to delete posts in their world', async () => {

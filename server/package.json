@@ -12,7 +12,9 @@
     "lint": "eslint src --ext .js",
     "lint:fix": "eslint src --ext .js --fix",
     "format": "prettier --write \"src/**/*.js\"",
-    "format:check": "prettier --check \"src/**/*.js\""
+    "format:check": "prettier --check \"src/**/*.js\"",
+    "test:load": "npx artillery run load-test.yml",
+    "test:load:report": "npx artillery run -o report.json load-test.yml && artillery report report.json"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -8,6 +8,7 @@
 /server/node_modules/
 /node_modules/
 /client/test-results/
+/client/playwright-report/
 
 # pdf
 *.pdf 

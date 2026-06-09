@@ -1,4 +1,10 @@
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import UserProfile from './UserProfile.jsx';
@@ -11,7 +17,9 @@ vi.mock('../services/api.js', () => ({
     post: vi.fn(),
     patch: vi.fn(),
   },
-  getApiCollection: vi.fn((payload) => (Array.isArray(payload) ? payload : payload?.data || [])),
+  getApiCollection: vi.fn((payload) =>
+    Array.isArray(payload) ? payload : payload?.data || [],
+  ),
   getApiAssetUrl: vi.fn((path) => path),
   getApiErrorMessage: vi.fn((err, fallback) => err.message || fallback),
 }));
@@ -164,7 +172,9 @@ describe('UserProfile Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Fetch failed')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /try again/i }),
+      ).toBeInTheDocument();
     });
   });
 });

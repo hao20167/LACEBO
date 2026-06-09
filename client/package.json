@@ -12,6 +12,7 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,css}\"",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:cross-browser": "playwright test --project=chromium --project=firefox --project=webkit --project=microsoft-edge",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
   },

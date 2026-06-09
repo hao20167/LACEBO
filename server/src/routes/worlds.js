@@ -7,6 +7,7 @@ import {
   createWorldValidators,
   updateWorldValidators,
   updateMemberValidators,
+  worldIdParamValidators,
 } from '../middleware/validators/worlds.js';
 
 const router = Router();
@@ -26,7 +27,6 @@ const requireWorldOwner = (world, userId) => {
   return getWorldOwnerId(world) === userId;
 };
 
-// List all worlds (with search and pagination)
 router.get('/', optionalAuth, (req, res) => {
   const { search } = req.query;
   const { page, limit, offset } = parsePagination(req.query);
@@ -45,7 +45,9 @@ router.get('/', optionalAuth, (req, res) => {
       )
       .all(`%${search}%`, limit, offset);
     total = db
-      .prepare(`SELECT COUNT(*) as count FROM worlds WHERE title LIKE ? AND is_public = 1`)
+      .prepare(
+        `SELECT COUNT(*) as count FROM worlds WHERE title LIKE ? AND is_public = 1`,
+      )
       .get(`%${search}%`).count;
   } else {
     worlds = db
@@ -59,12 +61,13 @@ router.get('/', optionalAuth, (req, res) => {
     `,
       )
       .all(limit, offset);
-    total = db.prepare(`SELECT COUNT(*) as count FROM worlds WHERE is_public = 1`).get().count;
+    total = db
+      .prepare(`SELECT COUNT(*) as count FROM worlds WHERE is_public = 1`)
+      .get().count;
   }
   paginatedResponse(res, worlds, total, page, limit);
 });
 
-// Get my worlds
 router.get('/mine', authMiddleware, (req, res) => {
   const worlds = db
     .prepare(
@@ -81,174 +84,214 @@ router.get('/mine', authMiddleware, (req, res) => {
   res.json(worlds);
 });
 
-// Create world
-router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => {
-  const { title, description, is_public = 1 } = req.body;
-  if (!title) return res.status(400).json({ error: 'Title is required' });
-  const result = db
-    .prepare(
-      'INSERT INTO worlds (title, description, is_public, owner_id) VALUES (?, ?, ?, ?)',
-    )
-    .run(title, description || '', is_public ? 1 : 0, req.user.id);
-  const worldId = result.lastInsertRowid;
-  // Creator becomes dev
-  db.prepare(
-    "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')",
-  ).run(worldId, req.user.id);
-  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
-  res.status(201).json(world);
-});
+router.post(
+  '/',
+  authMiddleware,
+  validate(createWorldValidators),
+  (req, res) => {
+    const { title, description, is_public = 1 } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+    const result = db
+      .prepare(
+        'INSERT INTO worlds (title, description, is_public, owner_id) VALUES (?, ?, ?, ?)',
+      )
+      .run(title, description || '', is_public ? 1 : 0, req.user.id);
+    const worldId = result.lastInsertRowid;
 
-// Get single world
-router.get('/:id', optionalAuth, (req, res) => {
-  const world = db
-    .prepare(
-      `
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')",
+    ).run(worldId, req.user.id);
+    const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
+    res.status(201).json(world);
+  },
+);
+
+router.get(
+  '/:id',
+  validate(worldIdParamValidators),
+  optionalAuth,
+  (req, res) => {
+    const world = db
+      .prepare(
+        `
     SELECT w.*,
       (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
     FROM worlds w WHERE w.id = ?
   `,
-    )
-    .get(req.params.id);
-  if (!world) return res.status(404).json({ error: 'World not found' });
+      )
+      .get(req.params.id);
+    if (!world) return res.status(404).json({ error: 'World not found' });
 
-  let membership = null;
-  if (req.user) {
-    membership = db
+    let membership = null;
+    if (req.user) {
+      membership = db
+        .prepare(
+          'SELECT * FROM world_members WHERE world_id = ? AND user_id = ?',
+        )
+        .get(world.id, req.user.id);
+    }
+    world.membership = membership;
+    res.json(world);
+  },
+);
+
+router.patch(
+  '/:id',
+  authMiddleware,
+  validate(updateWorldValidators),
+  (req, res) => {
+    const world = db
+      .prepare('SELECT * FROM worlds WHERE id = ?')
+      .get(req.params.id);
+    if (!world) return res.status(404).json({ error: 'World not found' });
+    if (!requireWorldOwner(world, req.user.id)) {
+      return res
+        .status(403)
+        .json({ error: 'Only the world owner can edit this world' });
+    }
+
+    const { title, description, cover_image, is_public } = req.body;
+    const updates = [];
+    const values = [];
+
+    if (title !== undefined) {
+      updates.push('title = ?');
+      values.push(title.trim());
+    }
+
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description.trim());
+    }
+
+    if (cover_image !== undefined) {
+      updates.push('cover_image = ?');
+      values.push(cover_image.trim());
+    }
+
+    if (is_public !== undefined) {
+      updates.push('is_public = ?');
+      values.push(is_public ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No world fields provided' });
+    }
+
+    db.prepare(`UPDATE worlds SET ${updates.join(', ')} WHERE id = ?`).run(
+      ...values,
+      world.id,
+    );
+    const updatedWorld = db
+      .prepare('SELECT * FROM worlds WHERE id = ?')
+      .get(world.id);
+    res.json(updatedWorld);
+  },
+);
+
+router.delete(
+  '/:id',
+  authMiddleware,
+  validate(updateWorldValidators),
+  (req, res) => {
+    const world = db
+      .prepare('SELECT * FROM worlds WHERE id = ?')
+      .get(req.params.id);
+    if (!world) return res.status(404).json({ error: 'World not found' });
+    if (!requireWorldOwner(world, req.user.id)) {
+      return res
+        .status(403)
+        .json({ error: 'Only the world owner can delete this world' });
+    }
+
+    db.prepare('DELETE FROM worlds WHERE id = ?').run(world.id);
+    res.json({ success: true });
+  },
+);
+
+router.post(
+  '/:id/join',
+  authMiddleware,
+  validate(worldIdParamValidators),
+  (req, res) => {
+    const worldId = req.params.id;
+    const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
+    if (!world) return res.status(404).json({ error: 'World not found' });
+
+    const existing = db
       .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
-      .get(world.id, req.user.id);
-  }
-  world.membership = membership;
-  res.json(world);
-});
+      .get(worldId, req.user.id);
+    if (existing) {
+      return res
+        .status(409)
+        .json({ error: 'Already a member or pending', membership: existing });
+    }
 
-router.patch('/:id', authMiddleware, validate(updateWorldValidators), (req, res) => {
-  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(req.params.id);
-  if (!world) return res.status(404).json({ error: 'World not found' });
-  if (!requireWorldOwner(world, req.user.id)) {
-    return res.status(403).json({ error: 'Only the world owner can edit this world' });
-  }
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'pending')",
+    ).run(worldId, req.user.id);
+    const membership = db
+      .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
+      .get(worldId, req.user.id);
+    res.status(201).json(membership);
+  },
+);
 
-  const { title, description, cover_image, is_public } = req.body;
-  const updates = [];
-  const values = [];
+router.patch(
+  '/:id/members/:memberId',
+  authMiddleware,
+  validate(updateMemberValidators),
+  (req, res) => {
+    const { status } = req.body;
+    if (!['approved', 'rejected'].includes(status)) {
+      return res
+        .status(400)
+        .json({ error: 'Status must be approved or rejected' });
+    }
+    const devCheck = db
+      .prepare(
+        "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
+      )
+      .get(req.params.id, req.user.id);
+    if (!devCheck)
+      return res.status(403).json({ error: 'Only devs can manage members' });
 
-  if (title !== undefined) {
-    updates.push('title = ?');
-    values.push(title.trim());
-  }
+    db.prepare(
+      'UPDATE world_members SET status = ? WHERE id = ? AND world_id = ?',
+    ).run(status, req.params.memberId, req.params.id);
+    res.json({ success: true });
+  },
+);
 
-  if (description !== undefined) {
-    updates.push('description = ?');
-    values.push(description.trim());
-  }
+router.get(
+  '/:id/members/pending',
+  authMiddleware,
+  validate(worldIdParamValidators),
+  (req, res) => {
+    const devCheck = db
+      .prepare(
+        "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
+      )
+      .get(req.params.id, req.user.id);
+    if (!devCheck)
+      return res
+        .status(403)
+        .json({ error: 'Only devs can view pending members' });
 
-  if (cover_image !== undefined) {
-    updates.push('cover_image = ?');
-    values.push(cover_image.trim());
-  }
-
-  if (is_public !== undefined) {
-    updates.push('is_public = ?');
-    values.push(is_public ? 1 : 0);
-  }
-
-  if (updates.length === 0) {
-    return res.status(400).json({ error: 'No world fields provided' });
-  }
-
-  db.prepare(`UPDATE worlds SET ${updates.join(', ')} WHERE id = ?`).run(
-    ...values,
-    world.id,
-  );
-  const updatedWorld = db.prepare('SELECT * FROM worlds WHERE id = ?').get(world.id);
-  res.json(updatedWorld);
-});
-
-router.delete('/:id', authMiddleware, validate(updateWorldValidators), (req, res) => {
-  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(req.params.id);
-  if (!world) return res.status(404).json({ error: 'World not found' });
-  if (!requireWorldOwner(world, req.user.id)) {
-    return res.status(403).json({ error: 'Only the world owner can delete this world' });
-  }
-
-  db.prepare('DELETE FROM worlds WHERE id = ?').run(world.id);
-  res.json({ success: true });
-});
-
-// Join world
-router.post('/:id/join', authMiddleware, (req, res) => {
-  const worldId = req.params.id;
-  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
-  if (!world) return res.status(404).json({ error: 'World not found' });
-
-  const existing = db
-    .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
-    .get(worldId, req.user.id);
-  if (existing) {
-    return res
-      .status(409)
-      .json({ error: 'Already a member or pending', membership: existing });
-  }
-
-  db.prepare(
-    "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'pending')",
-  ).run(worldId, req.user.id);
-  const membership = db
-    .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
-    .get(worldId, req.user.id);
-  res.status(201).json(membership);
-});
-
-// Approve/reject player (dev only)
-router.patch('/:id/members/:memberId', authMiddleware, validate(updateMemberValidators), (req, res) => {
-  const { status } = req.body; // 'approved' or 'rejected'
-  if (!['approved', 'rejected'].includes(status)) {
-    return res
-      .status(400)
-      .json({ error: 'Status must be approved or rejected' });
-  }
-  // Check requester is dev
-  const devCheck = db
-    .prepare(
-      "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
-    )
-    .get(req.params.id, req.user.id);
-  if (!devCheck)
-    return res.status(403).json({ error: 'Only devs can manage members' });
-
-  db.prepare(
-    'UPDATE world_members SET status = ? WHERE id = ? AND world_id = ?',
-  ).run(status, req.params.memberId, req.params.id);
-  res.json({ success: true });
-});
-
-// Get pending members (dev only)
-router.get('/:id/members/pending', authMiddleware, (req, res) => {
-  const devCheck = db
-    .prepare(
-      "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
-    )
-    .get(req.params.id, req.user.id);
-  if (!devCheck)
-    return res
-      .status(403)
-      .json({ error: 'Only devs can view pending members' });
-
-  const members = db
-    .prepare(
-      `
+    const members = db
+      .prepare(
+        `
     SELECT wm.*, u.username, u.display_name, u.avatar_url
     FROM world_members wm JOIN users u ON u.id = wm.user_id
     WHERE wm.world_id = ? AND wm.status = 'pending'
   `,
-    )
-    .all(req.params.id);
-  res.json(members);
-});
+      )
+      .all(req.params.id);
+    res.json(members);
+  },
+);
 
-// Get leaderboard
-router.get('/:id/leaderboard', (req, res) => {
+router.get('/:id/leaderboard', validate(worldIdParamValidators), (req, res) => {
   const members = db
     .prepare(
       `
@@ -262,9 +305,11 @@ router.get('/:id/leaderboard', (req, res) => {
   res.json(members);
 });
 
-// Get all members
-router.get('/:id/members', (req, res) => {
-  const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
+router.get('/:id/members', validate(worldIdParamValidators), (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query, {
+    page: 1,
+    limit: 50,
+  });
   const members = db
     .prepare(
       `
@@ -277,7 +322,9 @@ router.get('/:id/members', (req, res) => {
     )
     .all(req.params.id, limit, offset);
   const total = db
-    .prepare(`SELECT COUNT(*) as count FROM world_members WHERE world_id = ? AND status = 'approved'`)
+    .prepare(
+      `SELECT COUNT(*) as count FROM world_members WHERE world_id = ? AND status = 'approved'`,
+    )
     .get(req.params.id).count;
   paginatedResponse(res, members, total, page, limit);
 });
