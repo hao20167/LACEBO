@@ -1,4 +1,5 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test';
+import { crypto } from 'crypto';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -121,7 +122,7 @@ async function searchWorldAndOpen(page, worldTitle) {
 test('E2.5 happy path: register, join world, propose event, and create post', async ({ page }) => {
   try {
     const apiContext = await playwrightRequest.newContext({ baseURL: API_BASE_URL });
-    const timestamp = Date.now() + Math.floor(Math.random() * 1000);
+    const timestamp = Date.now() + crypto.getRandomValues(new Uint32Array(1))[0] % 1000;
     
     const devUser = {
       username: `dev_${timestamp}`,
