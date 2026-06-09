@@ -24,6 +24,12 @@ export const getApiErrorMessage = (
   );
 };
 
+export const getApiCollection = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: REQUEST_TIMEOUT_MS,
