@@ -10,7 +10,9 @@ describe('Rate Limiting Tests', () => {
     const loginPayload = { username: 'nonexistent', password: 'wrongpass' };
 
     test('allows requests under the rate limit', async () => {
-      const res = await request(ctx.app).post('/api/users/login').send(loginPayload);
+      const res = await request(ctx.app)
+        .post('/api/users/login')
+        .send(loginPayload);
       expect(res.status).not.toBe(429);
     });
 
@@ -51,7 +53,9 @@ describe('Rate Limiting Tests', () => {
     });
 
     test('allows registrations under the hourly limit', async () => {
-      const res = await request(ctx.app).post('/api/users/register').send(makePayload(1));
+      const res = await request(ctx.app)
+        .post('/api/users/register')
+        .send(makePayload(1));
       expect(res.status).not.toBe(429);
     });
 
@@ -72,7 +76,9 @@ describe('Rate Limiting Tests', () => {
     test('health endpoint is rate-limited after 100 req/min', async () => {
       let lastRes;
       for (let i = 0; i <= 100; i++) {
-        lastRes = await request(ctx.app).get('/api/health').set('x-test-client', 'limit-health');
+        lastRes = await request(ctx.app)
+          .get('/api/health')
+          .set('x-test-client', 'limit-health');
       }
       expect(lastRes.status).toBe(429);
     });

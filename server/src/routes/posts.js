@@ -63,26 +63,31 @@ router.get('/world/:worldId/announcements', optionalAuth, (req, res) => {
   res.json(announcements);
 });
 
-router.post('/world/:worldId/announcements', authMiddleware, validate(createAnnouncementValidators), (req, res) => {
-  const { worldId } = req.params;
-  const { title, content } = req.body;
+router.post(
+  '/world/:worldId/announcements',
+  authMiddleware,
+  validate(createAnnouncementValidators),
+  (req, res) => {
+    const { worldId } = req.params;
+    const { title, content } = req.body;
 
-  if (!isDev(worldId, req.user.id)) {
-    return res.status(403).json({ error: 'Dev only' });
-  }
+    if (!isDev(worldId, req.user.id)) {
+      return res.status(403).json({ error: 'Dev only' });
+    }
 
-  const result = db
-    .prepare(
-      'INSERT INTO announcements (world_id, user_id, title, content) VALUES (?, ?, ?, ?)',
-    )
-    .run(worldId, req.user.id, title, content);
+    const result = db
+      .prepare(
+        'INSERT INTO announcements (world_id, user_id, title, content) VALUES (?, ?, ?, ?)',
+      )
+      .run(worldId, req.user.id, title, content);
 
-  const announcement = db
-    .prepare(ANNOUNCEMENT_BY_ID_QUERY)
-    .get(result.lastInsertRowid);
+    const announcement = db
+      .prepare(ANNOUNCEMENT_BY_ID_QUERY)
+      .get(result.lastInsertRowid);
 
-  res.status(201).json(announcement);
-});
+    res.status(201).json(announcement);
+  },
+);
 
 router.get('/event/:eventId', optionalAuth, (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);
@@ -101,7 +106,9 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
     .all(req.params.eventId, limit, offset);
 
   const total = db
-    .prepare(`SELECT COUNT(*) as count FROM posts WHERE event_id = ? AND status = 'approved'`)
+    .prepare(
+      `SELECT COUNT(*) as count FROM posts WHERE event_id = ? AND status = 'approved'`,
+    )
     .get(req.params.eventId).count;
 
   if (req.user && posts.length > 0) {
@@ -124,7 +131,8 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
   }
   if (req.user) {
     for (const post of posts) {
-      post.can_delete = post.user_id === req.user.id || isDev(post.world_id, req.user.id);
+      post.can_delete =
+        post.user_id === req.user.id || isDev(post.world_id, req.user.id);
     }
   } else {
     for (const post of posts) {
@@ -134,48 +142,53 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
   paginatedResponse(res, posts, total, page, limit);
 });
 
-router.post('/event/:eventId', authMiddleware, validate(createPostValidators), (req, res) => {
-  const event = db
-    .prepare('SELECT * FROM events WHERE id = ?')
-    .get(req.params.eventId);
-  if (!event) return res.status(404).json({ error: 'Event not found' });
-  if (event.status !== 'open')
-    return res.status(400).json({ error: 'Event is not open' });
+router.post(
+  '/event/:eventId',
+  authMiddleware,
+  validate(createPostValidators),
+  (req, res) => {
+    const event = db
+      .prepare('SELECT * FROM events WHERE id = ?')
+      .get(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (event.status !== 'open')
+      return res.status(400).json({ error: 'Event is not open' });
 
-  const member = db
-    .prepare(
-      "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND status = 'approved'",
-    )
-    .get(event.world_id, req.user.id);
-  if (!member)
-    return res.status(403).json({ error: 'Not a member of this world' });
+    const member = db
+      .prepare(
+        "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND status = 'approved'",
+      )
+      .get(event.world_id, req.user.id);
+    if (!member)
+      return res.status(403).json({ error: 'Not a member of this world' });
 
-  const { content, image_url } = req.body;
-  if (!content) return res.status(400).json({ error: 'Content required' });
+    const { content, image_url } = req.body;
+    if (!content) return res.status(400).json({ error: 'Content required' });
 
-  const status = member.role === 'dev' ? 'approved' : 'pending';
-  const result = db
-    .prepare(
-      'INSERT INTO posts (event_id, world_id, user_id, content, image_url, status) VALUES (?, ?, ?, ?, ?, ?)',
-    )
-    .run(
-      event.id,
-      event.world_id,
-      req.user.id,
-      content,
-      image_url || null,
-      status,
-    );
+    const status = member.role === 'dev' ? 'approved' : 'pending';
+    const result = db
+      .prepare(
+        'INSERT INTO posts (event_id, world_id, user_id, content, image_url, status) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        event.id,
+        event.world_id,
+        req.user.id,
+        content,
+        image_url || null,
+        status,
+      );
 
-  if (status === 'approved') {
-    addCredits(event.world_id, req.user.id, 10);
-  }
+    if (status === 'approved') {
+      addCredits(event.world_id, req.user.id, 10);
+    }
 
-  const post = db
-    .prepare('SELECT * FROM posts WHERE id = ?')
-    .get(result.lastInsertRowid);
-  res.status(201).json(post);
-});
+    const post = db
+      .prepare('SELECT * FROM posts WHERE id = ?')
+      .get(result.lastInsertRowid);
+    res.status(201).json(post);
+  },
+);
 
 router.patch('/:postId/approve', authMiddleware, (req, res) => {
   handlePostStatusUpdate(req, res, 'approved', 10);
@@ -224,52 +237,78 @@ router.post('/:postId/like', authMiddleware, (req, res) => {
 });
 
 router.delete('/:postId', authMiddleware, (req, res) => {
-  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
+  const post = db
+    .prepare('SELECT * FROM posts WHERE id = ?')
+    .get(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
   if (post.user_id !== req.user.id && !isDev(post.world_id, req.user.id))
-    return res.status(403).json({ error: 'You can only delete your own posts' });
+    return res
+      .status(403)
+      .json({ error: 'You can only delete your own posts' });
 
   db.prepare('DELETE FROM posts WHERE id = ?').run(post.id);
   res.json({ success: true });
 });
 
-router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, res) => {
-  const { content, image_url } = req.body;
+router.patch(
+  '/:postId',
+  authMiddleware,
+  validate(updatePostValidators),
+  (req, res) => {
+    const { content, image_url } = req.body;
 
-  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (post.user_id !== req.user.id)
-    return res.status(403).json({ error: 'You can only edit your own posts' });
+    const post = db
+      .prepare('SELECT * FROM posts WHERE id = ?')
+      .get(req.params.postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (post.user_id !== req.user.id)
+      return res
+        .status(403)
+        .json({ error: 'You can only edit your own posts' });
 
-  const updates = [];
-  const values = [];
+    const updates = [];
+    const values = [];
 
-  if (content !== undefined) {
-    updates.push('content = ?');
-    values.push(content.trim());
-  }
+    if (content !== undefined) {
+      updates.push('content = ?');
+      values.push(content.trim());
+    }
 
-  if (image_url !== undefined) {
-    updates.push('image_url = ?');
-    values.push(image_url.trim());
-  }
+    if (image_url !== undefined) {
+      updates.push('image_url = ?');
+      values.push(image_url.trim());
+    }
 
-  if (updates.length === 0) {
-    return res.status(400).json({ error: 'No post fields provided' });
-  }
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No post fields provided' });
+    }
 
-  const query = `UPDATE posts SET ${updates.join(', ')} WHERE id = ?`;
-  db.prepare(query).run(...values, post.id);
-  
-  const updatedPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(post.id);
-  res.json(updatedPost);
-});
+    const query = `UPDATE posts SET ${updates.join(', ')} WHERE id = ?`;
+    db.prepare(query).run(...values, post.id);
 
-router.get('/:postId/comments', validate([param('postId').isInt({ min: 1 }).withMessage('Post ID must be a positive integer')]), optionalAuth, (req, res) => {
-  const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
-  const comments = db
-    .prepare(
-      `
+    const updatedPost = db
+      .prepare('SELECT * FROM posts WHERE id = ?')
+      .get(post.id);
+    res.json(updatedPost);
+  },
+);
+
+router.get(
+  '/:postId/comments',
+  validate([
+    param('postId')
+      .isInt({ min: 1 })
+      .withMessage('Post ID must be a positive integer'),
+  ]),
+  optionalAuth,
+  (req, res) => {
+    const { page, limit, offset } = parsePagination(req.query, {
+      page: 1,
+      limit: 50,
+    });
+    const comments = db
+      .prepare(
+        `
     SELECT c.*, u.username, u.display_name, u.avatar_url,
       (SELECT COUNT(*) FROM likes WHERE comment_id = c.id) as like_count
     FROM comments c JOIN users u ON u.id = c.user_id
@@ -277,47 +316,53 @@ router.get('/:postId/comments', validate([param('postId').isInt({ min: 1 }).with
     ORDER BY c.created_at ASC
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(req.params.postId, limit, offset);
-  const total = db
-    .prepare(`SELECT COUNT(*) as count FROM comments WHERE post_id = ?`)
-    .get(req.params.postId).count;
-  paginatedResponse(res, comments, total, page, limit);
-});
+      )
+      .all(req.params.postId, limit, offset);
+    const total = db
+      .prepare(`SELECT COUNT(*) as count FROM comments WHERE post_id = ?`)
+      .get(req.params.postId).count;
+    paginatedResponse(res, comments, total, page, limit);
+  },
+);
 
-router.post('/:postId/comments', authMiddleware, validate(createCommentValidators), (req, res) => {
-  const post = db
-    .prepare('SELECT * FROM posts WHERE id = ?')
-    .get(req.params.postId);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
+router.post(
+  '/:postId/comments',
+  authMiddleware,
+  validate(createCommentValidators),
+  (req, res) => {
+    const post = db
+      .prepare('SELECT * FROM posts WHERE id = ?')
+      .get(req.params.postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
 
-  const member = db
-    .prepare(
-      "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND status = 'approved'",
-    )
-    .get(post.world_id, req.user.id);
-  if (!member) return res.status(403).json({ error: 'Not a member' });
+    const member = db
+      .prepare(
+        "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND status = 'approved'",
+      )
+      .get(post.world_id, req.user.id);
+    if (!member) return res.status(403).json({ error: 'Not a member' });
 
-  const { content } = req.body;
-  if (!content) return res.status(400).json({ error: 'Content required' });
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Content required' });
 
-  const result = db
-    .prepare(
-      'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-    )
-    .run(post.id, req.user.id, content);
-  addCredits(post.world_id, req.user.id, 2);
+    const result = db
+      .prepare(
+        'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
+      )
+      .run(post.id, req.user.id, content);
+    addCredits(post.world_id, req.user.id, 2);
 
-  const comment = db
-    .prepare(
-      `
+    const comment = db
+      .prepare(
+        `
     SELECT c.*, u.username, u.display_name, u.avatar_url
     FROM comments c JOIN users u ON u.id = c.user_id
     WHERE c.id = ?
   `,
-    )
-    .get(result.lastInsertRowid);
-  res.status(201).json(comment);
-});
+      )
+      .get(result.lastInsertRowid);
+    res.status(201).json(comment);
+  },
+);
 
 export default router;

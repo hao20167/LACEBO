@@ -2,9 +2,11 @@ import rateLimit from 'express-rate-limit';
 import { ErrorCodes } from '../utils/AppError.js';
 
 const skipRateLimitInTests = (req) => {
-  const isJestTest = process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT !== 'true';
-  const isArtilleryLoadTest = req.headers['x-bypass-ratelimit'] === 'QA-Secret-Token-2026';
-  
+  const isJestTest =
+    process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT !== 'true';
+  const isArtilleryLoadTest =
+    req.headers['x-bypass-ratelimit'] === 'QA-Secret-Token-2026';
+
   return isJestTest || isArtilleryLoadTest;
 };
 
@@ -27,17 +29,19 @@ const defaultLimiterOptions = {
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
-  skip: skipRateLimitInTests, 
+  skip: skipRateLimitInTests,
   handler: rateLimitHandler,
 };
 
-const makeRateLimiter = (opts = {}) => rateLimit({ ...defaultLimiterOptions, ...opts });
+const makeRateLimiter = (opts = {}) =>
+  rateLimit({ ...defaultLimiterOptions, ...opts });
 
 const limiterConfigs = {
   authRateLimiter: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10,
-    message: 'Too many authentication attempts, please try again after 15 minutes.',
+    message:
+      'Too many authentication attempts, please try again after 15 minutes.',
   },
   registerRateLimiter: {
     windowMs: 60 * 60 * 1000, // 1 hour
@@ -51,7 +55,11 @@ const limiterConfigs = {
 };
 
 const limiters = Object.fromEntries(
-  Object.entries(limiterConfigs).map(([name, cfg]) => [name, makeRateLimiter(cfg)]),
+  Object.entries(limiterConfigs).map(([name, cfg]) => [
+    name,
+    makeRateLimiter(cfg),
+  ]),
 );
 
-export const { authRateLimiter, registerRateLimiter, globalApiRateLimiter } = limiters;
+export const { authRateLimiter, registerRateLimiter, globalApiRateLimiter } =
+  limiters;

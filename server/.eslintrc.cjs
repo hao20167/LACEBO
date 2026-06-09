@@ -9,9 +9,12 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module'
   },
+  rules: {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
+  },
   overrides: [
     {
-      files: ['**/*.{test,spec}.js', 'test/**/*.js'],
+      files: ['test/**/*.js', 'src/test/**/*.js', '**/*.{test,spec}.js'],
       globals: {
         afterAll: 'readonly',
         afterEach: 'readonly',

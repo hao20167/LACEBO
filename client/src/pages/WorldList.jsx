@@ -129,4 +129,3 @@ export default function WorldList() {
     </div>
   );
 }
-

@@ -161,7 +161,9 @@ describe('EventDetail Component', () => {
     setupApiMocks({ posts: [] });
     const { unmount } = renderEventDetail();
     expect(
-      await screen.findByPlaceholderText('Share your thoughts about this event...'),
+      await screen.findByPlaceholderText(
+        'Share your thoughts about this event...',
+      ),
     ).toBeInTheDocument();
     unmount();
 
@@ -280,7 +282,9 @@ describe('LikeButton Component', () => {
     // Click -> update to liked (6)
     fireEvent.click(likeButton);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /❤️\s*6/ })).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /❤️\s*6/ }),
+      ).toBeInTheDocument(),
     );
 
     // Click again but API fails -> current component keeps the existing state
@@ -288,7 +292,9 @@ describe('LikeButton Component', () => {
     fireEvent.click(likedButton);
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /❤️\s*6/ })).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /❤️\s*6/ }),
+      ).toBeInTheDocument(),
     );
   });
 
@@ -363,7 +369,9 @@ describe('Comments Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Great post!')).toBeInTheDocument();
       expect(input).toHaveValue('');
-      expect(screen.getByRole('button', { name: /💬\s*3/ })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /💬\s*3/ }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -377,8 +385,6 @@ describe('Comments Component', () => {
     await userEvent.type(input, 'Failed content');
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-    await waitFor(() =>
-      expect(input).toHaveValue('Failed content'),
-    );
+    await waitFor(() => expect(input).toHaveValue('Failed content'));
   });
 });

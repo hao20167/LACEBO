@@ -11,7 +11,7 @@ jest.mock('../config/auth.js', () => ({
   optionalAuth: (req, res, next) => {
     req.user = { id: 1 };
     next();
-  }
+  },
 }));
 
 import request from 'supertest';
@@ -23,8 +23,9 @@ describe('Security Testing Suite (E3.4)', () => {
 
   describe('SQL Injection Prevention', () => {
     it('should reject non-integer ID to prevent SQL injection in dynamic routes', async () => {
-      const res = await request(app)
-        .get('/api/posts/invalid-id-123 OR 1=1/comments');
+      const res = await request(app).get(
+        '/api/posts/invalid-id-123 OR 1=1/comments',
+      );
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('VALIDATION_ERROR');
     });
@@ -32,7 +33,7 @@ describe('Security Testing Suite (E3.4)', () => {
     it('should handle payload text with SQL characters safely', async () => {
       jest.spyOn(db, 'prepare').mockImplementation(() => ({
         get: () => ({ id: 1, world_id: 1, user_id: 1 }),
-        run: () => ({ changes: 1 })
+        run: () => ({ changes: 1 }),
       }));
 
       const res = await request(app)
@@ -49,7 +50,7 @@ describe('Security Testing Suite (E3.4)', () => {
     it('should sanitize HTML tags from content inputs', async () => {
       jest.spyOn(db, 'prepare').mockImplementation(() => ({
         get: () => ({ id: 1, world_id: 1, status: 'open' }),
-        run: () => ({ lastInsertRowid: 1 })
+        run: () => ({ lastInsertRowid: 1 }),
       }));
 
       const res = await request(app)

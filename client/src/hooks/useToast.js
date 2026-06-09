@@ -32,8 +32,8 @@ export function useToast() {
 
   const toast = {
     success: (msg, duration) => push(msg, 'success', duration),
-    error:   (msg, duration) => push(msg, 'error',   duration),
-    info:    (msg, duration) => push(msg, 'info',    duration),
+    error: (msg, duration) => push(msg, 'error', duration),
+    info: (msg, duration) => push(msg, 'info', duration),
   };
 
   return { toasts, toast, dismiss };

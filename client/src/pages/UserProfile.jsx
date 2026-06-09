@@ -222,8 +222,7 @@ export default function UserProfile() {
                 </span>
               </p>
               <p className="text-dark-400">
-                Worlds:{' '}
-                <span className="text-dark-200">{worlds.length}</span>
+                Worlds: <span className="text-dark-200">{worlds.length}</span>
               </p>
             </div>
           </div>
