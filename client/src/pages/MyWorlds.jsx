@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api.js';
+import { MyWorldsSkeleton } from '../components/SkeletonLoader';
 
 export default function MyWorlds() {
   const [worlds, setWorlds] = useState([]);
@@ -14,8 +15,7 @@ export default function MyWorlds() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading)
-    return <div className="text-center text-dark-400 py-12">Loading...</div>;
+  if (loading) return <MyWorldsSkeleton count={4} />;
 
   return (
     <div>

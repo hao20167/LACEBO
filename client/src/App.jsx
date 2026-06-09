@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
+import { AuthCheckSkeleton } from './components/SkeletonLoader';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -15,15 +16,11 @@ import WorldManage from './pages/WorldManage';
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth();
-  if (isLoading)
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-dark-400">Loading...</div>
-      </div>
-    );
+  if (isLoading) return <AuthCheckSkeleton />;
   if (!user) return <Navigate to="/login" />;
   return children;
 }
+
 
 ProtectedRoute.propTypes = {
   children: PropTypes.node.isRequired,
@@ -33,7 +30,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-dark-950">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

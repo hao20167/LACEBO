@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
 
   const updateUser = useCallback((nextUser) => {
     setUser((currentUser) => {
-      const mergedUser = { ...(currentUser ?? {}), ...(nextUser ?? {}) };
+      const mergedUser = { ...currentUser, ...nextUser };
       localStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
       return mergedUser;
     });
