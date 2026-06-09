@@ -1,3 +1,5 @@
+// Enable the rate limiter for this test file so the limiter behavior is exercised
+process.env.ENABLE_RATE_LIMIT = 'true';
 import request from 'supertest';
 import { createAppContext } from './helpers/appContext.js';
 
@@ -15,7 +17,10 @@ describe('Rate Limiting Tests', () => {
     test('responds with 429 and structured error after exceeding auth limit', async () => {
       let lastRes;
       for (let i = 0; i <= 10; i++) {
-        lastRes = await request(ctx.app).post('/api/users/login').send(loginPayload);
+        lastRes = await request(ctx.app)
+          .post('/api/users/login')
+          .set('x-test-client', 'limit-login')
+          .send(loginPayload);
       }
       expect(lastRes.status).toBe(429);
       expect(lastRes.body).toHaveProperty('error', 'RATE_LIMIT_EXCEEDED');
@@ -25,7 +30,10 @@ describe('Rate Limiting Tests', () => {
     test('429 response includes RateLimit headers', async () => {
       let lastRes;
       for (let i = 0; i <= 10; i++) {
-        lastRes = await request(ctx.app).post('/api/users/login').send(loginPayload);
+        lastRes = await request(ctx.app)
+          .post('/api/users/login')
+          .set('x-test-client', 'limit-login')
+          .send(loginPayload);
       }
       expect(lastRes.status).toBe(429);
       expect(lastRes.headers).toMatchObject(
@@ -50,7 +58,10 @@ describe('Rate Limiting Tests', () => {
     test('responds with 429 after exceeding register limit', async () => {
       let lastRes;
       for (let i = 0; i <= 5; i++) {
-        lastRes = await request(ctx.app).post('/api/users/register').send(makePayload(i + 100));
+        lastRes = await request(ctx.app)
+          .post('/api/users/register')
+          .set('x-test-client', 'limit-register')
+          .send(makePayload(i + 100));
       }
       expect(lastRes.status).toBe(429);
       expect(lastRes.body.error).toBe('RATE_LIMIT_EXCEEDED');
@@ -61,7 +72,7 @@ describe('Rate Limiting Tests', () => {
     test('health endpoint is rate-limited after 100 req/min', async () => {
       let lastRes;
       for (let i = 0; i <= 100; i++) {
-        lastRes = await request(ctx.app).get('/api/health');
+        lastRes = await request(ctx.app).get('/api/health').set('x-test-client', 'limit-health');
       }
       expect(lastRes.status).toBe(429);
     });
