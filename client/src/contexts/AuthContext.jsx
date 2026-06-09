@@ -46,6 +46,14 @@ export function AuthProvider({ children }) {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const updateUser = useCallback((nextUser) => {
+    setUser((currentUser) => {
+      const mergedUser = { ...(currentUser ?? {}), ...(nextUser ?? {}) };
+      localStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
+      return mergedUser;
+    });
+  }, []);
+
   /**
    * _saveSession — Helper lưu token + user vào state và localStorage.
    * Tách ra để login và register đều dùng lại.
@@ -128,9 +136,10 @@ export function AuthProvider({ children }) {
       isLoading,
       login,
       register,
+      updateUser,
       logout,
     }),
-    [user, token, isLoading, login, register, logout],
+    [user, token, isLoading, login, register, updateUser, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
