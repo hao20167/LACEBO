@@ -57,68 +57,37 @@ export default function UserProfile() {
       }
     };
     fetchProfile();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
-    if (!avatarFile) {
-      setAvatarPreview('');
-      return undefined;
-    }
+    if (!avatarFile) { setAvatarPreview(''); return undefined; }
     const nextPreview = URL.createObjectURL(avatarFile);
     setAvatarPreview(nextPreview);
-    return () => {
-      URL.revokeObjectURL(nextPreview);
-    };
+    return () => { URL.revokeObjectURL(nextPreview); };
   }, [avatarFile]);
 
   const displayName = profile?.display_name || profile?.username || 'User';
   const avatarSrc = avatarPreview || getApiAssetUrl(profile?.avatar_url);
   const initials = useMemo(() => {
-    return displayName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase();
+    return displayName.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   }, [displayName]);
 
   const handleStartEdit = () => {
     setDisplayNameInput(profile?.display_name || '');
-    setAvatarFile(null);
-    setSaveError('');
-    setSaveMessage('');
-    setIsEditing(true);
+    setAvatarFile(null); setSaveError(''); setSaveMessage(''); setIsEditing(true);
   };
-
   const handleCancelEdit = () => {
     setDisplayNameInput(profile?.display_name || '');
-    setAvatarFile(null);
-    setSaveError('');
-    setSaveMessage('');
-    setIsEditing(false);
+    setAvatarFile(null); setSaveError(''); setSaveMessage(''); setIsEditing(false);
   };
-
-  const handleAvatarChange = (event) => {
-    const file = event.target.files?.[0] || null;
-    setAvatarFile(file);
-    setSaveError('');
-    setSaveMessage('');
-  };
+  const handleAvatarChange = (event) => { setAvatarFile(event.target.files?.[0] || null); setSaveError(''); setSaveMessage(''); };
 
   const handleSaveProfile = async (event) => {
     event.preventDefault();
     const nextDisplayName = displayNameInput.trim();
-    if (!nextDisplayName) {
-      setSaveError('Display name cannot be empty.');
-      return;
-    }
-    setSaving(true);
-    setSaveError('');
-    setSaveMessage('');
+    if (!nextDisplayName) { setSaveError('Display name cannot be empty.'); return; }
+    setSaving(true); setSaveError(''); setSaveMessage('');
     try {
       let avatarUrl = '';
       if (avatarFile) {
@@ -132,9 +101,7 @@ export default function UserProfile() {
       const profileRes = await api.patch('/users/me', payload);
       setProfile(profileRes.data);
       updateUser?.(profileRes.data);
-      setAvatarFile(null);
-      setIsEditing(false);
-      setSaveMessage('Profile updated.');
+      setAvatarFile(null); setIsEditing(false); setSaveMessage('Profile updated.');
     } catch (err) {
       setSaveError(getApiErrorMessage(err, 'Unable to update profile.'));
     } finally {
@@ -146,116 +113,71 @@ export default function UserProfile() {
 
   if (error) {
     return (
-      <div className="bg-white border border-red-200 rounded-2xl p-8 text-center shadow-sm">
+      <div className="bg-white border border-red-200 rounded-xl p-8 text-center shadow-sm">
         <p className="text-red-600 mb-4">{error}</p>
-        <button
-          type="button"
-          onClick={() => globalThis.location.reload()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
+        <button type="button" onClick={() => globalThis.location.reload()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
           Try again
         </button>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-8">
-      {/* ── Banner + Profile card ────────────────────── */}
-      <div>
-        {/* Gradient banner */}
-        <div className="h-36 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 shadow-sm" />
+  const devWorlds = worlds.filter((w) => w.role === 'dev');
+  const memberWorlds = worlds.filter((w) => w.role !== 'dev');
 
-        {/* Profile card overlapping banner */}
-        <div className="bg-white border border-slate-200 rounded-2xl px-6 pb-6 pt-0 -mt-12 mx-2 shadow-sm relative">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-6">
-            {/* Avatar */}
+  return (
+    <div className="space-y-4">
+      {/* ── Profile card ── */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Banner */}
+        <div className="h-24 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 relative">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_bottom_left,_white,_transparent)]" />
+        </div>
+
+        <div className="px-5 pb-5">
+          {/* Avatar + name row */}
+          <div className="flex items-end gap-4 -mt-8 mb-4">
             {avatarSrc ? (
-              <img
-                src={avatarSrc}
-                alt={displayName}
-                className="h-20 w-20 rounded-xl object-cover border-4 border-white shadow-md -mt-6 flex-shrink-0"
-              />
+              <img src={avatarSrc} alt={displayName} className="h-16 w-16 rounded-full object-cover border-4 border-white shadow-md flex-shrink-0" />
             ) : (
-              <div className="h-20 w-20 rounded-xl bg-indigo-100 border-4 border-white shadow-md -mt-6 flex items-center justify-center text-2xl font-bold text-indigo-600 flex-shrink-0">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 border-4 border-white shadow-md flex items-center justify-center text-xl font-black text-white flex-shrink-0">
                 {initials || 'U'}
               </div>
             )}
-
-            {/* Name + username */}
-            <div className="flex-1 min-w-0 mt-2 sm:mt-0 pb-1">
-              <h1 className="text-2xl font-bold text-slate-900 truncate">
-                {displayName}
-              </h1>
-              <p className="text-slate-500 text-sm">@{profile?.username}</p>
+            <div className="flex-1 min-w-0 pb-1">
+              <h1 className="text-xl font-extrabold text-slate-900 leading-tight">{displayName}</h1>
+              <p className="text-sm text-slate-500">u/{profile?.username}</p>
             </div>
-
-            {/* Edit button */}
             {!isEditing && (
-              <button
-                type="button"
-                onClick={handleStartEdit}
-                className="shrink-0 self-start sm:self-end bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-              >
+              <button type="button" onClick={handleStartEdit} className="mb-1 border border-indigo-500 text-indigo-600 hover:bg-indigo-50 px-4 py-1.5 rounded-full text-sm font-bold transition-colors flex-shrink-0">
                 Edit Profile
               </button>
             )}
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-slate-100">
-            <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-0.5">
-                Email
-              </p>
-              <p className="text-sm font-medium text-slate-700 truncate">
-                {profile?.email}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-0.5">
-                Member Since
-              </p>
-              <p className="text-sm font-medium text-slate-700">
-                {formatDate(profile?.created_at)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-0.5">
-                Worlds
-              </p>
-              <p className="text-sm font-bold text-indigo-600">
-                {worlds.length}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-0.5">
-                Username
-              </p>
-              <p className="text-sm font-medium text-slate-700">
-                {profile?.username}
-              </p>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-slate-100 mb-4">
+            {[
+              { label: 'Email', value: profile?.email },
+              { label: 'Member Since', value: formatDate(profile?.created_at) },
+              { label: 'Worlds Joined', value: worlds.length, accent: true },
+              { label: 'Username', value: `u/${profile?.username}` },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center sm:text-left">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
+                <p className={`text-sm font-bold truncate ${stat.accent ? 'text-indigo-600' : 'text-slate-800'}`}>{stat.value}</p>
+              </div>
+            ))}
           </div>
 
           {/* Edit form */}
           {isEditing && (
-            <form
-              onSubmit={handleSaveProfile}
-              className="mt-5 space-y-4"
-            >
+            <form onSubmit={handleSaveProfile} className="space-y-4">
               {saveError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
-                  {saveError}
-                </div>
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{saveError}</div>
               )}
               <div>
-                <label
-                  htmlFor="profile_display_name"
-                  className="block text-sm font-medium text-slate-700 mb-1.5"
-                >
-                  Display Name
-                </label>
+                <label htmlFor="profile_display_name" className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Display Name</label>
                 <input
                   id="profile_display_name"
                   type="text"
@@ -263,41 +185,23 @@ export default function UserProfile() {
                   onChange={(event) => setDisplayNameInput(event.target.value)}
                   maxLength={50}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
                 />
               </div>
               <div>
-                <label
-                  htmlFor="profile_avatar"
-                  className="block text-sm font-medium text-slate-700 mb-1.5"
-                >
-                  Avatar
-                </label>
+                <label htmlFor="profile_avatar" className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Avatar</label>
                 <input
                   id="profile_avatar"
                   type="file"
                   accept="image/png,image/jpeg,image/gif,image/webp"
                   onChange={handleAvatarChange}
-                  className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                  className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
                 />
-                <p className="mt-1.5 text-xs text-slate-400">
-                  PNG, JPEG, GIF, or WebP. Maximum 5 MB.
-                </p>
+                <p className="mt-1.5 text-xs text-slate-400">PNG, JPEG, GIF, or WebP. Max 5 MB.</p>
               </div>
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  disabled={saving}
-                  className="border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm"
-                >
+              <div className="flex gap-3 justify-end">
+                <button type="button" onClick={handleCancelEdit} disabled={saving} className="border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-full text-sm font-bold transition-colors disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors disabled:opacity-50 shadow-sm">
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
@@ -305,92 +209,69 @@ export default function UserProfile() {
           )}
 
           {saveMessage && !isEditing && (
-            <div className="mt-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg p-3">
-              {saveMessage}
-            </div>
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg p-3">{saveMessage}</div>
           )}
         </div>
       </div>
 
-      {/* ── Worlds section ──────────────────────────── */}
-      <section>
-        <div className="flex items-center justify-between gap-4 mb-5">
-          <h2 className="text-xl font-bold text-slate-900">Worlds You Joined</h2>
-          <Link
-            to="/worlds"
-            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium transition-colors"
-          >
-            Explore more →
-          </Link>
+      {/* ── My Communities sections ── */}
+      {worlds.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-xl py-14 text-center shadow-sm">
+          <div className="text-4xl mb-3">🌍</div>
+          <p className="font-bold text-slate-700 mb-1">No worlds yet</p>
+          <p className="text-slate-400 text-sm mb-4">Explore and join some worlds to see them here.</p>
+          <Link to="/worlds" className="inline-flex bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-full text-sm font-bold transition-colors shadow-sm">Find a world</Link>
         </div>
-
-        {worlds.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl py-14 text-center shadow-sm">
-            <div className="text-4xl mb-3">🌍</div>
-            <p className="text-slate-600 font-medium mb-1">No worlds yet</p>
-            <p className="text-slate-400 text-sm mb-5">
-              Explore and join some worlds to see them here.
-            </p>
-            <Link
-              to="/worlds"
-              className="inline-flex bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-            >
-              Find a world
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {worlds.map((world) => {
-              const roleClass =
-                roleStyles[world.role] || 'bg-slate-100 text-slate-600 border-slate-200';
-              return (
-                <Link
-                  key={world.id}
-                  to={`/worlds/${world.id}`}
-                  className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all group flex flex-col"
-                >
-                  <div className="h-1 bg-gradient-to-r from-indigo-400 to-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="p-5 flex flex-col flex-1">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <h3 className="text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                        {world.title}
-                      </h3>
-                      <span
-                        className={`shrink-0 text-xs px-2.5 py-1 rounded-full border font-medium ${roleClass}`}
-                      >
-                        {(world.role || 'member').toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-slate-500 text-sm mb-4 line-clamp-2 flex-1">
-                      {world.description || 'No description'}
-                    </p>
-                    <div className="grid grid-cols-3 gap-3 text-xs pt-3 border-t border-slate-100">
-                      <div>
-                        <span className="block text-slate-400 mb-0.5">Members</span>
-                        <span className="text-slate-700 font-semibold">
-                          {world.member_count ?? 0}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-slate-400 mb-0.5">Credits</span>
-                        <span className="text-indigo-600 font-semibold">
-                          {world.credits ?? 0}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-slate-400 mb-0.5">Joined</span>
-                        <span className="text-slate-700 font-semibold">
-                          {formatDate(world.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      ) : (
+        <>
+          {devWorlds.length > 0 && (
+            <section>
+              <h2 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+                Worlds I Created ({devWorlds.length})
+              </h2>
+              <div className="space-y-2">
+                {devWorlds.map((world) => <WorldRow key={world.id} world={world} />)}
+              </div>
+            </section>
+          )}
+          {memberWorlds.length > 0 && (
+            <section>
+              <h2 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                Worlds I Joined ({memberWorlds.length})
+              </h2>
+              <div className="space-y-2">
+                {memberWorlds.map((world) => <WorldRow key={world.id} world={world} />)}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </div>
+  );
+}
+
+function WorldRow({ world }) {
+  const roleClass = roleStyles[world.role] || 'bg-slate-100 text-slate-600 border-slate-200';
+  return (
+    <Link
+      to={`/worlds/${world.id}`}
+      className="block bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-200 hover:shadow-md transition-all overflow-hidden"
+    >
+      <div className="flex items-center gap-3 p-4">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0 shadow-sm">
+          {world.title[0]?.toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors">w/{world.title}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${roleClass}`}>{world.role.toUpperCase()}</span>
+          </div>
+          <p className="text-xs text-slate-400">👥 {world.member_count} members · ⭐ {world.credits} credits</p>
+        </div>
+        <span className="text-xs text-slate-400 flex-shrink-0 hidden sm:block">{new Date(world.created_at).toLocaleDateString()}</span>
+      </div>
+    </Link>
   );
 }

@@ -75,7 +75,7 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#edeff1]">
       <Navbar />
       {/* Offset for desktop sidebar (w-60) and mobile top bar (h-14) */}
       <div className="lg:pl-60">

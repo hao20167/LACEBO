@@ -29,11 +29,7 @@ export default function WorldList() {
       if (res.data?.pagination) {
         setPagination(res.data.pagination);
       } else {
-        setPagination({
-          totalPages: 1,
-          hasNextPage: false,
-          hasPrevPage: false,
-        });
+        setPagination({ totalPages: 1, hasNextPage: false, hasPrevPage: false });
       }
     } catch {}
     setLoading(false);
@@ -55,94 +51,104 @@ export default function WorldList() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* ── Page header ────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-2 border-b border-slate-200">
+    <div className="space-y-3">
+      {/* ── Header ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Explore Worlds</h1>
-          <p className="text-slate-500 mt-1 text-sm">
+          <h1 className="text-lg font-extrabold text-slate-900">Explore Worlds</h1>
+          <p className="text-slate-500 text-xs mt-0.5">
             Discover and join collaborative roleplay universes
           </p>
         </div>
         <Link
           to="/worlds/create"
-          className="shrink-0 self-start sm:self-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors shadow-sm"
         >
-          + New World
+          + Create World
         </Link>
       </div>
 
-      {/* ── Search ─────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <form onSubmit={handleSearch} className="flex gap-3">
+      {/* ── Search ── */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-3">
+        <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
-              🔍
-            </span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search worlds by title..."
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
+              placeholder="Search communities..."
+              className="w-full pl-8 pr-3 py-2 bg-[#f6f7f8] border border-slate-200 rounded-full text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
             />
           </div>
           <button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm text-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full font-bold transition-colors text-sm"
           >
             Search
           </button>
         </form>
       </div>
 
-      {/* ── Results ────────────────────────────────── */}
+      {/* ── Results ── */}
       {loading ? (
         <WorldListSkeleton count={6} />
       ) : worlds.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl py-20 text-center shadow-sm">
-          <div className="text-5xl mb-4">🌍</div>
-          <p className="text-lg font-semibold text-slate-700 mb-1">
-            No worlds found
-          </p>
-          <p className="text-sm text-slate-500 mb-5">
-            Try a different search term or start a new world.
-          </p>
+        <div className="bg-white border border-slate-200 rounded-xl py-16 text-center shadow-sm">
+          <div className="text-4xl mb-3">🌍</div>
+          <p className="font-bold text-slate-700 mb-1">No communities found</p>
+          <p className="text-sm text-slate-500 mb-4">Try a different search or start a new world.</p>
           <Link
             to="/worlds/create"
-            className="inline-flex bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="inline-flex bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-full text-sm font-bold transition-colors shadow-sm"
           >
             Create a World
           </Link>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {worlds.map((world) => (
-              <Link
+          <div className="space-y-2">
+            {worlds.map((world, index) => (
+              <div
                 key={world.id}
-                to={`/worlds/${world.id}`}
-                className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all group flex flex-col"
+                className="bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-200 hover:shadow-md transition-all flex items-center gap-3 p-4"
               >
-                {/* Color accent strip */}
-                <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="p-5 flex flex-col flex-1">
-                  <h3 className="text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-2 line-clamp-1">
-                    {world.title}
-                  </h3>
-                  <p className="text-slate-500 text-sm mb-4 line-clamp-2 flex-1">
-                    {world.description || 'No description provided.'}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-100">
-                    <span className="flex items-center gap-1">
-                      👥 <span>{world.member_count} members</span>
-                    </span>
-                    <span>
-                      {new Date(world.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
+                {/* Rank */}
+                <span className="text-slate-400 font-bold text-sm w-6 text-center flex-shrink-0">
+                  {index + 1 + (page - 1) * 12}
+                </span>
+
+                {/* Community icon */}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0 shadow-sm">
+                  {world.title[0]?.toUpperCase()}
                 </div>
-              </Link>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Link
+                      to={`/worlds/${world.id}`}
+                      className="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors"
+                    >
+                      w/{world.title}
+                    </Link>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    👥 {world.member_count} members
+                    {world.description && (
+                      <span className="hidden sm:inline"> · {world.description.slice(0, 60)}{world.description.length > 60 ? '…' : ''}</span>
+                    )}
+                  </p>
+                </div>
+
+                {/* View button */}
+                <Link
+                  to={`/worlds/${world.id}`}
+                  className="flex-shrink-0 border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all"
+                >
+                  View
+                </Link>
+              </div>
             ))}
           </div>
 
