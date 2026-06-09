@@ -1,6 +1,13 @@
 import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
+import { parsePagination, paginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validate.js';
+import {
+  createWorldValidators,
+  updateWorldValidators,
+  updateMemberValidators,
+} from '../middleware/validators/worlds.js';
 
 const router = Router();
 // Change this value to adjust when a scheduled delete happens.
@@ -34,7 +41,22 @@ const requireDev = (worldId, userId) => {
     .get(worldId, userId);
 };
 
-// List all worlds (with search)
+const getWorldOwnerId = (world) => {
+  if (world.owner_id) return world.owner_id;
+
+  const ownerMembership = db
+    .prepare(
+      "SELECT user_id FROM world_members WHERE world_id = ? AND role = 'dev' AND status = 'approved' ORDER BY id ASC LIMIT 1",
+    )
+    .get(world.id);
+  return ownerMembership?.user_id || null;
+};
+
+const requireWorldOwner = (world, userId) => {
+  return getWorldOwnerId(world) === userId;
+};
+
+// List all worlds (with search and pagination)
 router.get('/', optionalAuth, (req, res) => {
   cleanupExpiredWorlds();
   const { search, page = 1, limit = 20 } = req.query;
@@ -44,14 +66,17 @@ router.get('/', optionalAuth, (req, res) => {
     worlds = db
       .prepare(
         `
-      SELECT w.*, 
+      SELECT w.*,
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
       FROM worlds w 
       WHERE w.title LIKE ? AND w.is_public = 1 AND w.deletion_scheduled_at IS NULL
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
-      .all(`%${search}%`, Number(limit), Number(offset));
+      .all(`%${search}%`, limit, offset);
+    total = db
+      .prepare(`SELECT COUNT(*) as count FROM worlds WHERE title LIKE ? AND is_public = 1`)
+      .get(`%${search}%`).count;
   } else {
     worlds = db
       .prepare(
@@ -63,9 +88,10 @@ router.get('/', optionalAuth, (req, res) => {
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
-      .all(Number(limit), Number(offset));
+      .all(limit, offset);
+    total = db.prepare(`SELECT COUNT(*) as count FROM worlds WHERE is_public = 1`).get().count;
   }
-  res.json(worlds);
+  paginatedResponse(res, worlds, total, page, limit);
 });
 
 // Get my worlds
@@ -87,14 +113,14 @@ router.get('/mine', authMiddleware, (req, res) => {
 });
 
 // Create world
-router.post('/', authMiddleware, (req, res) => {
+router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => {
   const { title, description, is_public = 1 } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
   const result = db
     .prepare(
-      'INSERT INTO worlds (title, description, is_public) VALUES (?, ?, ?)',
+      'INSERT INTO worlds (title, description, is_public, owner_id) VALUES (?, ?, ?, ?)',
     )
-    .run(title, description || '', is_public ? 1 : 0);
+    .run(title, description || '', is_public ? 1 : 0, req.user.id);
   const worldId = result.lastInsertRowid;
   // Creator becomes dev
   db.prepare(
@@ -132,6 +158,60 @@ router.get('/:id', optionalAuth, (req, res) => {
   res.json(world);
 });
 
+router.patch('/:id', authMiddleware, validate(updateWorldValidators), (req, res) => {
+  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(req.params.id);
+  if (!world) return res.status(404).json({ error: 'World not found' });
+  if (!requireWorldOwner(world, req.user.id)) {
+    return res.status(403).json({ error: 'Only the world owner can edit this world' });
+  }
+
+  const { title, description, cover_image, is_public } = req.body;
+  const updates = [];
+  const values = [];
+
+  if (title !== undefined) {
+    updates.push('title = ?');
+    values.push(title.trim());
+  }
+
+  if (description !== undefined) {
+    updates.push('description = ?');
+    values.push(description.trim());
+  }
+
+  if (cover_image !== undefined) {
+    updates.push('cover_image = ?');
+    values.push(cover_image.trim());
+  }
+
+  if (is_public !== undefined) {
+    updates.push('is_public = ?');
+    values.push(is_public ? 1 : 0);
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No world fields provided' });
+  }
+
+  db.prepare(`UPDATE worlds SET ${updates.join(', ')} WHERE id = ?`).run(
+    ...values,
+    world.id,
+  );
+  const updatedWorld = db.prepare('SELECT * FROM worlds WHERE id = ?').get(world.id);
+  res.json(updatedWorld);
+});
+
+router.delete('/:id', authMiddleware, validate(updateWorldValidators), (req, res) => {
+  const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(req.params.id);
+  if (!world) return res.status(404).json({ error: 'World not found' });
+  if (!requireWorldOwner(world, req.user.id)) {
+    return res.status(403).json({ error: 'Only the world owner can delete this world' });
+  }
+
+  db.prepare('DELETE FROM worlds WHERE id = ?').run(world.id);
+  res.json({ success: true });
+});
+
 // Join world
 router.post('/:id/join', authMiddleware, (req, res) => {
   const worldId = req.params.id;
@@ -167,7 +247,7 @@ router.post('/:id/join', authMiddleware, (req, res) => {
 });
 
 // Approve/reject player (dev only)
-router.patch('/:id/members/:memberId', authMiddleware, (req, res) => {
+router.patch('/:id/members/:memberId', authMiddleware, validate(updateMemberValidators), (req, res) => {
   const { status } = req.body; // 'approved' or 'rejected'
   if (!['approved', 'rejected'].includes(status)) {
     return res
@@ -269,6 +349,7 @@ router.get('/:id/leaderboard', (req, res) => {
 
 // Get all members
 router.get('/:id/members', (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
   const members = db
     .prepare(
       `
@@ -276,10 +357,14 @@ router.get('/:id/members', (req, res) => {
     FROM world_members wm JOIN users u ON u.id = wm.user_id
     WHERE wm.world_id = ? AND wm.status = 'approved'
     ORDER BY wm.role ASC, wm.credits DESC
+    LIMIT ? OFFSET ?
   `,
     )
-    .all(req.params.id);
-  res.json(members);
+    .all(req.params.id, limit, offset);
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM world_members WHERE world_id = ? AND status = 'approved'`)
+    .get(req.params.id).count;
+  paginatedResponse(res, members, total, page, limit);
 });
 
 export default router;

@@ -3,6 +3,9 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || 'lacebo-secret-key-change-in-production',
   jwtExpiresIn: '7d',
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  get uploadDir() {
+    return process.env.UPLOAD_DIR || 'uploads';
+  },
   get dbPath() {
     return process.env.DB_PATH || null;
   }, // null = default (../data/lacebo.db)

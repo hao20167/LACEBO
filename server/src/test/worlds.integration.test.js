@@ -6,6 +6,7 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
   let app;
   let db;
   let testDbPath;
+  let userSequence;
 
   beforeAll(async () => {
     testDbPath = setupTestDb();
@@ -22,6 +23,7 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
 
   beforeEach(() => {
     resetDatabase(db);
+    userSequence = 0;
   });
 
   afterAll(() => {
@@ -32,24 +34,38 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
     delete process.env.DB_PATH;
   });
 
-  test('should create a world, find it by search, and fetch detail with membership', async () => {
+  const createAuthedUser = (prefix, displayName) => {
+    userSequence += 1;
+    const username = `${prefix}_${userSequence}`;
     const user = createTestUser({
       db,
-      username: 'e15_creator',
-      email: 'e15_creator@example.com',
+      username,
+      email: `${username}@example.com`,
       password: 'Password123!',
-      displayName: 'E1.5 Creator',
+      displayName,
     });
-    const token = createTestToken(user);
-    const title = `E1.5 World ${Date.now()}`;
 
-    const createRes = await request(app)
+    return {
+      user,
+      token: createTestToken(user),
+    };
+  };
+
+  const createWorld = (token, payload) => {
+    return request(app)
       .post('/api/worlds')
       .set('Authorization', `Bearer ${token}`)
-      .send({
-        title,
-        description: 'Integration flow test world',
-      });
+      .send(payload);
+  };
+
+  test('should create a world, find it by search, and fetch detail with membership', async () => {
+    const { user, token } = createAuthedUser('e15_creator', 'E1.5 Creator');
+    const title = `E1.5 World ${Date.now()}`;
+
+    const createRes = await createWorld(token, {
+      title,
+      description: 'Integration flow test world',
+    });
 
     expect(createRes.status).toBe(201);
     expect(createRes.body).toMatchObject({
@@ -65,8 +81,8 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
       .query({ search: title });
 
     expect(searchRes.status).toBe(200);
-    expect(Array.isArray(searchRes.body)).toBe(true);
-    const foundWorld = searchRes.body.find((w) => w.id === worldId);
+    expect(Array.isArray(searchRes.body.data)).toBe(true);
+    const foundWorld = searchRes.body.data.find((w) => w.id === worldId);
     expect(foundWorld).toBeDefined();
     expect(foundWorld.title).toBe(title);
 

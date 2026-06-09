@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, beforeEach, test, expect } from 'vitest';
+import { vi, describe, beforeEach, afterEach, test, expect } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import EventDetail from './EventDetail';
 import api from '../services/api.js';
@@ -86,7 +86,7 @@ describe('EventDetail', () => {
   test('renders loading and not found states', async () => {
     api.get.mockImplementation(() => new Promise(() => {}));
     const { unmount } = renderEventDetail();
-    expect(screen.getByText('Loading event...')).toBeInTheDocument();
+    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
     unmount();
 
     api.get.mockImplementation((url) => {
@@ -119,7 +119,7 @@ describe('EventDetail', () => {
     renderEventDetail();
 
     expect(
-      await screen.findByText('No approved posts for this event yet.'),
+      await screen.findByText('No posts yet. Be the first to post!'),
     ).toBeInTheDocument();
     expect(screen.getByText('Be the first to post.')).toBeInTheDocument();
   });

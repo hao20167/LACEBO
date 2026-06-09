@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { getApiCollection } from '../services/api';
+import { EventDetailSkeleton } from '../components/SkeletonLoader';
+import { useToastContext } from '../components/Toast';
+import Pagination from '../components/Pagination';
 
 export default function EventDetail() {
   const { eventId } = useParams();
   const { user } = useAuth();
+  const toast = useToastContext();
   const [event, setEvent] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,20 +23,51 @@ export default function EventDetail() {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [openMenuPostId, setOpenMenuPostId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  const fetchPosts = async (pageNumber = 1) => {
+    try {
+      const res = await api.get(`/posts/event/${eventId}`, {
+        params: { page: pageNumber, limit: 10 },
+      });
+      setPosts(getApiCollection(res.data));
+      if (res.data?.pagination) {
+        setPagination(res.data.pagination);
+      } else {
+        setPagination({
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        });
+      }
+    } catch {}
+  };
 
   const fetchData = async () => {
     try {
-      const [eventRes, postsRes] = await Promise.all([
+      const [eventRes] = await Promise.all([
         api.get(`/events/${eventId}`),
-        api.get(`/posts/event/${eventId}`)
+        fetchPosts(1),
       ]);
       setEvent(eventRes.data);
-      setPosts(postsRes.data);
-    } catch { }
+    } catch {}
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [eventId]);
+  useEffect(() => {
+    setPage(1);
+    fetchData();
+  }, [eventId]);
+
+  const handlePageChange = (nextPage) => {
+    setPage(nextPage);
+    fetchPosts(nextPage);
+  };
 
   const handlePost = async (e) => {
     e.preventDefault();
@@ -41,9 +76,10 @@ export default function EventDetail() {
     try {
       await api.post(`/posts/event/${eventId}`, { content: newPost });
       setNewPost('');
-      fetchData();
+      setPage(1);
+      await fetchPosts(1);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to create post');
+      toast.error(err.response?.data?.error || 'Failed to create post');
     }
     setPosting(false);
   };
@@ -97,7 +133,7 @@ export default function EventDetail() {
       setEditingPostId(null);
       setEditContent('');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update post');
+      toast.error(err.response?.data?.error || 'Failed to update post');
     }
   };
 
@@ -109,7 +145,7 @@ export default function EventDetail() {
       setPosts(posts.filter((post) => post.id !== postToDelete.id));
       setPostToDelete(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete post');
+      toast.error(err.response?.data?.error || 'Failed to delete post');
     }
   };
 
@@ -120,7 +156,7 @@ export default function EventDetail() {
     }
     try {
       const res = await api.get(`/posts/${postId}/comments`);
-      setComments({ ...comments, [postId]: res.data });
+      setComments({ ...comments, [postId]: getApiCollection(res.data) });
       setExpandedComments({ ...expandedComments, [postId]: true });
     } catch { }
   };
@@ -136,7 +172,7 @@ export default function EventDetail() {
     } catch { }
   };
 
-  if (loading) return <div className="text-center text-dark-400 py-12">Loading event...</div>;
+  if (loading) return <EventDetailSkeleton />;
   if (!event) return <div className="text-center text-dark-400 py-12">Event not found</div>;
 
   const isOpen = event.status === 'open';
@@ -201,7 +237,8 @@ export default function EventDetail() {
           }
         />
       ) : (
-        <div className="space-y-4">
+        <>
+          <div className="space-y-4">
           {posts.map(post => (
             <div key={post.id} className="bg-dark-900 border border-dark-700 rounded-xl p-4">
               {/* Post header */}
@@ -333,6 +370,15 @@ export default function EventDetail() {
             </div>
           ))}
         </div>
+
+        <Pagination
+          page={page}
+          totalPages={pagination.totalPages}
+          onPageChange={handlePageChange}
+          hasNextPage={pagination.hasNextPage}
+          hasPrevPage={pagination.hasPrevPage}
+        />
+      </>
       )}
 
       {postToDelete && (

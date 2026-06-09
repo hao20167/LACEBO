@@ -80,7 +80,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
         .set('Authorization', `Bearer ${playerToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(0);
+      expect(res.body.data).toHaveLength(0);
     });
 
     it('should allow player to create a post, but it requires approval', async () => {
@@ -96,7 +96,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       // Should not be visible in event posts yet
       const getRes = await request(app).get(`/api/posts/event/${eventId}`);
       expect(getRes.status).toBe(200);
-      expect(getRes.body).toHaveLength(0);
+      expect(getRes.body.data).toHaveLength(0);
     });
 
     it('should allow dev to create a post that is automatically approved', async () => {
@@ -112,8 +112,8 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       // Should be visible in event posts
       const getRes = await request(app).get(`/api/posts/event/${eventId}`);
       expect(getRes.status).toBe(200);
-      expect(getRes.body).toHaveLength(1);
-      expect(getRes.body[0].content).toBe('Dev post content');
+      expect(getRes.body.data).toHaveLength(1);
+      expect(getRes.body.data[0].content).toBe('Dev post content');
     });
 
     it('should return approved posts for an authenticated user', async () => {
@@ -127,8 +127,8 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
         .set('Authorization', `Bearer ${playerToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(1);
-      expect(res.body[0].liked).toBe(false);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.data[0].liked).toBe(false);
     });
 
     it('should allow dev to view pending posts and approve them', async () => {
@@ -159,8 +159,8 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       // Verify it is now visible in the event
       const getRes = await request(app).get(`/api/posts/event/${eventId}`);
       expect(getRes.status).toBe(200);
-      expect(getRes.body).toHaveLength(1);
-      expect(getRes.body[0].content).toBe('Needs approval');
+      expect(getRes.body.data).toHaveLength(1);
+      expect(getRes.body.data[0].content).toBe('Needs approval');
     });
 
     it('should reject approving a post that is no longer pending', async () => {
@@ -180,6 +180,107 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
         .set('Authorization', `Bearer ${devToken}`);
 
       expect(secondApproveRes.status).toBe(400);
+    });
+
+    it('should allow the author to update post content and image', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Original post' });
+
+      const res = await request(app)
+        .patch(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({
+          content: 'Updated post',
+          image_url: '/uploads/images/post.png',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        id: createRes.body.id,
+        content: 'Updated post',
+        image_url: '/uploads/images/post.png',
+      });
+    });
+
+    it('should reject post updates from non-authors', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Owned by dev' });
+
+      const res = await request(app)
+        .patch(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Player edit' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should reject empty post updates', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'No fields update' });
+
+      const res = await request(app)
+        .patch(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should allow the author to delete a post', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Delete my own post' });
+
+      const res = await request(app)
+        .delete(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${playerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(db.prepare('SELECT * FROM posts WHERE id = ?').get(createRes.body.id)).toBeUndefined();
+    });
+
+    it('should allow a dev to delete posts in their world', async () => {
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Dev can delete this' });
+
+      const res = await request(app)
+        .delete(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should reject post deletes from non-authors and non-devs', async () => {
+      const otherUser = createTestUser({
+        db,
+        username: 'other_player',
+        email: 'other@test.com',
+        password: 'Password123!',
+        displayName: 'Other Player',
+      });
+      const otherToken = createTestToken(otherUser);
+
+      const createRes = await request(app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Cannot delete this' });
+
+      const res = await request(app)
+        .delete(`/api/posts/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(403);
     });
   });
 
@@ -246,7 +347,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
 
       // Verify like count
       const getRes1 = await request(app).get(`/api/posts/event/${eventId}`);
-      expect(getRes1.body[0].like_count).toBe(1);
+      expect(getRes1.body.data[0].like_count).toBe(1);
 
       // Unlike
       const unlikeRes = await request(app)
@@ -257,7 +358,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
 
       // Verify like count
       const getRes2 = await request(app).get(`/api/posts/event/${eventId}`);
-      expect(getRes2.body[0].like_count).toBe(0);
+      expect(getRes2.body.data[0].like_count).toBe(0);
     });
 
     it('should return pending posts only to dev users', async () => {
@@ -317,9 +418,9 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
         `/api/posts/${postId}/comments`,
       );
       expect(getCommentsRes.status).toBe(200);
-      expect(getCommentsRes.body).toHaveLength(1);
-      expect(getCommentsRes.body[0].content).toBe('This is a comment');
-      expect(getCommentsRes.body[0].username).toBe(playerUser.username);
+      expect(getCommentsRes.body.data).toHaveLength(1);
+      expect(getCommentsRes.body.data[0].content).toBe('This is a comment');
+      expect(getCommentsRes.body.data[0].username).toBe(playerUser.username);
     });
   });
 });

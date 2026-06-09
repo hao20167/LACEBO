@@ -17,6 +17,7 @@ export function initDatabase() {
       title TEXT NOT NULL,
       description TEXT,
       cover_image TEXT DEFAULT NULL,
+      owner_id INTEGER DEFAULT NULL,
       is_public INTEGER DEFAULT 1,
       deletion_scheduled_at DATETIME DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -98,6 +99,23 @@ export function initDatabase() {
       FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    -- Indexes for frequently queried columns
+    CREATE INDEX IF NOT EXISTS idx_world_members_world_id ON world_members(world_id);
+    CREATE INDEX IF NOT EXISTS idx_world_members_user_id ON world_members(user_id);
+    CREATE INDEX IF NOT EXISTS idx_world_members_world_user ON world_members(world_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_world_members_status ON world_members(world_id, status);
+    CREATE INDEX IF NOT EXISTS idx_events_world_id ON events(world_id);
+    CREATE INDEX IF NOT EXISTS idx_events_status ON events(world_id, status);
+    CREATE INDEX IF NOT EXISTS idx_posts_event_id ON posts(event_id);
+    CREATE INDEX IF NOT EXISTS idx_posts_world_id ON posts(world_id);
+    CREATE INDEX IF NOT EXISTS idx_posts_world_status ON posts(world_id, status);
+    CREATE INDEX IF NOT EXISTS idx_posts_event_status ON posts(event_id, status);
+    CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
+    CREATE INDEX IF NOT EXISTS idx_likes_post_user ON likes(post_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_likes_comment_user ON likes(comment_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_announcements_world_id ON announcements(world_id);
+    CREATE INDEX IF NOT EXISTS idx_worlds_public_created ON worlds(is_public, created_at);
   `);
 
   const columns = db.prepare("PRAGMA table_info(worlds)").all();
@@ -106,3 +124,4 @@ export function initDatabase() {
     db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
   }
 }
+

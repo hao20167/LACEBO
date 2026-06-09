@@ -15,6 +15,9 @@ vi.mock('../services/api.js', () => ({
   default: {
     get: vi.fn(),
   },
+  getApiCollection: vi.fn((payload) =>
+    Array.isArray(payload) ? payload : payload?.data || [],
+  ),
 }));
 
 const mockWorlds = [
@@ -51,7 +54,7 @@ describe('WorldList', () => {
       );
     });
 
-    expect(screen.getByText('Loading worlds...')).toBeInTheDocument();
+    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
   });
 
   it('fetches and displays worlds on mount', async () => {
@@ -66,7 +69,7 @@ describe('WorldList', () => {
     });
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/worlds', { params: {} });
+      expect(api.get).toHaveBeenCalledWith('/worlds', { params: { page: 1, limit: 12 } });
     });
 
     expect(screen.getByText('World 1')).toBeInTheDocument();
@@ -88,7 +91,7 @@ describe('WorldList', () => {
     });
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/worlds', { params: {} });
+      expect(api.get).toHaveBeenCalledWith('/worlds', { params: { page: 1, limit: 12 } });
     });
 
     const searchInput = screen.getByPlaceholderText(
@@ -101,7 +104,7 @@ describe('WorldList', () => {
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/worlds', {
-        params: { search: 'World 1' },
+        params: { page: 1, limit: 12, search: 'World 1' },
       });
     });
 

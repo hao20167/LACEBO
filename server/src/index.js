@@ -6,6 +6,9 @@ import usersRouter from './routes/users.js';
 import worldsRouter from './routes/worlds.js';
 import eventsRouter from './routes/events.js';
 import postsRouter from './routes/posts.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import uploadsRouter from './routes/uploads.js';
+import { globalApiRateLimiter } from './middleware/rateLimiter.js';
 
 // Initialize database tables
 initDatabase();
@@ -14,13 +17,23 @@ const app = express();
 
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
+app.use('/uploads', express.static(config.uploadDir));
+app.use(globalApiRateLimiter);
 
 app.use('/api/users', usersRouter);
 app.use('/api/worlds', worldsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/posts', postsRouter);
+app.use('/api/uploads', uploadsRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// 404 for unknown routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'NOT_FOUND', message: 'Route not found' });
+});
+
+app.use(errorHandler);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(config.port, () => {

@@ -2,6 +2,14 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware, optionalAuth } from '../config/auth.js';
 import { isDev, addCredits } from '../helpers/world.js';
+import { parsePagination, paginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validate.js';
+import {
+  createPostValidators,
+  createCommentValidators,
+  createAnnouncementValidators,
+  updatePostValidators,
+} from '../middleware/validators/posts.js';
 
 const router = Router();
 
@@ -57,13 +65,9 @@ router.get('/world/:worldId/announcements', optionalAuth, (req, res) => {
 });
 
 // Create an announcement (dev only)
-router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
+router.post('/world/:worldId/announcements', authMiddleware, validate(createAnnouncementValidators), (req, res) => {
   const { worldId } = req.params;
   const { title, content } = req.body;
-
-  if (!title || !content) {
-    return res.status(400).json({ error: 'Title and content required' });
-  }
 
   if (!isDev(worldId, req.user.id)) {
     return res.status(403).json({ error: 'Dev only' });
@@ -84,6 +88,7 @@ router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
 
 // Get posts for an event
 router.get('/event/:eventId', optionalAuth, (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
   const posts = db
     .prepare(
       `
@@ -93,9 +98,14 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
     FROM posts p JOIN users u ON u.id = p.user_id
     WHERE p.event_id = ? AND p.status = 'approved'
     ORDER BY p.created_at DESC
+    LIMIT ? OFFSET ?
   `,
     )
-    .all(req.params.eventId);
+    .all(req.params.eventId, limit, offset);
+
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM posts WHERE event_id = ? AND status = 'approved'`)
+    .get(req.params.eventId).count;
 
   if (req.user && posts.length > 0) {
     const postIds = posts.map((post) => post.id);
@@ -125,7 +135,7 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
       post.can_delete = false;
     }
   }
-  res.json(posts);
+  paginatedResponse(res, posts, total, page, limit);
 });
 
 // Get announcements for a world
@@ -163,7 +173,7 @@ router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
 });
 
 // Create post in event
-router.post('/event/:eventId', authMiddleware, (req, res) => {
+router.post('/event/:eventId', authMiddleware, validate(createPostValidators), (req, res) => {
   const event = db
     .prepare('SELECT * FROM events WHERE id = ?')
     .get(req.params.eventId);
@@ -267,23 +277,41 @@ router.delete('/:postId', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 // Update a post's content if the requesting user is the author
-router.patch('/:postId', authMiddleware, (req, res) => {
-  const { content } = req.body;
-  if (!content || !content.trim()) {
-    return res.status(400).json({ error: 'Content required' });
-  }
+router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, res) => {
+  const { content, image_url } = req.body;
 
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
   if (post.user_id !== req.user.id)
     return res.status(403).json({ error: 'You can only edit your own posts' });
 
-  db.prepare('UPDATE posts SET content = ? WHERE id = ?').run(content.trim(), post.id);
+  const updates = [];
+  const values = [];
+
+  if (content !== undefined) {
+    updates.push('content = ?');
+    values.push(content.trim());
+  }
+
+  if (image_url !== undefined) {
+    updates.push('image_url = ?');
+    values.push(image_url.trim());
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No post fields provided' });
+  }
+
+  db.prepare(`UPDATE posts SET ${updates.join(', ')} WHERE id = ?`).run(
+    ...values,
+    post.id,
+  );
   const updatedPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(post.id);
   res.json(updatedPost);
 });
 // Get comments for a post
-router.get('/:postId/comments', optionalAuth, (req, res) =>{
+router.get('/:postId/comments', optionalAuth, (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
   const comments = db
     .prepare(
       `
@@ -292,14 +320,18 @@ router.get('/:postId/comments', optionalAuth, (req, res) =>{
     FROM comments c JOIN users u ON u.id = c.user_id
     WHERE c.post_id = ?
     ORDER BY c.created_at ASC
+    LIMIT ? OFFSET ?
   `,
     )
-    .all(req.params.postId);
-  res.json(comments);
+    .all(req.params.postId, limit, offset);
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM comments WHERE post_id = ?`)
+    .get(req.params.postId).count;
+  paginatedResponse(res, comments, total, page, limit);
 });
 
 // Add comment
-router.post('/:postId/comments', authMiddleware, (req, res) => {
+router.post('/:postId/comments', authMiddleware, validate(createCommentValidators), (req, res) => {
   const post = db
     .prepare('SELECT * FROM posts WHERE id = ?')
     .get(req.params.postId);

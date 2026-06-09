@@ -47,7 +47,7 @@ describe('MyWorlds', () => {
       );
     });
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
   });
 
   it('fetches and displays user worlds on mount', async () => {

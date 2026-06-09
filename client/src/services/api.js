@@ -24,6 +24,24 @@ export const getApiErrorMessage = (
   );
 };
 
+export const getApiCollection = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+export const getApiAssetUrl = (path) => {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+
+  try {
+    const apiUrl = new URL(API_URL);
+    return `${apiUrl.origin}${path}`;
+  } catch {
+    return path;
+  }
+};
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: REQUEST_TIMEOUT_MS,

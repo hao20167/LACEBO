@@ -2,14 +2,19 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db from '../database/connection.js';
 import { generateToken, authMiddleware } from '../config/auth.js';
+import { authRateLimiter, registerRateLimiter } from '../middleware/rateLimiter.js';
+import { validate } from '../middleware/validate.js';
+import {
+  registerValidators,
+  loginValidators,
+  updateProfileValidators,
+  userIdParamValidators,
+} from '../middleware/validators/users.js';
 
 const router = Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', registerRateLimiter, validate(registerValidators), (req, res) => {
   const { username, email, password, display_name } = req.body;
-  if (!username || !email || !password || !display_name) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
   const existing = db
     .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
     .get(username, email);
@@ -26,11 +31,8 @@ router.post('/register', (req, res) => {
   res.status(201).json({ user, token: generateToken(user) });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', authRateLimiter, validate(loginValidators), (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
   const user = db
     .prepare('SELECT * FROM users WHERE username = ?')
     .get(username);
@@ -48,6 +50,49 @@ router.get('/me', authMiddleware, (req, res) => {
       'SELECT id, username, email, display_name, avatar_url, created_at FROM users WHERE id = ?',
     )
     .get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+router.patch('/me', authMiddleware, validate(updateProfileValidators), (req, res) => {
+  const { display_name, avatar } = req.body;
+  const updates = [];
+  const values = [];
+
+  if (display_name !== undefined) {
+    updates.push('display_name = ?');
+    values.push(display_name.trim());
+  }
+
+  if (avatar !== undefined) {
+    updates.push('avatar_url = ?');
+    values.push(avatar.trim());
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No profile fields provided' });
+  }
+
+  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(
+    ...values,
+    req.user.id,
+  );
+
+  const user = db
+    .prepare(
+      'SELECT id, username, email, display_name, avatar_url, created_at FROM users WHERE id = ?',
+    )
+    .get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+router.get('/:id', validate(userIdParamValidators), (req, res) => {
+  const user = db
+    .prepare(
+      'SELECT id, username, display_name, avatar_url, created_at FROM users WHERE id = ?',
+    )
+    .get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);
 });
