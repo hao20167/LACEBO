@@ -24,6 +24,8 @@ vi.mock('../contexts/AuthContext.jsx', () => ({
   }),
 }));
 
+// ─── Shared fixtures ────────────────────────────────────────────────────────
+
 const mockProfile = {
   id: 1,
   username: 'johndoe',
@@ -45,6 +47,38 @@ const mockWorlds = [
   },
 ];
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** Default successful mock: /users/me → mockProfile, /worlds/mine → mockWorlds */
+const mockSuccessfulFetch = () => {
+  api.get.mockImplementation((url) => {
+    if (url === '/users/me') return Promise.resolve({ data: mockProfile });
+    if (url === '/worlds/mine') return Promise.resolve({ data: mockWorlds });
+    return Promise.resolve({ data: [] });
+  });
+};
+
+/** Renders <UserProfile /> inside a MemoryRouter and waits for act to settle */
+const renderUserProfile = async () => {
+  await act(async () => {
+    render(
+      <MemoryRouter>
+        <UserProfile />
+      </MemoryRouter>,
+    );
+  });
+};
+
+/** Renders the component and waits until the profile display name is visible */
+const renderAndWaitForProfile = async () => {
+  await renderUserProfile();
+  await waitFor(() => {
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+  });
+};
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
 describe('UserProfile Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,31 +87,15 @@ describe('UserProfile Page', () => {
   it('renders loading state initially with skeleton', async () => {
     api.get.mockImplementation(() => new Promise(() => {}));
 
-    await act(async () => {
-      render(
-        <MemoryRouter>
-          <UserProfile />
-        </MemoryRouter>,
-      );
-    });
+    await renderUserProfile();
 
     expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
   });
 
   it('fetches and displays profile details and joined worlds on successful fetch', async () => {
-    api.get.mockImplementation((url) => {
-      if (url === '/users/me') return Promise.resolve({ data: mockProfile });
-      if (url === '/worlds/mine') return Promise.resolve({ data: mockWorlds });
-      return Promise.resolve({ data: [] });
-    });
+    mockSuccessfulFetch();
 
-    await act(async () => {
-      render(
-        <MemoryRouter>
-          <UserProfile />
-        </MemoryRouter>,
-      );
-    });
+    await renderUserProfile();
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/users/me');
@@ -98,63 +116,32 @@ describe('UserProfile Page', () => {
   });
 
   it('allows user to enter editing mode and cancel editing', async () => {
-    api.get.mockImplementation((url) => {
-      if (url === '/users/me') return Promise.resolve({ data: mockProfile });
-      if (url === '/worlds/mine') return Promise.resolve({ data: mockWorlds });
-      return Promise.resolve({ data: [] });
-    });
+    mockSuccessfulFetch();
+    await renderAndWaitForProfile();
 
-    await act(async () => {
-      render(
-        <MemoryRouter>
-          <UserProfile />
-        </MemoryRouter>,
-      );
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-    });
-
-    const editBtn = screen.getByRole('button', { name: /edit profile/i });
-    fireEvent.click(editBtn);
+    fireEvent.click(screen.getByRole('button', { name: /edit profile/i }));
 
     const input = screen.getByLabelText(/display name/i);
     expect(input.value).toBe('John Doe');
 
-    const cancelBtn = screen.getByRole('button', { name: /cancel/i });
-    fireEvent.click(cancelBtn);
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(screen.queryByLabelText(/display name/i)).not.toBeInTheDocument();
     expect(screen.getByText('John Doe')).toBeInTheDocument();
   });
 
   it('updates display name successfully', async () => {
-    api.get.mockImplementation((url) => {
-      if (url === '/users/me') return Promise.resolve({ data: mockProfile });
-      if (url === '/worlds/mine') return Promise.resolve({ data: mockWorlds });
-      return Promise.resolve({ data: [] });
-    });
+    mockSuccessfulFetch();
 
     const updatedProfile = { ...mockProfile, display_name: 'John Smith' };
     api.patch.mockResolvedValueOnce({ data: updatedProfile });
 
-    await act(async () => {
-      render(
-        <MemoryRouter>
-          <UserProfile />
-        </MemoryRouter>,
-      );
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-    });
+    await renderAndWaitForProfile();
 
     fireEvent.click(screen.getByRole('button', { name: /edit profile/i }));
-
-    const input = screen.getByLabelText(/display name/i);
-    fireEvent.change(input, { target: { value: 'John Smith' } });
+    fireEvent.change(screen.getByLabelText(/display name/i), {
+      target: { value: 'John Smith' },
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
@@ -173,13 +160,7 @@ describe('UserProfile Page', () => {
   it('handles initial fetch error gracefully with retry option', async () => {
     api.get.mockRejectedValueOnce(new Error('Fetch failed'));
 
-    await act(async () => {
-      render(
-        <MemoryRouter>
-          <UserProfile />
-        </MemoryRouter>,
-      );
-    });
+    await renderUserProfile();
 
     await waitFor(() => {
       expect(screen.getByText('Fetch failed')).toBeInTheDocument();
