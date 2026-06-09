@@ -13,7 +13,8 @@ describe('Input Validation Tests', () => {
 
   describe('POST /api/users/register', () => {
     test('rejects missing username', async () => {
-      const { username: _username, ...body } = validUser;
+      const body = { ...validUser };
+      delete body.username;
       const res = await request(ctx.app).post('/api/users/register').send(body);
       expect(res.status).toBe(400);
       expect(res.body.error).toBeDefined();
@@ -48,7 +49,8 @@ describe('Input Validation Tests', () => {
     });
 
     test('rejects missing display_name', async () => {
-      const { display_name: _display_name, ...body } = validUser;
+      const body = { ...validUser };
+      delete body.display_name;
       const res = await request(ctx.app).post('/api/users/register').send(body);
       expect(res.status).toBe(400);
     });

@@ -1,5 +1,5 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test';
-import { crypto } from 'crypto';
+import { crypto } from 'node:crypto';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -26,7 +26,7 @@ async function joinWorldViaApi(apiContext, playerToken, worldId) {
     await apiContext.post(`worlds/${worldId}/join`, {
       headers: { Authorization: `Bearer ${playerToken}` }
     });
-  } catch (e) {}
+  } catch {}
 }
 
 async function approvePendingMember(apiContext, token, worldId, username) {
@@ -50,7 +50,7 @@ async function approvePendingMember(apiContext, token, worldId, username) {
       );
       expect(approveResponse.status()).toBe(200);
     }
-  } catch (err) {}
+  } catch {}
 }
 
 async function getProposedEvent(apiContext, token, worldId, title) {
@@ -61,7 +61,7 @@ async function getProposedEvent(apiContext, token, worldId, title) {
     if (response.status() !== 200) return null;
     const events = await response.json();
     return events.find((item) => item.title === title) || null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -73,7 +73,7 @@ async function openEvent(apiContext, token, eventId) {
       data: { status: 'open' },
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch (e) {}
+  } catch {}
 }
 
 async function approvePost(apiContext, token, worldId, content) {
@@ -91,7 +91,7 @@ async function approvePost(apiContext, token, worldId, content) {
     await apiContext.patch(`posts/${pendingPost.id}/approve`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch (e) {}
+  } catch {}
 }
 
 async function registerPlayerViaUi(page, user) {
@@ -186,7 +186,7 @@ test('E2.5 happy path: register, join world, propose event, and create post', as
         await submitEventBtn.click();
         await page.waitForTimeout(1000);
       }
-    } catch (error) {}
+    } catch {}
 
     const proposedEvent = await getProposedEvent(apiContext, devAuth.token, worldId, eventTitle);
     if (proposedEvent) {
@@ -219,8 +219,8 @@ test('E2.5 happy path: register, join world, propose event, and create post', as
           await expect(targetPost).toBeVisible({ timeout: 3000 });
         }
       }
-    } catch (error) {}
+    } catch {}
 
     await apiContext.dispose();
-  } catch (globalError) {}
+  } catch {}
 });

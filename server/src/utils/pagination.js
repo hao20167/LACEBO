@@ -1,8 +1,8 @@
 export const parsePagination = (query, defaults = { page: 1, limit: 20 }) => {
-  const page = Math.max(1, parseInt(query.page) || defaults.page);
+  const page = Math.max(1, Number.parseInt(query.page) || defaults.page);
   const limit = Math.min(
     100,
-    Math.max(1, parseInt(query.limit) || defaults.limit),
+    Math.max(1, Number.parseInt(query.limit) || defaults.limit),
   );
   const offset = (page - 1) * limit;
   return { page, limit, offset };
