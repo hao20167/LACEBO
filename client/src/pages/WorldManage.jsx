@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
-import { WorldManageSkeleton } from '../components/SkeletonLoader';
+
+const toSafeUrlId = (value) => {
+  const id = String(value);
+  return /^\d+$/.test(id) ? encodeURIComponent(id) : null;
+};
 
 export default function WorldManage() {
   const { id } = useParams();
+  const safeWorldId = toSafeUrlId(id);
   const [world, setWorld] = useState(null);
   const [pendingMembers, setPendingMembers] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
@@ -16,60 +21,83 @@ export default function WorldManage() {
   const [confirming, setConfirming] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [worldRes, membersRes, postsRes, eventsRes] = await Promise.all([
-        api.get(`/worlds/${id}`),
-        api.get(`/worlds/${id}/members/pending`),
-        api.get(`/posts/world/${id}/pending`),
-        api.get(`/events/world/${id}/proposed`),
-      ]);
-      setWorld(worldRes.data);
-      setPendingMembers(membersRes.data);
-      setPendingPosts(postsRes.data);
-      setProposedEvents(eventsRes.data);
-    } catch {
-      setWorld(null);
-      setPendingMembers([]);
-      setPendingPosts([]);
-      setProposedEvents([]);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      if (!safeWorldId) {
+        setWorld(null);
+        setPendingMembers([]);
+        setPendingPosts([]);
+        setProposedEvents([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const [worldRes, membersRes, postsRes, eventsRes] = await Promise.all([
+          api.get(`/worlds/${safeWorldId}`),
+          api.get(`/worlds/${safeWorldId}/members/pending`),
+          api.get(`/posts/world/${safeWorldId}/pending`),
+          api.get(`/events/world/${safeWorldId}/proposed`),
+        ]);
+        setWorld(worldRes.data);
+        setPendingMembers(membersRes.data);
+        setPendingPosts(postsRes.data);
+        setProposedEvents(eventsRes.data);
+      } catch {
+        setWorld(null);
+        setPendingMembers([]);
+        setPendingPosts([]);
+        setProposedEvents([]);
+      }
+      setLoading(false);
+    };
+
     fetchData();
-  }, [id]);
+  }, [safeWorldId]);
 
   const handleMember = async (memberId, status) => {
+    const safeWorldId = toSafeUrlId(id);
+    const safeMemberId = toSafeUrlId(memberId);
+    if (!safeWorldId || !safeMemberId) return;
+
     try {
-      await api.patch(`/worlds/${id}/members/${memberId}`, { status });
+      await api.patch(`/worlds/${safeWorldId}/members/${safeMemberId}`, {
+        status,
+      });
       setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
     } catch {}
   };
 
   const handlePost = async (postId, action) => {
+    const safePostId = toSafeUrlId(postId);
+    if (!safePostId) return;
+
     try {
       if (action === 'approve') {
-        await api.patch(`/posts/${postId}/approve`);
+        await api.patch(`/posts/${safePostId}/approve`);
       } else if (action === 'reject') {
-        await api.patch(`/posts/${postId}/reject`);
+        await api.patch(`/posts/${safePostId}/reject`);
       }
       setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
     } catch {}
   };
 
   const handleEvent = async (eventId, status) => {
+    const safeEventId = toSafeUrlId(eventId);
+    if (!safeEventId) return;
+
     try {
-      await api.patch(`/events/${eventId}`, { status });
+      await api.patch(`/events/${safeEventId}`, { status });
       setProposedEvents(proposedEvents.filter((e) => e.id !== eventId));
     } catch {}
   };
 
   const scheduleWorldDeletion = async () => {
+    if (!safeWorldId) return;
+
     try {
-      const response = await api.post(`/worlds/${id}/schedule-delete`);
+      const response = await api.post(`/worlds/${safeWorldId}/schedule-delete`);
       setWorld(response.data);
       setActionMessage('World sẽ được xóa sau 3 phút.');
     } catch {
@@ -78,8 +106,10 @@ export default function WorldManage() {
   };
 
   const undoWorldDeletion = async () => {
+    if (!safeWorldId) return;
+
     try {
-      const response = await api.post(`/worlds/${id}/undo-delete`);
+      const response = await api.post(`/worlds/${safeWorldId}/undo-delete`);
       setWorld(response.data);
       setActionMessage('Yêu cầu xóa đã được hủy.');
     } catch {

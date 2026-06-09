@@ -130,8 +130,16 @@ router.post(
       .run(title, description || '', is_public ? 1 : 0, req.user.id);
     const worldId = result.lastInsertRowid;
 
+    db.prepare(
+      "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')",
+    ).run(worldId, req.user.id);
+    const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
+    res.status(201).json(world);
+  },
+);
+
 // Get single world
-router.get('/:id', optionalAuth, (req, res) => {
+router.get('/:id', optionalAuth, validate(worldIdParamValidators), (req, res) => {
   const worldId = req.params.id;
   if (cleanupExpiredWorld(worldId)) {
     return res.status(404).json({ error: 'World not found' });
@@ -148,18 +156,15 @@ router.get('/:id', optionalAuth, (req, res) => {
     .get(worldId);
   if (!world) return res.status(404).json({ error: 'World not found' });
 
-    let membership = null;
-    if (req.user) {
-      membership = db
-        .prepare(
-          'SELECT * FROM world_members WHERE world_id = ? AND user_id = ?',
-        )
-        .get(world.id, req.user.id);
-    }
-    world.membership = membership;
-    res.json(world);
-  },
-);
+  let membership = null;
+  if (req.user) {
+    membership = db
+      .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
+      .get(world.id, req.user.id);
+  }
+  world.membership = membership;
+  res.json(world);
+});
 
 router.patch(
   '/:id',
@@ -244,24 +249,24 @@ router.post(
     const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
     if (!world) return res.status(404).json({ error: 'World not found' });
 
-  const existing = db
-    .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
-    .get(worldId, req.user.id);
-  if (existing) {
-    if (existing.status === 'rejected') {
-      db.prepare(
-        "UPDATE world_members SET status = 'pending', role = 'player' WHERE id = ?",
-      ).run(existing.id);
-      const membership = db
-        .prepare('SELECT * FROM world_members WHERE id = ?')
-        .get(existing.id);
-      return res.status(201).json(membership);
-    }
+    const existing = db
+      .prepare('SELECT * FROM world_members WHERE world_id = ? AND user_id = ?')
+      .get(worldId, req.user.id);
+    if (existing) {
+      if (existing.status === 'rejected') {
+        db.prepare(
+          "UPDATE world_members SET status = 'pending', role = 'player' WHERE id = ?",
+        ).run(existing.id);
+        const membership = db
+          .prepare('SELECT * FROM world_members WHERE id = ?')
+          .get(existing.id);
+        return res.status(201).json(membership);
+      }
 
-    return res
-      .status(409)
-      .json({ error: 'Already a member or pending', membership: existing });
-  }
+      return res
+        .status(409)
+        .json({ error: 'Already a member or pending', membership: existing });
+    }
 
     db.prepare(
       "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'player', 'pending')",
