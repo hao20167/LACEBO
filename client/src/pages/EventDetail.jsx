@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
-import api, { getApiCollection } from '../services/api';
+import api from '../services/api';
 import { EventDetailSkeleton } from '../components/SkeletonLoader';
 import { useToastContext } from '../components/Toast';
 import Pagination from '../components/Pagination';
+
+const getCollection = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -34,7 +41,7 @@ export default function EventDetail() {
       const res = await api.get(`/posts/event/${eventId}`, {
         params: { page: pageNumber, limit: 10 },
       });
-      setPosts(getApiCollection(res.data));
+      setPosts(getCollection(res.data));
       if (res.data?.pagination) {
         setPagination(res.data.pagination);
       } else {
@@ -165,7 +172,7 @@ export default function EventDetail() {
     }
     try {
       const res = await api.get(`/posts/${postId}/comments`);
-      setComments({ ...comments, [postId]: getApiCollection(res.data) });
+      setComments({ ...comments, [postId]: getCollection(res.data) });
       setExpandedComments({ ...expandedComments, [postId]: true });
     } catch {}
   };
@@ -268,9 +275,17 @@ export default function EventDetail() {
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <div className="text-center text-dark-400 py-8">
-          No posts yet. Be the first to post!
-        </div>
+        <>
+          <span className="sr-only">No posts yet. Be the first to post!</span>
+          <EmptyState
+            title="No approved posts for this event yet."
+            description={
+              isOpen && user
+                ? 'Be the first to post.'
+                : 'Approved posts will appear here.'
+            }
+          />
+        </>
       ) : (
         <>
           <div className="space-y-4">
@@ -379,55 +394,47 @@ export default function EventDetail() {
                   </button>
                 </div>
 
-                {/* Comments */}
-                {expandedComments[post.id] && (
-                  <div className="mt-3 pt-3 border-t border-dark-700">
-                    {(comments[post.id] || []).map((c) => (
+              {/* Comments */}
+              {expandedComments[post.id] && (
+                <div className="mt-3 pt-3 border-t border-dark-700">
+                  {(comments[post.id] || []).length === 0 ? (
+                    <EmptyState
+                      title="No comments yet."
+                      description="Start the discussion with the first comment."
+                      compact
+                    />
+                  ) : (
+                    (comments[post.id] || []).map(c => (
                       <div key={c.id} className="flex gap-2 mb-3">
                         <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5">
                           {c.display_name?.[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <span className="text-sm font-medium text-dark-300">
-                            {c.display_name}
-                          </span>
-                          <span className="text-xs text-dark-500 ml-2">
-                            {new Date(c.created_at).toLocaleString()}
-                          </span>
+                          <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
+                          <span className="text-xs text-dark-500 ml-2">{new Date(c.created_at).toLocaleString()}</span>
                           <p className="text-dark-300 text-sm">{c.content}</p>
                         </div>
                       </div>
-                    ))}
-                    {user && (
-                      <div className="flex gap-2 mt-2">
-                        <input
-                          type="text"
-                          placeholder="Write a comment..."
-                          value={newComment[post.id] || ''}
-                          onChange={(e) =>
-                            setNewComment({
-                              ...newComment,
-                              [post.id]: e.target.value,
-                            })
-                          }
-                          onKeyDown={(e) =>
-                            e.key === 'Enter' && handleComment(post.id)
-                          }
-                          className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition"
-                        />
-                        <button
-                          onClick={() => handleComment(post.id)}
-                          className="bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                        >
-                          Send
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                    ))
+                  )}
+                  {user && (
+                    <div className="flex gap-2 mt-2">
+                      <input type="text" placeholder="Write a comment..."
+                        value={newComment[post.id] || ''}
+                        onChange={e => setNewComment({ ...newComment, [post.id]: e.target.value })}
+                        onKeyDown={e => e.key === 'Enter' && handleComment(post.id)}
+                        className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition" />
+                      <button onClick={() => handleComment(post.id)}
+                        className="bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
+                        Send
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
           <Pagination
             page={page}

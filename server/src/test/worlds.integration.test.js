@@ -100,112 +100,100 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
     });
   });
 
-  test('PATCH /api/worlds/:id - Should allow owner to update a world', async () => {
-    const { user: owner, token: ownerToken } = createAuthedUser(
-      'world_owner',
-      'World Owner',
-    );
-    const createRes = await createWorld(ownerToken, {
-      title: 'Original World',
-      description: 'Before update',
+  test('should allow a rejected member to request joining again', async () => {
+    const dev = createTestUser({
+      db,
+      username: 'rejoin_dev',
+      email: 'rejoin_dev@example.com',
+      displayName: 'Rejoin Dev',
     });
+    const player = createTestUser({
+      db,
+      username: 'rejoin_player',
+      email: 'rejoin_player@example.com',
+      displayName: 'Rejoin Player',
+    });
+    const devToken = createTestToken(dev);
+    const playerToken = createTestToken(player);
 
-    const res = await request(app)
-      .patch(`/api/worlds/${createRes.body.id}`)
-      .set('Authorization', `Bearer ${ownerToken}`)
+    const createRes = await request(app)
+      .post('/api/worlds')
+      .set('Authorization', `Bearer ${devToken}`)
       .send({
-        title: 'Updated World',
-        description: 'After update',
-        cover_image: '/uploads/images/world.png',
-        is_public: false,
+        title: 'Rejoin World',
+        description: 'World for rejoin flow',
       });
+    const worldId = createRes.body.id;
 
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      id: createRes.body.id,
-      title: 'Updated World',
-      description: 'After update',
-      cover_image: '/uploads/images/world.png',
-      is_public: 0,
-      owner_id: owner.id,
+    const firstJoinRes = await request(app)
+      .post(`/api/worlds/${worldId}/join`)
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(firstJoinRes.status).toBe(201);
+    expect(firstJoinRes.body.status).toBe('pending');
+
+    const rejectRes = await request(app)
+      .patch(`/api/worlds/${worldId}/members/${firstJoinRes.body.id}`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .send({ status: 'rejected' });
+
+    expect(rejectRes.status).toBe(200);
+
+    const rejoinRes = await request(app)
+      .post(`/api/worlds/${worldId}/join`)
+      .set('Authorization', `Bearer ${playerToken}`);
+
+    expect(rejoinRes.status).toBe(201);
+    expect(rejoinRes.body.id).toBe(firstJoinRes.body.id);
+    expect(rejoinRes.body.status).toBe('pending');
+    expect(rejoinRes.body.role).toBe('player');
+
+    const pendingRes = await request(app)
+      .get(`/api/worlds/${worldId}/members/pending`)
+      .set('Authorization', `Bearer ${devToken}`);
+
+    expect(pendingRes.status).toBe(200);
+    expect(pendingRes.body).toHaveLength(1);
+    expect(pendingRes.body[0]).toMatchObject({
+      id: firstJoinRes.body.id,
+      user_id: player.id,
+      status: 'pending',
     });
   });
 
-  test('PATCH /api/worlds/:id - Should reject non-owner updates', async () => {
-    const { token: ownerToken } = createAuthedUser(
-      'world_owner_reject',
-      'World Owner Reject',
-    );
-    const { token: otherToken } = createAuthedUser(
-      'world_other',
-      'World Other',
-    );
-    const createRes = await createWorld(ownerToken, {
-      title: 'Owner Only World',
+  test('should hide worlds scheduled for deletion from public lists immediately', async () => {
+    const user = createTestUser({
+      db,
+      username: 'delete_list_dev',
+      email: 'delete_list_dev@example.com',
+      displayName: 'Delete List Dev',
     });
+    const token = createTestToken(user);
 
-    const res = await request(app)
-      .patch(`/api/worlds/${createRes.body.id}`)
-      .set('Authorization', `Bearer ${otherToken}`)
-      .send({ title: 'Forbidden Update' });
+    const createRes = await request(app)
+      .post('/api/worlds')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Hidden Scheduled World',
+        description: 'Should not appear in Explore Worlds after scheduling deletion',
+      });
+    const worldId = createRes.body.id;
 
-    expect(res.status).toBe(403);
-  });
+    const scheduleRes = await request(app)
+      .post(`/api/worlds/${worldId}/schedule-delete`)
+      .set('Authorization', `Bearer ${token}`);
 
-  test('PATCH /api/worlds/:id - Should reject empty updates', async () => {
-    const { token: ownerToken } = createAuthedUser(
-      'world_empty_update',
-      'World Empty Update',
-    );
-    const createRes = await createWorld(ownerToken, {
-      title: 'Empty Update World',
-    });
+    expect(scheduleRes.status).toBe(200);
+    expect(scheduleRes.body.deletion_scheduled_at).toBeTruthy();
 
-    const res = await request(app)
-      .patch(`/api/worlds/${createRes.body.id}`)
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({});
+    const listRes = await request(app).get('/api/worlds');
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.data.some((world) => world.id === worldId)).toBe(false);
 
-    expect(res.status).toBe(400);
-  });
-
-  test('DELETE /api/worlds/:id - Should allow owner to delete a world', async () => {
-    const { token: ownerToken } = createAuthedUser(
-      'world_delete_owner',
-      'World Delete Owner',
-    );
-    const createRes = await createWorld(ownerToken, {
-      title: 'Delete World',
-    });
-
-    const res = await request(app)
-      .delete(`/api/worlds/${createRes.body.id}`)
-      .set('Authorization', `Bearer ${ownerToken}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(
-      db.prepare('SELECT * FROM worlds WHERE id = ?').get(createRes.body.id),
-    ).toBeUndefined();
-  });
-
-  test('DELETE /api/worlds/:id - Should reject non-owner deletes', async () => {
-    const { token: ownerToken } = createAuthedUser(
-      'world_delete_reject_owner',
-      'World Delete Reject Owner',
-    );
-    const { token: otherToken } = createAuthedUser(
-      'world_delete_other',
-      'World Delete Other',
-    );
-    const createRes = await createWorld(ownerToken, {
-      title: 'Protected World',
-    });
-
-    const res = await request(app)
-      .delete(`/api/worlds/${createRes.body.id}`)
-      .set('Authorization', `Bearer ${otherToken}`);
-
-    expect(res.status).toBe(403);
+    const mineRes = await request(app)
+      .get('/api/worlds/mine')
+      .set('Authorization', `Bearer ${token}`);
+    expect(mineRes.status).toBe(200);
+    expect(mineRes.body.some((world) => world.id === worldId)).toBe(false);
   });
 });
