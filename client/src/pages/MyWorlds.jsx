@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
 
 export default function MyWorlds() {
@@ -29,15 +30,18 @@ export default function MyWorlds() {
         </Link>
       </div>
       {worlds.length === 0 ? (
-        <div className="text-center text-dark-400 py-12">
-          <p>You haven&apos;t joined any worlds yet.</p>
+        <EmptyState
+          title="You haven't joined any worlds yet."
+          description="Join an existing world or create one to start building your story."
+          action={
           <Link
             to="/worlds"
             className="text-primary-400 hover:underline text-sm mt-2 inline-block"
           >
             Explore worlds
           </Link>
-        </div>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {worlds.map((world) => (

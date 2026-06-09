@@ -47,7 +47,7 @@ router.get('/', optionalAuth, (req, res) => {
       SELECT w.*, 
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
       FROM worlds w 
-      WHERE w.title LIKE ? AND w.is_public = 1 AND (w.deletion_scheduled_at IS NULL OR datetime(w.deletion_scheduled_at) > CURRENT_TIMESTAMP)
+      WHERE w.title LIKE ? AND w.is_public = 1 AND w.deletion_scheduled_at IS NULL
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
@@ -59,7 +59,7 @@ router.get('/', optionalAuth, (req, res) => {
       SELECT w.*,
         (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
       FROM worlds w 
-      WHERE w.is_public = 1 AND (w.deletion_scheduled_at IS NULL OR datetime(w.deletion_scheduled_at) > CURRENT_TIMESTAMP)
+      WHERE w.is_public = 1 AND w.deletion_scheduled_at IS NULL
       ORDER BY w.created_at DESC LIMIT ? OFFSET ?
     `,
       )
@@ -78,7 +78,7 @@ router.get('/mine', authMiddleware, (req, res) => {
       (SELECT COUNT(*) FROM world_members WHERE world_id = w.id AND status = 'approved') as member_count
     FROM worlds w
     JOIN world_members wm ON wm.world_id = w.id AND wm.user_id = ?
-    WHERE wm.status = 'approved'
+    WHERE wm.status = 'approved' AND w.deletion_scheduled_at IS NULL
     ORDER BY w.created_at DESC
   `,
     )

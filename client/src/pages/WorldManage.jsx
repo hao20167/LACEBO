@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
 
 export default function WorldManage() {
@@ -280,9 +281,10 @@ export default function WorldManage() {
             Pending Member Requests
           </h2>
           {pendingMembers.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">
-              No pending requests
-            </p>
+            <EmptyState
+              title="No pending requests"
+              description="New member requests will appear here for review."
+            />
           ) : (
             <div className="space-y-3">
               {pendingMembers.map((member) => (
@@ -328,7 +330,10 @@ export default function WorldManage() {
             Pending Posts
           </h2>
           {pendingPosts.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">No pending posts</p>
+            <EmptyState
+              title="No pending posts"
+              description="Posts waiting for approval will appear here."
+            />
           ) : (
             <div className="space-y-3">
               {pendingPosts.map((post) => (
@@ -375,7 +380,10 @@ export default function WorldManage() {
             Proposed Small Events
           </h2>
           {proposedEvents.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">No event proposals</p>
+            <EmptyState
+              title="No event proposals"
+              description="Member-submitted small event proposals will appear here."
+            />
           ) : (
             <div className="space-y-3">
               {proposedEvents.map((event) => (

@@ -144,4 +144,40 @@ describe('E1.5 Integration: create world -> search -> detail', () => {
       status: 'pending',
     });
   });
+
+  test('should hide worlds scheduled for deletion from public lists immediately', async () => {
+    const user = createTestUser({
+      db,
+      username: 'delete_list_dev',
+      email: 'delete_list_dev@example.com',
+      displayName: 'Delete List Dev',
+    });
+    const token = createTestToken(user);
+
+    const createRes = await request(app)
+      .post('/api/worlds')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Hidden Scheduled World',
+        description: 'Should not appear in Explore Worlds after scheduling deletion',
+      });
+    const worldId = createRes.body.id;
+
+    const scheduleRes = await request(app)
+      .post(`/api/worlds/${worldId}/schedule-delete`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(scheduleRes.status).toBe(200);
+    expect(scheduleRes.body.deletion_scheduled_at).toBeTruthy();
+
+    const listRes = await request(app).get('/api/worlds');
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.some((world) => world.id === worldId)).toBe(false);
+
+    const mineRes = await request(app)
+      .get('/api/worlds/mine')
+      .set('Authorization', `Bearer ${token}`);
+    expect(mineRes.status).toBe(200);
+    expect(mineRes.body.some((world) => world.id === worldId)).toBe(false);
+  });
 });

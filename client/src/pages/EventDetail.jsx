@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
@@ -191,7 +192,14 @@ export default function EventDetail() {
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <div className="text-center text-dark-400 py-8">No posts yet. Be the first to post!</div>
+        <EmptyState
+          title="No approved posts for this event yet."
+          description={
+            isOpen && user
+              ? 'Be the first to post.'
+              : 'Approved posts will appear here.'
+          }
+        />
       ) : (
         <div className="space-y-4">
           {posts.map(post => (
@@ -287,18 +295,26 @@ export default function EventDetail() {
               {/* Comments */}
               {expandedComments[post.id] && (
                 <div className="mt-3 pt-3 border-t border-dark-700">
-                  {(comments[post.id] || []).map(c => (
-                    <div key={c.id} className="flex gap-2 mb-3">
-                      <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5">
-                        {c.display_name?.[0]?.toUpperCase()}
+                  {(comments[post.id] || []).length === 0 ? (
+                    <EmptyState
+                      title="No comments yet."
+                      description="Start the discussion with the first comment."
+                      compact
+                    />
+                  ) : (
+                    (comments[post.id] || []).map(c => (
+                      <div key={c.id} className="flex gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5">
+                          {c.display_name?.[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
+                          <span className="text-xs text-dark-500 ml-2">{new Date(c.created_at).toLocaleString()}</span>
+                          <p className="text-dark-300 text-sm">{c.content}</p>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
-                        <span className="text-xs text-dark-500 ml-2">{new Date(c.created_at).toLocaleString()}</span>
-                        <p className="text-dark-300 text-sm">{c.content}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                   {user && (
                     <div className="flex gap-2 mt-2">
                       <input type="text" placeholder="Write a comment..."

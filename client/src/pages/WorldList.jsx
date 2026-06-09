@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
 
 export default function WorldList() {
@@ -50,19 +51,22 @@ export default function WorldList() {
       {loading ? (
         <div className="text-center text-dark-400 py-12">Loading worlds...</div>
       ) : worlds.length === 0 ? (
-        <div className="text-center text-dark-400 py-12">
-          <p className="text-lg mb-2">No worlds found</p>
-          <p className="text-sm">
-            Be the first to{' '}
+        <EmptyState
+          title="No worlds found"
+          description={
+            search
+              ? 'Try a different search term or clear the search to browse every world.'
+              : 'Start the first shared setting for this community.'
+          }
+          action={
             <Link
               to="/worlds/create"
               className="text-primary-400 hover:underline"
             >
-              create a world
+              Create a world
             </Link>
-            !
-          </p>
-        </div>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {worlds.map((world) => (

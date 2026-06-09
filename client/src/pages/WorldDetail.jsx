@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
@@ -164,7 +165,14 @@ export default function WorldDetail() {
         <div>
           <h2 className="text-xl font-bold text-dark-100 mb-4">World Lore Timeline</h2>
           {events.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">No events in this world's lore yet.</p>
+            <EmptyState
+              title="No events in this world's lore yet."
+              description={
+                isDev
+                  ? 'Create the first event to start this world timeline.'
+                  : 'Once events are opened, they will appear here as the world timeline.'
+              }
+            />
           ) : (
             <div className="relative">
               <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
@@ -249,7 +257,15 @@ export default function WorldDetail() {
             )}
 
             {openEvents.length === 0 ? (
-              <p className="text-dark-400 text-sm">No ongoing events</p>
+              <EmptyState
+                title="No ongoing events"
+                description={
+                  isDev
+                    ? 'Open a new event when this world is ready for activity.'
+                    : 'Check back later for open events you can join.'
+                }
+                compact
+              />
             ) : (
               <div className="space-y-3">
                 {openEvents.map(event => (
@@ -299,9 +315,15 @@ export default function WorldDetail() {
           )}
 
           {/* Past Events */}
-          {closedEvents.length > 0 && (
-            <div>
-              <h2 className="text-xl font-bold text-dark-100 mb-3">📜 Past Events</h2>
+          <div>
+            <h2 className="text-xl font-bold text-dark-100 mb-3">📜 Past Events</h2>
+            {closedEvents.length === 0 ? (
+              <EmptyState
+                title="No past events"
+                description="Closed events will be archived here."
+                compact
+              />
+            ) : (
               <div className="space-y-3">
                 {closedEvents.map(event => (
                   <Link key={event.id} to={`/events/${event.id}`}
@@ -317,8 +339,8 @@ export default function WorldDetail() {
                   </Link>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
@@ -346,7 +368,14 @@ export default function WorldDetail() {
           )}
 
           {announcements.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">No announcements yet.</p>
+            <EmptyState
+              title="No announcements yet."
+              description={
+                isDev
+                  ? 'Post an announcement to keep members updated.'
+                  : 'Updates from the world devs will appear here.'
+              }
+            />
           ) : (
             <div className="space-y-3">
               {announcements.map(ann => (
@@ -369,7 +398,10 @@ export default function WorldDetail() {
         <div>
           <h2 className="text-xl font-bold text-dark-100 mb-4">🏆 Citizen Leaderboard</h2>
           {leaderboard.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">No members yet.</p>
+            <EmptyState
+              title="No members yet."
+              description="Approved members and their credits will appear here."
+            />
           ) : (
             <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
               <table className="w-full">
