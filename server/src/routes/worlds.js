@@ -7,6 +7,7 @@ import {
   createWorldValidators,
   updateWorldValidators,
   updateMemberValidators,
+  worldIdParamValidators,
 } from '../middleware/validators/worlds.js';
 
 const router = Router();
@@ -26,7 +27,6 @@ const requireWorldOwner = (world, userId) => {
   return getWorldOwnerId(world) === userId;
 };
 
-// List all worlds (with search and pagination)
 router.get('/', optionalAuth, (req, res) => {
   const { search } = req.query;
   const { page, limit, offset } = parsePagination(req.query);
@@ -64,7 +64,6 @@ router.get('/', optionalAuth, (req, res) => {
   paginatedResponse(res, worlds, total, page, limit);
 });
 
-// Get my worlds
 router.get('/mine', authMiddleware, (req, res) => {
   const worlds = db
     .prepare(
@@ -81,7 +80,6 @@ router.get('/mine', authMiddleware, (req, res) => {
   res.json(worlds);
 });
 
-// Create world
 router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => {
   const { title, description, is_public = 1 } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
@@ -91,7 +89,7 @@ router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => 
     )
     .run(title, description || '', is_public ? 1 : 0, req.user.id);
   const worldId = result.lastInsertRowid;
-  // Creator becomes dev
+  
   db.prepare(
     "INSERT INTO world_members (world_id, user_id, role, status) VALUES (?, ?, 'dev', 'approved')",
   ).run(worldId, req.user.id);
@@ -99,8 +97,7 @@ router.post('/', authMiddleware, validate(createWorldValidators), (req, res) => 
   res.status(201).json(world);
 });
 
-// Get single world
-router.get('/:id', optionalAuth, (req, res) => {
+router.get('/:id', validate(worldIdParamValidators), optionalAuth, (req, res) => {
   const world = db
     .prepare(
       `
@@ -176,8 +173,7 @@ router.delete('/:id', authMiddleware, validate(updateWorldValidators), (req, res
   res.json({ success: true });
 });
 
-// Join world
-router.post('/:id/join', authMiddleware, (req, res) => {
+router.post('/:id/join', authMiddleware, validate(worldIdParamValidators), (req, res) => {
   const worldId = req.params.id;
   const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
   if (!world) return res.status(404).json({ error: 'World not found' });
@@ -200,15 +196,13 @@ router.post('/:id/join', authMiddleware, (req, res) => {
   res.status(201).json(membership);
 });
 
-// Approve/reject player (dev only)
 router.patch('/:id/members/:memberId', authMiddleware, validate(updateMemberValidators), (req, res) => {
-  const { status } = req.body; // 'approved' or 'rejected'
+  const { status } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
     return res
       .status(400)
       .json({ error: 'Status must be approved or rejected' });
   }
-  // Check requester is dev
   const devCheck = db
     .prepare(
       "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
@@ -223,8 +217,7 @@ router.patch('/:id/members/:memberId', authMiddleware, validate(updateMemberVali
   res.json({ success: true });
 });
 
-// Get pending members (dev only)
-router.get('/:id/members/pending', authMiddleware, (req, res) => {
+router.get('/:id/members/pending', authMiddleware, validate(worldIdParamValidators), (req, res) => {
   const devCheck = db
     .prepare(
       "SELECT * FROM world_members WHERE world_id = ? AND user_id = ? AND role = 'dev' AND status = 'approved'",
@@ -247,8 +240,7 @@ router.get('/:id/members/pending', authMiddleware, (req, res) => {
   res.json(members);
 });
 
-// Get leaderboard
-router.get('/:id/leaderboard', (req, res) => {
+router.get('/:id/leaderboard', validate(worldIdParamValidators), (req, res) => {
   const members = db
     .prepare(
       `
@@ -262,8 +254,7 @@ router.get('/:id/leaderboard', (req, res) => {
   res.json(members);
 });
 
-// Get all members
-router.get('/:id/members', (req, res) => {
+router.get('/:id/members', validate(worldIdParamValidators), (req, res) => {
   const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
   const members = db
     .prepare(

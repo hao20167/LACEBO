@@ -1,6 +1,12 @@
 import { body, param } from 'express-validator';
 
+export const eventParamsValidators = [
+  param('worldId').optional().isInt({ min: 1 }).withMessage('World ID must be a positive integer'),
+  param('eventId').optional().isInt({ min: 1 }).withMessage('Event ID must be a positive integer'),
+];
+
 export const createEventValidators = [
+  param('worldId').isInt({ min: 1 }).withMessage('World ID must be a positive integer'),
   body('title')
     .trim()
     .notEmpty().withMessage('Title is required')

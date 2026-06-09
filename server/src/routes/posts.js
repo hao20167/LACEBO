@@ -10,6 +10,7 @@ import {
   createAnnouncementValidators,
   updatePostValidators,
 } from '../middleware/validators/posts.js';
+import { param } from 'express-validator';
 
 const router = Router();
 
@@ -34,7 +35,6 @@ const requireDevForPost = (post, userId) => {
   return isDev(post.world_id, userId);
 };
 
-// Hàm Helper dùng chung để xử lý duyệt/từ chối bài viết, loại bỏ code duplication
 const handlePostStatusUpdate = (req, res, targetStatus, creditsToAward = 0) => {
   const post = getPostById(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
@@ -56,7 +56,6 @@ const handlePostStatusUpdate = (req, res, targetStatus, creditsToAward = 0) => {
   return res.json({ success: true });
 };
 
-// Get announcements for a world
 router.get('/world/:worldId/announcements', optionalAuth, (req, res) => {
   const announcements = db
     .prepare(ANNOUNCEMENTS_BY_WORLD_QUERY)
@@ -64,7 +63,6 @@ router.get('/world/:worldId/announcements', optionalAuth, (req, res) => {
   res.json(announcements);
 });
 
-// Create an announcement (dev only)
 router.post('/world/:worldId/announcements', authMiddleware, validate(createAnnouncementValidators), (req, res) => {
   const { worldId } = req.params;
   const { title, content } = req.body;
@@ -86,7 +84,6 @@ router.post('/world/:worldId/announcements', authMiddleware, validate(createAnno
   res.status(201).json(announcement);
 });
 
-// Get posts for an event
 router.get('/event/:eventId', optionalAuth, (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);
   const posts = db
@@ -125,7 +122,6 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
       post.liked = false;
     }
   }
-  // Add permission info: whether current user can delete/manage the post
   if (req.user) {
     for (const post of posts) {
       post.can_delete = post.user_id === req.user.id || isDev(post.world_id, req.user.id);
@@ -138,41 +134,6 @@ router.get('/event/:eventId', optionalAuth, (req, res) => {
   paginatedResponse(res, posts, total, page, limit);
 });
 
-// Get announcements for a world
-router.get('/world/:worldId/announcements', (req, res) => {
-  const announcements = db
-    .prepare(
-      `
-    SELECT a.*, u.username, u.display_name, u.avatar_url
-    FROM announcements a JOIN users u ON u.id = a.user_id
-    WHERE a.world_id = ?
-    ORDER BY a.created_at DESC LIMIT 20
-  `,
-    )
-    .all(req.params.worldId);
-  res.json(announcements);
-});
-
-// Create announcement (dev only)
-router.post('/world/:worldId/announcements', authMiddleware, (req, res) => {
-  const worldId = req.params.worldId;
-  if (!isDev(worldId, req.user.id))
-    return res.status(403).json({ error: 'Dev only' });
-  const { title, content } = req.body;
-  if (!title || !content)
-    return res.status(400).json({ error: 'Title and content required' });
-  const result = db
-    .prepare(
-      'INSERT INTO announcements (world_id, user_id, title, content) VALUES (?, ?, ?, ?)',
-    )
-    .run(worldId, req.user.id, title, content);
-  const announcement = db
-    .prepare('SELECT * FROM announcements WHERE id = ?')
-    .get(result.lastInsertRowid);
-  res.status(201).json(announcement);
-});
-
-// Create post in event
 router.post('/event/:eventId', authMiddleware, validate(createPostValidators), (req, res) => {
   const event = db
     .prepare('SELECT * FROM events WHERE id = ?')
@@ -216,17 +177,14 @@ router.post('/event/:eventId', authMiddleware, validate(createPostValidators), (
   res.status(201).json(post);
 });
 
-// Approve post (dev only) - Đã refactor sạch duplication
 router.patch('/:postId/approve', authMiddleware, (req, res) => {
   handlePostStatusUpdate(req, res, 'approved', 10);
 });
 
-// Reject post (dev only) - Đã refactor sạch duplication
 router.patch('/:postId/reject', authMiddleware, (req, res) => {
   handlePostStatusUpdate(req, res, 'rejected', 0);
 });
 
-// Get pending posts (dev only)
 router.get('/world/:worldId/pending', authMiddleware, (req, res) => {
   if (!isDev(req.params.worldId, req.user.id))
     return res.status(403).json({ error: 'Dev only' });
@@ -243,7 +201,6 @@ router.get('/world/:worldId/pending', authMiddleware, (req, res) => {
   res.json(posts);
 });
 
-// Like/unlike a post
 router.post('/:postId/like', authMiddleware, (req, res) => {
   const postId = req.params.postId;
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(postId);
@@ -266,7 +223,6 @@ router.post('/:postId/like', authMiddleware, (req, res) => {
   }
 });
 
-// Delete a post if the requesting user is the author
 router.delete('/:postId', authMiddleware, (req, res) => {
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.postId);
   if (!post) return res.status(404).json({ error: 'Post not found' });
@@ -276,7 +232,7 @@ router.delete('/:postId', authMiddleware, (req, res) => {
   db.prepare('DELETE FROM posts WHERE id = ?').run(post.id);
   res.json({ success: true });
 });
-// Update a post's content if the requesting user is the author
+
 router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, res) => {
   const { content, image_url } = req.body;
 
@@ -302,15 +258,14 @@ router.patch('/:postId', authMiddleware, validate(updatePostValidators), (req, r
     return res.status(400).json({ error: 'No post fields provided' });
   }
 
-  db.prepare(`UPDATE posts SET ${updates.join(', ')} WHERE id = ?`).run(
-    ...values,
-    post.id,
-  );
+  const query = `UPDATE posts SET ${updates.join(', ')} WHERE id = ?`;
+  db.prepare(query).run(...values, post.id);
+  
   const updatedPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(post.id);
   res.json(updatedPost);
 });
-// Get comments for a post
-router.get('/:postId/comments', optionalAuth, (req, res) => {
+
+router.get('/:postId/comments', validate([param('postId').isInt({ min: 1 }).withMessage('Post ID must be a positive integer')]), optionalAuth, (req, res) => {
   const { page, limit, offset } = parsePagination(req.query, { page: 1, limit: 50 });
   const comments = db
     .prepare(
@@ -330,7 +285,6 @@ router.get('/:postId/comments', optionalAuth, (req, res) => {
   paginatedResponse(res, comments, total, page, limit);
 });
 
-// Add comment
 router.post('/:postId/comments', authMiddleware, validate(createCommentValidators), (req, res) => {
   const post = db
     .prepare('SELECT * FROM posts WHERE id = ?')

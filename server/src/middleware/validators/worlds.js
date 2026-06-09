@@ -1,5 +1,9 @@
 import { body, param } from 'express-validator';
 
+export const worldIdParamValidators = [
+  param('id').isInt({ min: 1 }).withMessage('World ID must be a positive integer'),
+];
+
 export const createWorldValidators = [
   body('title')
     .trim()

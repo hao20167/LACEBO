@@ -3,12 +3,11 @@ import db from '../database/connection.js';
 import { authMiddleware } from '../config/auth.js';
 import { isDev, isMember } from '../helpers/world.js';
 import { validate } from '../middleware/validate.js';
-import { createEventValidators, updateEventValidators } from '../middleware/validators/events.js';
+import { createEventValidators, updateEventValidators, eventParamsValidators } from '../middleware/validators/events.js';
 
 const router = Router();
 
-// Get events for a world (lore/timeline)
-router.get('/world/:worldId', (req, res) => {
+router.get('/world/:worldId', validate(eventParamsValidators), (req, res) => {
   const events = db
     .prepare(
       `
@@ -24,8 +23,7 @@ router.get('/world/:worldId', (req, res) => {
   res.json(events);
 });
 
-// Get proposed events (dev only)
-router.get('/world/:worldId/proposed', authMiddleware, (req, res) => {
+router.get('/world/:worldId/proposed', authMiddleware, validate(eventParamsValidators), (req, res) => {
   if (!isDev(req.params.worldId, req.user.id)) {
     return res.status(403).json({ error: 'Dev only' });
   }
@@ -42,7 +40,6 @@ router.get('/world/:worldId/proposed', authMiddleware, (req, res) => {
   res.json(events);
 });
 
-// Create event
 router.post('/world/:worldId', authMiddleware, validate(createEventValidators), (req, res) => {
   const { title, description, event_type, start_date, end_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title required' });
@@ -81,7 +78,6 @@ router.post('/world/:worldId', authMiddleware, validate(createEventValidators), 
   res.status(201).json(event);
 });
 
-// Approve/open/close event (dev only)
 router.patch('/:eventId', authMiddleware, validate(updateEventValidators), (req, res) => {
   const event = db
     .prepare('SELECT * FROM events WHERE id = ?')
@@ -120,8 +116,7 @@ router.patch('/:eventId', authMiddleware, validate(updateEventValidators), (req,
   res.json(updated);
 });
 
-// Get single event
-router.get('/:eventId', (req, res) => {
+router.get('/:eventId', validate(eventParamsValidators), (req, res) => {
   const event = db
     .prepare(
       `
