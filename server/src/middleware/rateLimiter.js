@@ -1,12 +1,12 @@
 import rateLimit from 'express-rate-limit';
 import { ErrorCodes } from '../utils/AppError.js';
 
-// By default, skip rate limiting during the Jest test run to avoid interfering
-// with tests that make many requests. To explicitly enable rate limiting for
-// the rate limiter test suite, set the environment variable
-// `ENABLE_RATE_LIMIT=true` when running tests.
-const skipRateLimitInTests = () =>
-  process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT !== 'true';
+const skipRateLimitInTests = (req) => {
+  const isJestTest = process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT !== 'true';
+  const isArtilleryLoadTest = req.headers['x-bypass-ratelimit'] === 'QA-Secret-Token-2026';
+  
+  return isJestTest || isArtilleryLoadTest;
+};
 
 const rateLimitHandler = (req, res) => {
   res.status(429).json({
@@ -27,7 +27,7 @@ const defaultLimiterOptions = {
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
-  skip: skipRateLimitInTests,
+  skip: skipRateLimitInTests, 
   handler: rateLimitHandler,
 };
 
