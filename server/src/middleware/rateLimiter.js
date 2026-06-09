@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import { ErrorCodes } from '../utils/AppError.js';
 
 // By default, skip rate limiting during the Jest test run to avoid interfering
 // with tests that make many requests. To explicitly enable rate limiting for
@@ -9,7 +10,7 @@ const skipRateLimitInTests = () =>
 
 const rateLimitHandler = (req, res) => {
   res.status(429).json({
-    error: 'RATE_LIMIT_EXCEEDED',
+    error: ErrorCodes.RATE_LIMIT_EXCEEDED,
     message: 'Too many requests, please try again later.',
     retryAfter: Math.ceil(req.rateLimit.resetTime / 1000),
   });
@@ -32,19 +33,25 @@ const defaultLimiterOptions = {
 
 const makeRateLimiter = (opts = {}) => rateLimit({ ...defaultLimiterOptions, ...opts });
 
-export const authRateLimiter = makeRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
-  message: 'Too many authentication attempts, please try again after 15 minutes.',
-});
+const limiterConfigs = {
+  authRateLimiter: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: 'Too many authentication attempts, please try again after 15 minutes.',
+  },
+  registerRateLimiter: {
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5,
+    message: 'Too many registration attempts, please try again after 1 hour.',
+  },
+  globalApiRateLimiter: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+  },
+};
 
-export const registerRateLimiter = makeRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
-  message: 'Too many registration attempts, please try again after 1 hour.',
-});
+const limiters = Object.fromEntries(
+  Object.entries(limiterConfigs).map(([name, cfg]) => [name, makeRateLimiter(cfg)]),
+);
 
-export const globalApiRateLimiter = makeRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100,
-});
+export const { authRateLimiter, registerRateLimiter, globalApiRateLimiter } = limiters;
