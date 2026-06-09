@@ -29,7 +29,7 @@ export default function Pagination({
         type="button"
         disabled={!hasPrevPage}
         onClick={() => onPageChange(page - 1)}
-        className="px-3 py-2 rounded-lg border border-dark-700 bg-dark-900 text-dark-300 hover:text-dark-100 hover:border-dark-600 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+        className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
       >
         <span>&larr;</span> Prev
       </button>
@@ -41,14 +41,14 @@ export default function Pagination({
             onClick={() => onPageChange(1)}
             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg border text-sm font-medium transition ${
               page === 1
-                ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-900/30'
-                : 'border-dark-700 bg-dark-900 text-dark-300 hover:text-dark-100 hover:border-dark-600'
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                : 'border-slate-300 bg-white text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50'
             }`}
           >
             1
           </button>
           {start > 2 && (
-            <span className="text-dark-500 px-1 text-sm select-none">...</span>
+            <span className="text-slate-400 px-1 text-sm select-none">...</span>
           )}
         </>
       )}
@@ -60,8 +60,8 @@ export default function Pagination({
           onClick={() => onPageChange(p)}
           className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg border text-sm font-medium transition ${
             page === p
-              ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-900/30'
-              : 'border-dark-700 bg-dark-900 text-dark-300 hover:text-dark-100 hover:border-dark-600'
+              ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+              : 'border-slate-300 bg-white text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50'
           }`}
         >
           {p}
@@ -71,15 +71,15 @@ export default function Pagination({
       {end < totalPages && (
         <>
           {end < totalPages - 1 && (
-            <span className="text-dark-500 px-1 text-sm select-none">...</span>
+            <span className="text-slate-400 px-1 text-sm select-none">...</span>
           )}
           <button
             type="button"
             onClick={() => onPageChange(totalPages)}
             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg border text-sm font-medium transition ${
               page === totalPages
-                ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-900/30'
-                : 'border-dark-700 bg-dark-900 text-dark-300 hover:text-dark-100 hover:border-dark-600'
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                : 'border-slate-300 bg-white text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50'
             }`}
           >
             {totalPages}
@@ -91,7 +91,7 @@ export default function Pagination({
         type="button"
         disabled={!hasNextPage}
         onClick={() => onPageChange(page + 1)}
-        className="px-3 py-2 rounded-lg border border-dark-700 bg-dark-900 text-dark-300 hover:text-dark-100 hover:border-dark-600 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+        className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
       >
         Next <span>&rarr;</span>
       </button>

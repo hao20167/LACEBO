@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
@@ -25,52 +25,65 @@ ProtectedRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="page-enter">
+      <Routes location={location}>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/worlds" element={<WorldList />} />
+        <Route
+          path="/worlds/create"
+          element={
+            <ProtectedRoute>
+              <CreateWorld />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/worlds/mine"
+          element={
+            <ProtectedRoute>
+              <MyWorlds />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/worlds/:id" element={<WorldDetail />} />
+        <Route path="/events/:eventId" element={<EventDetail />} />
+        <Route
+          path="/worlds/:id/manage"
+          element={
+            <ProtectedRoute>
+              <WorldManage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </div>
+  );
+}
+
 export default function App() {
   return (
-    <div className="min-h-screen bg-dark-950">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/worlds" element={<WorldList />} />
-          <Route
-            path="/worlds/create"
-            element={
-              <ProtectedRoute>
-                <CreateWorld />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/worlds/mine"
-            element={
-              <ProtectedRoute>
-                <MyWorlds />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/worlds/:id" element={<WorldDetail />} />
-          <Route path="/events/:eventId" element={<EventDetail />} />
-          <Route
-            path="/worlds/:id/manage"
-            element={
-              <ProtectedRoute>
-                <WorldManage />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </main>
+      {/* Offset for desktop sidebar (w-60) and mobile top bar (h-14) */}
+      <div className="lg:pl-60">
+        <div className="h-14 lg:h-0" />
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+          <AnimatedRoutes />
+        </main>
+      </div>
     </div>
   );
 }

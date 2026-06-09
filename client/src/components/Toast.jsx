@@ -17,19 +17,19 @@ export function useToastContext() {
 // ─── Styles per type ─────────────────────────────────────────────────────────
 const STYLES = {
   success: {
-    bar: 'bg-green-500',
+    bar: 'bg-emerald-500',
     icon: '✓',
-    ring: 'border-green-700/60 bg-green-900/30 text-green-200',
+    ring: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   },
   error: {
     bar: 'bg-red-500',
     icon: '✕',
-    ring: 'border-red-700/60 bg-red-900/30 text-red-200',
+    ring: 'border-red-200 bg-red-50 text-red-800',
   },
   info: {
-    bar: 'bg-primary-500',
+    bar: 'bg-indigo-500',
     icon: 'ℹ',
-    ring: 'border-primary-700/60 bg-primary-900/30 text-primary-200',
+    ring: 'border-indigo-200 bg-indigo-50 text-indigo-800',
   },
 };
 
@@ -39,7 +39,7 @@ function ToastItem({ id, message, type, onDismiss }) {
   return (
     <div
       role="alert"
-      className={`relative flex items-start gap-3 rounded-xl border px-4 py-3 pr-10 shadow-2xl text-sm font-medium animate-toast-in ${s.ring}`}
+      className={`relative flex items-start gap-3 rounded-xl border px-4 py-3 pr-10 shadow-lg text-sm font-medium animate-toast-in ${s.ring}`}
     >
       {/* Colored left bar */}
       <span
@@ -52,13 +52,13 @@ function ToastItem({ id, message, type, onDismiss }) {
         type="button"
         onClick={() => onDismiss(id)}
         aria-label="Dismiss notification"
-        className="absolute right-2 top-2.5 text-current opacity-50 hover:opacity-100 transition text-lg leading-none"
+        className="absolute right-2 top-2.5 text-current opacity-40 hover:opacity-80 transition text-lg leading-none"
       >
         ×
       </button>
       {/* Auto-progress bar */}
       <div
-        className={`absolute bottom-0 left-0 h-0.5 w-full rounded-b-xl ${s.bar} opacity-40 animate-toast-progress`}
+        className={`absolute bottom-0 left-0 h-0.5 w-full rounded-b-xl ${s.bar} opacity-30 animate-toast-progress`}
       />
     </div>
   );

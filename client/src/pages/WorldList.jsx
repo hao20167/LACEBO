@@ -55,42 +55,65 @@ export default function WorldList() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-dark-100">Explore Worlds</h1>
+    <div className="space-y-6">
+      {/* ── Page header ────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Explore Worlds</h1>
+          <p className="text-slate-500 mt-1 text-sm">
+            Discover and join collaborative roleplay universes
+          </p>
+        </div>
+        <Link
+          to="/worlds/create"
+          className="shrink-0 self-start sm:self-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+        >
+          + New World
+        </Link>
       </div>
 
-      <form onSubmit={handleSearch} className="mb-8 flex gap-3">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search worlds by title..."
-          className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition"
-        />
-        <button
-          type="submit"
-          className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-2.5 rounded-lg font-medium transition"
-        >
-          Search
-        </button>
-      </form>
+      {/* ── Search ─────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <form onSubmit={handleSearch} className="flex gap-3">
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+              🔍
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search worlds by title..."
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm text-sm"
+          >
+            Search
+          </button>
+        </form>
+      </div>
 
+      {/* ── Results ────────────────────────────────── */}
       {loading ? (
         <WorldListSkeleton count={6} />
       ) : worlds.length === 0 ? (
-        <div className="text-center text-dark-400 py-12">
-          <p className="text-lg mb-2">No worlds found</p>
-          <p className="text-sm">
-            Be the first to{' '}
-            <Link
-              to="/worlds/create"
-              className="text-primary-400 hover:underline"
-            >
-              create a world
-            </Link>
-            !
+        <div className="bg-white border border-slate-200 rounded-2xl py-20 text-center shadow-sm">
+          <div className="text-5xl mb-4">🌍</div>
+          <p className="text-lg font-semibold text-slate-700 mb-1">
+            No worlds found
           </p>
+          <p className="text-sm text-slate-500 mb-5">
+            Try a different search term or start a new world.
+          </p>
+          <Link
+            to="/worlds/create"
+            className="inline-flex bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            Create a World
+          </Link>
         </div>
       ) : (
         <>
@@ -99,19 +122,25 @@ export default function WorldList() {
               <Link
                 key={world.id}
                 to={`/worlds/${world.id}`}
-                className="bg-dark-900 border border-dark-700 rounded-xl p-5 hover:border-primary-600 transition group"
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all group flex flex-col"
               >
-                <h3 className="text-lg font-semibold text-dark-100 group-hover:text-primary-400 transition mb-2">
-                  {world.title}
-                </h3>
-                <p className="text-dark-400 text-sm mb-3 line-clamp-2">
-                  {world.description || 'No description'}
-                </p>
-                <div className="flex items-center gap-4 text-xs text-dark-500">
-                  <span>👥 {world.member_count} members</span>
-                  <span>
-                    📅 {new Date(world.created_at).toLocaleDateString()}
-                  </span>
+                {/* Color accent strip */}
+                <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-2 line-clamp-1">
+                    {world.title}
+                  </h3>
+                  <p className="text-slate-500 text-sm mb-4 line-clamp-2 flex-1">
+                    {world.description || 'No description provided.'}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-100">
+                    <span className="flex items-center gap-1">
+                      👥 <span>{world.member_count} members</span>
+                    </span>
+                    <span>
+                      {new Date(world.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))}
