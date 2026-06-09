@@ -15,45 +15,36 @@ const rateLimitHandler = (req, res) => {
   });
 };
 
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+// Reusable key generator: in focused rate limiter tests we allow an explicit
+// `x-test-client` header so multiple supertest requests can be grouped.
+const keyGenerator = (req) =>
+  process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT === 'true'
+    ? req.headers['x-test-client'] || req.ip
+    : req.ip;
+
+const defaultLimiterOptions = {
   standardHeaders: true,
   legacyHeaders: false,
-  // When running the focused rate limiter tests, use a stable key so
-  // supertest requests are aggregated under the same client identifier.
-  keyGenerator: (req) =>
-    process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT === 'true'
-      ? req.headers['x-test-client'] || req.ip
-      : req.ip,
+  keyGenerator,
   skip: skipRateLimitInTests,
   handler: rateLimitHandler,
+};
+
+const makeRateLimiter = (opts = {}) => rateLimit({ ...defaultLimiterOptions, ...opts });
+
+export const authRateLimiter = makeRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
   message: 'Too many authentication attempts, please try again after 15 minutes.',
 });
 
-export const registerRateLimiter = rateLimit({
+export const registerRateLimiter = makeRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) =>
-    process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT === 'true'
-      ? req.headers['x-test-client'] || req.ip
-      : req.ip,
-  skip: skipRateLimitInTests,
-  handler: rateLimitHandler,
   message: 'Too many registration attempts, please try again after 1 hour.',
 });
 
-export const globalApiRateLimiter = rateLimit({
+export const globalApiRateLimiter = makeRateLimiter({
   windowMs: 60 * 1000, // 1 minute
   max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) =>
-    process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT === 'true'
-      ? req.headers['x-test-client'] || req.ip
-      : req.ip,
-  skip: skipRateLimitInTests,
-  handler: rateLimitHandler,
 });
