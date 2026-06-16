@@ -6,8 +6,7 @@ export const createPostValidators = [
     .notEmpty()
     .withMessage('Content is required')
     .isLength({ max: 5000 })
-    .withMessage('Content must be at most 5000 characters')
-    .escape(),
+    .withMessage('Content must be at most 5000 characters'),
   body('image_url')
     .optional()
     .isURL()
@@ -22,8 +21,7 @@ export const createCommentValidators = [
     .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ max: 2000 })
-    .withMessage('Comment must be at most 2000 characters')
-    .escape(),
+    .withMessage('Comment must be at most 2000 characters'),
   body('image_url')
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -41,15 +39,13 @@ export const createAnnouncementValidators = [
     .notEmpty()
     .withMessage('Title is required')
     .isLength({ max: 150 })
-    .withMessage('Title must be at most 150 characters')
-    .escape(),
+    .withMessage('Title must be at most 150 characters'),
   body('content')
     .trim()
     .notEmpty()
     .withMessage('Content is required')
     .isLength({ max: 5000 })
-    .withMessage('Content must be at most 5000 characters')
-    .escape(),
+    .withMessage('Content must be at most 5000 characters'),
 ];
 
 export const updatePostValidators = [
@@ -62,8 +58,7 @@ export const updatePostValidators = [
     .notEmpty()
     .withMessage('Content cannot be empty')
     .isLength({ max: 5000 })
-    .withMessage('Content must be at most 5000 characters')
-    .escape(),
+    .withMessage('Content must be at most 5000 characters'),
   body('image_url')
     .optional()
     .trim()
