@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
 import { MyWorldsSkeleton } from '../components/SkeletonLoader';
 
@@ -39,15 +40,21 @@ export default function MyWorlds() {
       </div>
 
       {worlds.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl py-20 text-center shadow-sm">
-          <div className="text-5xl mb-4">🌍</div>
-          <p className="text-lg font-semibold text-slate-700 mb-1">
-            No worlds yet
-          </p>
-          <p className="text-slate-500 text-sm mb-6">
-            You haven&apos;t joined any worlds yet.
-          </p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
+        <EmptyState
+          title="You haven't joined any worlds yet."
+          description="Join an existing world or create one to start building your story."
+          action={
+          <Link
+            to="/worlds"
+            className="text-primary-400 hover:underline text-sm mt-2 inline-block"
+          >
+            Explore worlds
+          </Link>
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {worlds.map((world) => (
             <Link
               to="/worlds"
               className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
