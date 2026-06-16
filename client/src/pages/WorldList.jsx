@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import EmptyState from '../components/EmptyState.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { WorldListSkeleton } from '../components/SkeletonLoader.jsx';
-import api, { getApiCollection } from '../services/api.js';
+import api, { getApiAssetUrl, getApiCollection } from '../services/api.js';
 
 export default function WorldList() {
   const [worlds, setWorlds] = useState([]);
@@ -127,8 +127,15 @@ export default function WorldList() {
                 to={`/worlds/${world.id}`}
                 className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all group flex flex-col"
               >
-                {/* Color accent strip */}
-                <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {getApiAssetUrl(world.cover_image) ? (
+                  <img
+                    src={getApiAssetUrl(world.cover_image)}
+                    alt={world.title}
+                    className="w-full h-32 object-cover group-hover:opacity-95 transition-opacity"
+                  />
+                ) : (
+                  <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
                 <div className="p-5 flex flex-col flex-1">
                   <h3 className="text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-2 line-clamp-1">
                     {world.title}

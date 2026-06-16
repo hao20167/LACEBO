@@ -121,10 +121,16 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_worlds_public_created ON worlds(is_public, created_at);
   `);
 
-  const columns = db.prepare("PRAGMA table_info(worlds)").all();
-  const hasDeletionColumn = columns.some((column) => column.name === 'deletion_scheduled_at');
+  const worldColumns = db.prepare("PRAGMA table_info(worlds)").all();
+
+  const hasDeletionColumn = worldColumns.some((column) => column.name === 'deletion_scheduled_at');
   if (!hasDeletionColumn) {
     db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
+  }
+
+  const hasWorldBackground = worldColumns.some((column) => column.name === 'background_image_url');
+  if (!hasWorldBackground) {
+    db.exec('ALTER TABLE worlds ADD COLUMN background_image_url TEXT DEFAULT NULL');
   }
 
   const commentColumns = db.prepare("PRAGMA table_info(comments)").all();
