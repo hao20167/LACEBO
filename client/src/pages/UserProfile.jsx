@@ -226,28 +226,34 @@ export default function UserProfile() {
             />
           </label>
         </div>
-        {/* Show save button when a new bg is selected */}
-        {bgFile && !uploadingBg && (
-          <div className="flex gap-2 mt-2 justify-end">
-            <button
-              type="button"
-              onClick={() => { setBgFile(null); setBgPreview(''); }}
-              className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveBg}
-              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition-colors"
-            >
-              Save Background
-            </button>
-          </div>
-        )}
-
         {/* Profile card overlapping banner */}
-        <div className="bg-white border border-slate-200 rounded-2xl px-6 pb-6 pt-0 -mt-12 mx-2 shadow-sm relative">
+        <div className="bg-white border border-slate-200 rounded-2xl px-6 pb-6 pt-0 -mt-12 mx-2 shadow-sm relative z-10">
+          {/* BG save bar — appears inside the card so it's never covered */}
+          {bgFile && (
+            <div className="flex items-center justify-between gap-3 bg-indigo-50 border-b border-indigo-100 -mx-6 px-6 py-3 mb-0 rounded-t-2xl">
+              <span className="text-sm text-indigo-700 font-medium">
+                {uploadingBg ? 'Saving background...' : 'New background image ready to save'}
+              </span>
+              {!uploadingBg && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setBgFile(null); setBgPreview(''); }}
+                    className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveBg}
+                    className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition-colors"
+                  >
+                    Save Background
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-6">
             {/* Avatar */}
             {avatarSrc ? (
