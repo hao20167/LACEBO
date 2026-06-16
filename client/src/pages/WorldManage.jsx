@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import api from '../services/api.js';
 import { WorldManageSkeleton } from '../components/SkeletonLoader';
 
@@ -56,22 +57,6 @@ export default function WorldManage() {
 
   if (loading) return <WorldManageSkeleton />;
 
-  const tabs = [
-    {
-      key: 'members',
-      label: 'Members',
-      count: pendingMembers.length,
-      icon: '👥',
-    },
-    { key: 'posts', label: 'Posts', count: pendingPosts.length, icon: '📝' },
-    {
-      key: 'events',
-      label: 'Events',
-      count: proposedEvents.length,
-      icon: '⚡',
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* ── Page header ──────────────────────────────── */}
@@ -88,7 +73,21 @@ export default function WorldManage() {
 
       {/* ── Stats row ────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-4">
-        {tabs.map((t) => (
+        {[
+          {
+            key: 'members',
+            label: 'Members',
+            count: pendingMembers.length,
+            icon: '👥',
+          },
+          { key: 'posts', label: 'Posts', count: pendingPosts.length, icon: '📝' },
+          {
+            key: 'events',
+            label: 'Events',
+            count: proposedEvents.length,
+            icon: '⚡',
+          },
+        ].map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -125,7 +124,7 @@ export default function WorldManage() {
             Pending Member Requests
           </h2>
           {pendingMembers.length === 0 ? (
-            <EmptyState message="No pending member requests" />
+            <WorldManageEmptyState message="No pending member requests" />
           ) : (
             <div className="space-y-3">
               {pendingMembers.map((member) => (
@@ -174,7 +173,7 @@ export default function WorldManage() {
             Posts Awaiting Approval
           </h2>
           {pendingPosts.length === 0 ? (
-            <EmptyState message="No posts awaiting approval" />
+            <WorldManageEmptyState message="No posts awaiting approval" />
           ) : (
             <div className="space-y-3">
               {pendingPosts.map((post) => (
@@ -226,7 +225,7 @@ export default function WorldManage() {
             Proposed Small Events
           </h2>
           {proposedEvents.length === 0 ? (
-            <EmptyState message="No event proposals pending" />
+            <WorldManageEmptyState message="No event proposals pending" />
           ) : (
             <div className="space-y-3">
               {proposedEvents.map((event) => (
@@ -274,7 +273,7 @@ export default function WorldManage() {
   );
 }
 
-function EmptyState({ message }) {
+function WorldManageEmptyState({ message }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl py-14 text-center shadow-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -282,3 +281,7 @@ function EmptyState({ message }) {
     </div>
   );
 }
+
+WorldManageEmptyState.propTypes = {
+  message: PropTypes.string.isRequired,
+};

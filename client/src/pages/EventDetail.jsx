@@ -386,14 +386,14 @@ export default function EventDetail() {
                     onClick={() => handleLike(post.id)}
                     className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}
                   >
-                    {post.liked ? '❤️' : '🤍'}
+                    {post.liked ? '❤️' : '🤍'}{' '}
                     <span className="text-xs">{post.like_count}</span>
                   </button>
                   <button
                     onClick={() => toggleComments(post.id)}
                     className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
                   >
-                    💬
+                    💬{' '}
                     <span className="text-xs">{post.comment_count}</span>
                   </button>
                 </div>

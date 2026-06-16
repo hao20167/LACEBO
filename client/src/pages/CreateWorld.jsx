@@ -48,7 +48,7 @@ export default function CreateWorld() {
                   htmlFor="title"
                   className="block text-sm font-medium text-slate-700 mb-1.5"
                 >
-                  World Title
+                  World Title{' '}
                   <span className="text-red-400 ml-0.5">*</span>
                 </label>
                 <input
@@ -96,7 +96,7 @@ export default function CreateWorld() {
             <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
               <span className="w-6 h-6 bg-indigo-100 rounded-md flex items-center justify-center text-sm">
                 💡
-              </span>
+              </span>{' '}
               Tips for a great world
             </h3>
             <ul className="space-y-2.5">
@@ -118,7 +118,7 @@ export default function CreateWorld() {
             <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
               <span className="w-6 h-6 bg-indigo-100 rounded-md flex items-center justify-center text-sm">
                 🚀
-              </span>
+              </span>{' '}
               After creating...
             </h3>
             <ul className="space-y-2 text-sm text-slate-600">

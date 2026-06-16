@@ -229,9 +229,11 @@ export default function Navbar() {
       {/* ── Mobile drawer ── */}
       {drawerOpen && (
         <>
-          <div
-            className="lg:hidden fixed inset-0 bg-black/40 z-50 backdrop-blur-sm"
+          <button
+            type="button"
+            className="lg:hidden fixed inset-0 w-full h-full bg-black/40 z-50 backdrop-blur-sm cursor-default border-none p-0"
             onClick={close}
+            aria-label="Close menu"
           />
           <aside className="lg:hidden fixed inset-y-0 left-0 w-72 bg-white z-50 flex flex-col shadow-2xl animate-slide-in">
             <SidebarContent onClose={close} />
