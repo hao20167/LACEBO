@@ -44,7 +44,15 @@ export default function EventDetail() {
     hasNextPage: false,
     hasPrevPage: false,
   });
-  const [uploadingEventImage, setUploadingEventImage] = useState(false);
+
+  // Event image upload states
+  const [bgImageFile, setBgImageFile] = useState(null);
+  const [bgImagePreview, setBgImagePreview] = useState('');
+  const [uploadingBg, setUploadingBg] = useState(false);
+
+  const [coverImageFile, setCoverImageFile] = useState(null);
+  const [coverImagePreview, setCoverImagePreview] = useState('');
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const fetchPosts = async (pageNumber = 1) => {
     try {
@@ -76,6 +84,14 @@ export default function EventDetail() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
+
+  // Cleanup previews
+  useEffect(() => {
+    return () => {
+      if (bgImagePreview) URL.revokeObjectURL(bgImagePreview);
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+    };
+  }, [bgImagePreview, coverImagePreview]);
 
   const handlePageChange = (nextPage) => {
     setPage(nextPage);
@@ -386,21 +402,66 @@ export default function EventDetail() {
   const isOpen = event.status === 'open';
   const isBig = event.event_type === 'big';
 
-  const handleUploadEventImage = async (field, file) => {
+  const handleBgImageChange = (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    setUploadingEventImage(true);
+    if (bgImagePreview) URL.revokeObjectURL(bgImagePreview);
+    const preview = URL.createObjectURL(file);
+    setBgImageFile(file);
+    setBgImagePreview(preview);
+  };
+
+  const handleCoverImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+    const preview = URL.createObjectURL(file);
+    setCoverImageFile(file);
+    setCoverImagePreview(preview);
+  };
+
+  const handleSaveBgImage = async () => {
+    if (!bgImageFile) return;
+    setUploadingBg(true);
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', bgImageFile);
       const uploadRes = await api.post('/uploads/images', formData);
-      await api.patch(`/events/${eventId}`, { [field]: uploadRes.data.url });
+      await api.patch(`/events/${eventId}`, { background_image_url: uploadRes.data.url });
       const res = await api.get(`/events/${eventId}`);
       setEvent(res.data);
-      toast.success('Image updated.');
+      setBgImageFile(null);
+      setBgImagePreview('');
+      toast.success('Background image updated.');
     } catch {
-      toast.error('Failed to upload image.');
+      toast.error('Failed to upload background image.');
+      setBgImageFile(null);
+      setBgImagePreview('');
+    } finally {
+      setUploadingBg(false);
     }
-    setUploadingEventImage(false);
+  };
+
+  const handleSaveCoverImage = async () => {
+    if (!coverImageFile) return;
+    setUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', coverImageFile);
+      const uploadRes = await api.post('/uploads/images', formData);
+      await api.patch(`/events/${eventId}`, { thumbnail_url: uploadRes.data.url });
+      const res = await api.get(`/events/${eventId}`);
+      setEvent(res.data);
+      setCoverImageFile(null);
+      setCoverImagePreview('');
+      toast.success('Cover image updated.');
+    } catch {
+      toast.error('Failed to upload cover image.');
+      setCoverImageFile(null);
+      setCoverImagePreview('');
+    } finally {
+      setUploadingCover(false);
+    }
   };
 
   const isDev = user && event.created_by && user.id === event.created_by;
@@ -412,53 +473,93 @@ export default function EventDetail() {
         className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${isBig ? 'border-indigo-200' : 'border-slate-200'}`}
       >
         {/* Background image or accent bar */}
-        {getApiAssetUrl(event.background_image_url) ? (
+        {getApiAssetUrl(event.background_image_url) || bgImagePreview ? (
           <div className="relative h-40 group">
             <img
-              src={getApiAssetUrl(event.background_image_url)}
+              src={bgImagePreview || getApiAssetUrl(event.background_image_url)}
               alt="Event background"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            {isDev && (
+            {isDev && !bgImageFile && (
               <label className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-xs px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors">
-                {uploadingEventImage ? '...' : '📷 Change BG'}
-                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
-                  onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+                {uploadingBg ? '...' : '📷 Change BG'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingBg}
+                  onChange={handleBgImageChange} />
               </label>
+            )}
+            {bgImageFile && (
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setBgImageFile(null); setBgImagePreview(''); }}
+                  className="bg-white/90 hover:bg-white text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  disabled={uploadingBg}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveBgImage}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  disabled={uploadingBg}
+                >
+                  {uploadingBg ? 'Saving...' : 'Save BG'}
+                </button>
+              </div>
             )}
           </div>
         ) : isDev ? (
           <label className={`flex h-20 cursor-pointer items-center justify-center gap-2 text-sm font-medium transition-colors ${isBig ? 'bg-indigo-50 text-indigo-500 hover:bg-indigo-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
-            {uploadingEventImage ? 'Uploading...' : '📷 Add Background Image'}
-            <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
-              onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+            {uploadingBg ? 'Uploading...' : '📷 Add Background Image'}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingBg}
+              onChange={handleBgImageChange} />
           </label>
         ) : (
           <div className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
         )}
 
         {/* Cover image (full-width, above title) */}
-        {getApiAssetUrl(event.thumbnail_url) ? (
+        {getApiAssetUrl(event.thumbnail_url) || coverImagePreview ? (
           <div className="relative group">
             <img
-              src={getApiAssetUrl(event.thumbnail_url)}
+              src={coverImagePreview || getApiAssetUrl(event.thumbnail_url)}
               alt="Event cover"
               className="w-full h-36 object-cover"
             />
-            {isDev && (
+            {isDev && !coverImageFile && (
               <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs font-medium">
-                {uploadingEventImage ? 'Uploading...' : '📷 Change Cover'}
-                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
-                  onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+                {uploadingCover ? 'Uploading...' : '📷 Change Cover'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+                  onChange={handleCoverImageChange} />
               </label>
+            )}
+            {coverImageFile && (
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setCoverImageFile(null); setCoverImagePreview(''); }}
+                  className="bg-white/90 hover:bg-white text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  disabled={uploadingCover}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCoverImage}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  disabled={uploadingCover}
+                >
+                  {uploadingCover ? 'Saving...' : 'Save Cover'}
+                </button>
+              </div>
             )}
           </div>
         ) : isDev ? (
           <label className={`flex h-24 cursor-pointer items-center justify-center gap-2 border-b text-sm font-medium transition-colors ${isBig ? 'bg-indigo-50/50 border-indigo-100 text-indigo-400 hover:bg-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>
-            {uploadingEventImage ? 'Uploading...' : '📷 Add Cover Image'}
-            <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
-              onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+            {uploadingCover ? 'Uploading...' : '📷 Add Cover Image'}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+              onChange={handleCoverImageChange} />
           </label>
         ) : null}
 
