@@ -77,7 +77,10 @@ describe('WorldDetail Page', () => {
     expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();
     expect(screen.getByText('Magic Kingdom')).toBeInTheDocument();
     expect(screen.getByText('A kingdom of wonders')).toBeInTheDocument();
-    expect(screen.getByText('👥 5 members')).toBeInTheDocument();
-    expect(screen.getByText('⭐ 100 credits')).toBeInTheDocument();
+    // Members: render as label "Members" + value "5" in separate spans
+    expect(screen.getByText('Members')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    // Credits: render as "⭐ 100" in one span (no "credits" text)
+    expect(screen.getByText(/⭐\s*100/)).toBeInTheDocument();
   });
 });

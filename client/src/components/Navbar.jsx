@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiAssetUrl } from '../services/api.js';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -139,9 +140,17 @@ function SidebarContent({ onClose }) {
               onClick={onClose}
               className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors mb-2 group"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-sm">
-                {user.display_name?.[0]?.toUpperCase()}
-              </div>
+              {getApiAssetUrl(user.avatar_url) ? (
+                <img
+                  src={getApiAssetUrl(user.avatar_url)}
+                  alt={user.display_name}
+                  className="w-9 h-9 rounded-xl object-cover flex-shrink-0 shadow-sm border border-slate-200"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-sm">
+                  {user.display_name?.[0]?.toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
                   {user.display_name}

@@ -29,7 +29,7 @@ describe('Login Page Component', () => {
       login: vi.fn(),
     });
 
-    expect(screen.getByText(/Login to LACEBO/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
   });
@@ -49,7 +49,7 @@ describe('Login Page Component', () => {
       target: { value: 'password123' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Login/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalled();
@@ -77,7 +77,7 @@ describe('Login Page Component', () => {
       target: { value: 'wrongpass' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Login/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Invalid credentials/i)).toBeInTheDocument();

@@ -177,7 +177,9 @@ export default function EventDetail() {
           p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p,
         ),
       );
-    } catch {}
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Không thể gửi bình luận. Bạn cần là thành viên của World này.');
+    }
   };
 
   if (loading) return <EventDetailSkeleton />;
@@ -421,7 +423,7 @@ export default function EventDetail() {
                         </div>
                       ))}
                     </div>
-                    {user && (
+                    {user ? (
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -445,6 +447,10 @@ export default function EventDetail() {
                           Send
                         </button>
                       </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 text-center py-1">
+                        <a href="/login" className="text-indigo-500 hover:underline">Đăng nhập</a> để bình luận.
+                      </p>
                     )}
                   </div>
                 )}

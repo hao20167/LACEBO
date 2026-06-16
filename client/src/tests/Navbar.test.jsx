@@ -48,13 +48,17 @@ describe('Navbar — trạng thái chưa đăng nhập', () => {
 
   it('hiển thị logo LACEBO', () => {
     renderNavbar();
-    expect(screen.getByText('LACEBO')).toBeInTheDocument();
+    // Both desktop sidebar and mobile header render LACEBO
+    const logos = screen.getAllByText('LACEBO');
+    expect(logos.length).toBeGreaterThan(0);
   });
 
   it('logo link đến "/"', () => {
     renderNavbar();
-    const logoLink = screen.getByRole('link', { name: /lacebo/i });
-    expect(logoLink).toHaveAttribute('href', '/');
+    // Multiple LACEBO links exist (desktop sidebar + mobile)
+    const logoLinks = screen.getAllByRole('link', { name: /lacebo/i });
+    expect(logoLinks.length).toBeGreaterThan(0);
+    expect(logoLinks[0]).toHaveAttribute('href', '/');
   });
 
   it('hiển thị link "Explore Worlds"', () => {
@@ -64,9 +68,9 @@ describe('Navbar — trạng thái chưa đăng nhập', () => {
     ).toBeInTheDocument();
   });
 
-  it('hiển thị link "Login"', () => {
+  it('hiển thị link "Log in"', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /^login$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^log in$/i })).toBeInTheDocument();
   });
 
   it('hiển thị link "Register"', () => {
@@ -76,9 +80,9 @@ describe('Navbar — trạng thái chưa đăng nhập', () => {
     ).toBeInTheDocument();
   });
 
-  it('link Login trỏ đến /login', () => {
+  it('link Log in trỏ đến /login', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /^login$/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^log in$/i })).toHaveAttribute(
       'href',
       '/login',
     );
@@ -92,10 +96,10 @@ describe('Navbar — trạng thái chưa đăng nhập', () => {
     );
   });
 
-  it('không hiển thị nút Logout', () => {
+  it('không hiển thị nút Sign out', () => {
     renderNavbar();
     expect(
-      screen.queryByRole('button', { name: /logout/i }),
+      screen.queryByRole('button', { name: /sign out/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -125,9 +129,9 @@ describe('Navbar — trạng thái đã đăng nhập', () => {
     expect(screen.getByText('Alice Nguyen')).toBeInTheDocument();
   });
 
-  it('hiển thị nút Logout', () => {
+  it('hiển thị nút Sign out', () => {
     renderNavbar();
-    expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
 
   it('hiển thị link "My Worlds"', () => {
@@ -160,10 +164,10 @@ describe('Navbar — trạng thái đã đăng nhập', () => {
     );
   });
 
-  it('không hiển thị link Login khi đã đăng nhập', () => {
+  it('không hiển thị link Log in khi đã đăng nhập', () => {
     renderNavbar();
     expect(
-      screen.queryByRole('link', { name: /^login$/i }),
+      screen.queryByRole('link', { name: /^log in$/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -177,14 +181,14 @@ describe('Navbar — trạng thái đã đăng nhập', () => {
 
 // ════════════════════════════════════════════════════════════════════════════
 describe('Navbar — hành vi logout', () => {
-  it('gọi logout() khi click nút Logout', async () => {
+  it('gọi logout() khi click nút Sign out', async () => {
     const mockLogout = vi.fn();
     mockAuthState = { user: LOGGED_IN_USER, logout: mockLogout };
 
     const user = userEvent.setup();
     renderNavbar();
 
-    await user.click(screen.getByRole('button', { name: /logout/i }));
+    await user.click(screen.getByRole('button', { name: /sign out/i }));
 
     expect(mockLogout).toHaveBeenCalledOnce();
   });

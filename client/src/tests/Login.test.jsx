@@ -55,7 +55,7 @@ const fillAndSubmit = async (
 ) => {
   await user.type(screen.getByLabelText(/username/i), username);
   await user.type(screen.getByLabelText(/password/i), password);
-  await user.click(screen.getByRole('button', { name: /^login$/i }));
+  await user.click(screen.getByRole('button', { name: /^sign in$/i }));
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -65,10 +65,10 @@ describe('Login — render', () => {
     mockNavigate.mockReset();
   });
 
-  it('hiển thị tiêu đề "Login to LACEBO"', () => {
+  it('hiển thị tiêu đề "Welcome back"', () => {
     renderLogin();
     expect(
-      screen.getByRole('heading', { name: /login to lacebo/i }),
+      screen.getByRole('heading', { name: /welcome back/i }),
     ).toBeInTheDocument();
   });
 
@@ -78,16 +78,16 @@ describe('Login — render', () => {
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
   });
 
-  it('hiển thị nút submit "Login"', () => {
+  it('hiển thị nút submit "Sign in"', () => {
     renderLogin();
     expect(
-      screen.getByRole('button', { name: /^login$/i }),
+      screen.getByRole('button', { name: /^sign in$/i }),
     ).toBeInTheDocument();
   });
 
   it('hiển thị link điều hướng đến trang Register', () => {
     renderLogin();
-    const link = screen.getByRole('link', { name: /register/i });
+    const link = screen.getByRole('link', { name: /create one/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/register');
   });
@@ -226,7 +226,7 @@ describe('Login — hiển thị lỗi', () => {
     );
 
     // Submit lần 2 — lỗi biến mất
-    await user.click(screen.getByRole('button', { name: /^login$/i }));
+    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
     await waitFor(() =>
       expect(screen.queryByText('Wrong password')).not.toBeInTheDocument(),
     );
@@ -239,7 +239,7 @@ describe('Login — trạng thái loading', () => {
     mockNavigate.mockReset();
   });
 
-  it('nút hiển thị "Logging in..." trong khi đang gửi request', async () => {
+  it('nút hiển thị "Signing in..." trong khi đang gửi request', async () => {
     const neverResolve = vi.fn(() => new Promise(() => {}));
     mockAuthState = { login: neverResolve, user: null };
 
@@ -247,10 +247,10 @@ describe('Login — trạng thái loading', () => {
     renderLogin();
     await user.type(screen.getByLabelText(/username/i), 'alice');
     await user.type(screen.getByLabelText(/password/i), 'pass');
-    await user.click(screen.getByRole('button', { name: /^login$/i }));
+    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     expect(
-      screen.getByRole('button', { name: /logging in/i }),
+      screen.getByRole('button', { name: /signing in/i }),
     ).toBeInTheDocument();
   });
 
@@ -262,12 +262,12 @@ describe('Login — trạng thái loading', () => {
     renderLogin();
     await user.type(screen.getByLabelText(/username/i), 'alice');
     await user.type(screen.getByLabelText(/password/i), 'pass');
-    await user.click(screen.getByRole('button', { name: /^login$/i }));
+    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
 
-    expect(screen.getByRole('button', { name: /logging in/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
   });
 
-  it('nút trở lại "Login" và enabled sau khi request xong', async () => {
+  it('nút trở lại "Sign in" và enabled sau khi request xong', async () => {
     const mockLogin = vi.fn().mockResolvedValue(undefined);
     mockAuthState = { login: mockLogin, user: null };
 
@@ -277,6 +277,6 @@ describe('Login — trạng thái loading', () => {
 
     await waitFor(() => expect(mockLogin).toHaveBeenCalledOnce());
     // Sau khi async xong, nút quay về trạng thái ban đầu
-    expect(screen.getByRole('button', { name: /^login$/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).not.toBeDisabled();
   });
 });

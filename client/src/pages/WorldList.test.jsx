@@ -77,7 +77,7 @@ describe('WorldList', () => {
     expect(screen.getByText('World 1')).toBeInTheDocument();
     expect(screen.getByText('World 2')).toBeInTheDocument();
     expect(screen.getByText('Description 1')).toBeInTheDocument();
-    expect(screen.getByText('👥 10 members')).toBeInTheDocument();
+    expect(screen.getByText('10 members')).toBeInTheDocument();
   });
 
   it('handles search functionality', async () => {

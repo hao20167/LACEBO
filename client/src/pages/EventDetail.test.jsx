@@ -175,7 +175,7 @@ describe('EventDetail Component', () => {
       screen.queryByPlaceholderText('Share your thoughts about this event...'),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText('This event is closed. You can still view the posts.'),
+      screen.getByText('This event is closed. Posts are read-only.'),
     ).toBeInTheDocument();
   });
 

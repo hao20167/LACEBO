@@ -74,10 +74,10 @@ describe('Register — render', () => {
     mockNavigate.mockReset();
   });
 
-  it('hiển thị tiêu đề "Join LACEBO"', () => {
+  it('hiển thị tiêu đề "Create your account"', () => {
     renderRegister();
     expect(
-      screen.getByRole('heading', { name: /join lacebo/i }),
+      screen.getByRole('heading', { name: /create your account/i }),
     ).toBeInTheDocument();
   });
 
@@ -98,7 +98,8 @@ describe('Register — render', () => {
 
   it('hiển thị link điều hướng về trang Login', () => {
     renderRegister();
-    const link = screen.getByRole('link', { name: /login/i });
+    // Link text is "Sign in" but href is "/login"
+    const link = screen.getByRole('link', { name: /sign in/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/login');
   });

@@ -152,7 +152,7 @@ describe('UserProfile Page', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
+      fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
     });
 
     await waitFor(() => {
