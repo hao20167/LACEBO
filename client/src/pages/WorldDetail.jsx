@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { getApiAssetUrl } from '../services/api';
 import { WorldDetailSkeleton } from '../components/SkeletonLoader';
 import { useToastContext } from '../components/Toast';
 
@@ -36,6 +36,26 @@ export default function WorldDetail() {
     title: '',
     description: '',
   });
+
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
+
+  const handleUploadImage = async (field, file) => {
+    if (!file) return;
+    const setter = field === 'cover_image' ? setUploadingCover : setUploadingBg;
+    setter(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const uploadRes = await api.post('/uploads/images', formData);
+      await api.patch(`/worlds/${id}`, { [field]: uploadRes.data.url });
+      fetchData();
+      toast.success('Image updated.');
+    } catch {
+      toast.error('Failed to upload image.');
+    }
+    setter(false);
+  };
 
   const fetchData = async () => {
     try {
@@ -170,14 +190,55 @@ export default function WorldDetail() {
   const actionBtn = renderActionButtons();
 
   return (
+    <div>
+      {/* ── World background banner ── */}
+      {getApiAssetUrl(world.background_image) && (
+        <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mb-6 h-48 overflow-hidden rounded-xl">
+          <img
+            src={getApiAssetUrl(world.background_image)}
+            alt="World background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <h1 className="absolute bottom-4 left-6 text-white text-2xl font-bold drop-shadow">
+            {world.title}
+          </h1>
+        </div>
+      )}
     <div className="lg:grid lg:grid-cols-3 lg:gap-8">
       {/* ── Sidebar ──────────────────────────────────── */}
       <aside className="lg:col-span-1 mb-6 lg:mb-0">
         <div className="sticky top-24 space-y-4">
           {/* World info card */}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            {/* Colored header strip */}
-            <div className="h-2 bg-gradient-to-r from-indigo-500 to-violet-500" />
+            {/* Cover image or gradient strip */}
+            {getApiAssetUrl(world.cover_image) ? (
+              <div className="relative h-32 group">
+                <img
+                  src={getApiAssetUrl(world.cover_image)}
+                  alt="World cover"
+                  className="w-full h-full object-cover"
+                />
+                {isDev && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs font-medium">
+                    {uploadingCover ? 'Uploading...' : '📷 Change Cover'}
+                    <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+                      onChange={e => handleUploadImage('cover_image', e.target.files?.[0])} />
+                  </label>
+                )}
+              </div>
+            ) : (
+              <div className="relative group">
+                <div className="h-2 bg-gradient-to-r from-indigo-500 to-violet-500" />
+                {isDev && (
+                  <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/10 text-indigo-700 text-xs font-semibold">
+                    {uploadingCover ? 'Uploading...' : '📷 Add Cover Image'}
+                    <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+                      onChange={e => handleUploadImage('cover_image', e.target.files?.[0])} />
+                  </label>
+                )}
+              </div>
+            )}
             <div className="p-6">
               <h1 className="text-xl font-bold text-slate-900 mb-2 leading-tight">
                 {world.title}
@@ -217,12 +278,19 @@ export default function WorldDetail() {
               <div className="space-y-2">
                 {actionBtn}
                 {isDev && (
-                  <Link
-                    to={`/worlds/${id}/manage`}
-                    className="block w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    ⚙️ Manage World
-                  </Link>
+                  <>
+                    <Link
+                      to={`/worlds/${id}/manage`}
+                      className="block w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      ⚙️ Manage World
+                    </Link>
+                    <label className="flex items-center justify-center gap-2 w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                      {uploadingBg ? 'Uploading...' : '🖼️ Set Background Image'}
+                      <input type="file" accept="image/*" className="hidden" disabled={uploadingBg}
+                        onChange={e => handleUploadImage('background_image', e.target.files?.[0])} />
+                    </label>
+                  </>
                 )}
               </div>
             </div>
@@ -725,6 +793,7 @@ export default function WorldDetail() {
         </div>
       )}
       </div>
+    </div>
     </div>
   );
 }
