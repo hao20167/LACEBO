@@ -181,7 +181,7 @@ router.patch(
         .json({ error: 'Only the world owner can edit this world' });
     }
 
-    const { title, description, cover_image, background_image, is_public } = req.body;
+    const { title, description, cover_image, background_image_url, is_public } = req.body;
     const updates = [];
     const values = [];
 
@@ -200,9 +200,9 @@ router.patch(
       values.push(cover_image.trim());
     }
 
-    if (background_image !== undefined) {
-      updates.push('background_image = ?');
-      values.push(background_image.trim());
+    if (background_image_url !== undefined) {
+      updates.push('background_image_url = ?');
+      values.push(background_image_url.trim());
     }
 
     if (is_public !== undefined) {

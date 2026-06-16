@@ -192,10 +192,10 @@ export default function WorldDetail() {
   return (
     <div>
       {/* ── World background banner ── */}
-      {getApiAssetUrl(world.background_image) && (
+      {getApiAssetUrl(world.background_image_url) && (
         <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mb-6 h-48 overflow-hidden rounded-xl">
           <img
-            src={getApiAssetUrl(world.background_image)}
+            src={getApiAssetUrl(world.background_image_url)}
             alt="World background"
             className="w-full h-full object-cover"
           />
@@ -288,7 +288,7 @@ export default function WorldDetail() {
                     <label className="flex items-center justify-center gap-2 w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer">
                       {uploadingBg ? 'Uploading...' : '🖼️ Set Background Image'}
                       <input type="file" accept="image/*" className="hidden" disabled={uploadingBg}
-                        onChange={e => handleUploadImage('background_image', e.target.files?.[0])} />
+                        onChange={e => handleUploadImage('background_image_url', e.target.files?.[0])} />
                     </label>
                   </>
                 )}

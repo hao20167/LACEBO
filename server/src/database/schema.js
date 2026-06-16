@@ -128,9 +128,9 @@ export function initDatabase() {
     db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
   }
 
-  const hasWorldBackground = worldColumns.some((column) => column.name === 'background_image');
+  const hasWorldBackground = worldColumns.some((column) => column.name === 'background_image_url');
   if (!hasWorldBackground) {
-    db.exec('ALTER TABLE worlds ADD COLUMN background_image TEXT DEFAULT NULL');
+    db.exec('ALTER TABLE worlds ADD COLUMN background_image_url TEXT DEFAULT NULL');
   }
 
   const commentColumns = db.prepare("PRAGMA table_info(comments)").all();
