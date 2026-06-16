@@ -44,6 +44,7 @@ export default function EventDetail() {
     hasNextPage: false,
     hasPrevPage: false,
   });
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   const fetchPosts = async (pageNumber = 1) => {
     try {
@@ -385,40 +386,113 @@ export default function EventDetail() {
   const isOpen = event.status === 'open';
   const isBig = event.event_type === 'big';
 
+  const handleUploadEventImage = async (field, file) => {
+    if (!file) return;
+    setUploadingEventImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const uploadRes = await api.post('/uploads/images', formData);
+      await api.patch(`/events/${eventId}`, { [field]: uploadRes.data.url });
+      const res = await api.get(`/events/${eventId}`);
+      setEvent(res.data);
+      toast.success('Image updated.');
+    } catch {
+      toast.error('Failed to upload image.');
+    }
+    setUploadingEventImage(false);
+  };
+
+  const isDev = user && event.created_by && user.id === event.created_by;
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       {/* ── Event header ─────────────────────────────── */}
       <div
         className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${isBig ? 'border-indigo-200' : 'border-slate-200'}`}
       >
-        {/* Accent bar */}
-        <div
-          className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`}
-        />
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                isBig
-                  ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
-                  : 'bg-slate-100 text-slate-600 border-slate-200'
-              }`}
-            >
-              {isBig ? 'BIG EVENT' : 'SMALL EVENT'}
-            </span>
-            <span
-              className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
-                isOpen
-                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                  : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}
-            >
-              {event.status.toUpperCase()}
-            </span>
+        {/* Background image or accent bar */}
+        {getApiAssetUrl(event.background_image_url) ? (
+          <div className="relative h-40 group">
+            <img
+              src={getApiAssetUrl(event.background_image_url)}
+              alt="Event background"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            {isDev && (
+              <label className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-xs px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors">
+                {uploadingEventImage ? '...' : '📷 Change BG'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+                  onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+              </label>
+            )}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            {event.title}
-          </h1>
+        ) : (
+          <div className="relative group">
+            <div className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
+            {isDev && (
+              <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/5 text-slate-500 text-xs font-medium">
+                {uploadingEventImage ? 'Uploading...' : '📷 Add Background Image'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+                  onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+              </label>
+            )}
+          </div>
+        )}
+
+        <div className="p-6">
+          <div className="flex items-start gap-4 mb-3">
+            {/* Thumbnail */}
+            {getApiAssetUrl(event.thumbnail_url) ? (
+              <div className="relative group flex-shrink-0">
+                <img
+                  src={getApiAssetUrl(event.thumbnail_url)}
+                  alt="Event thumbnail"
+                  className="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm"
+                />
+                {isDev && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl cursor-pointer text-white text-[10px] font-medium text-center">
+                    {uploadingEventImage ? '...' : '📷'}
+                    <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+                      onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+                  </label>
+                )}
+              </div>
+            ) : isDev ? (
+              <label className="flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs cursor-pointer hover:border-indigo-400 hover:text-indigo-500 transition-colors">
+                {uploadingEventImage ? '...' : '📷'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+                  onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+              </label>
+            ) : null}
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                    isBig
+                      ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {isBig ? 'BIG EVENT' : 'SMALL EVENT'}
+                </span>
+                <span
+                  className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
+                    isOpen
+                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                  }`}
+                >
+                  {event.status.toUpperCase()}
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">
+                {event.title}
+              </h1>
+            </div>
+          </div>
           <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed mb-4">
             {event.description}
           </p>
