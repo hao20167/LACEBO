@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { getApiAssetUrl } from '../services/api';
 import { EventDetailSkeleton } from '../components/SkeletonLoader';
 import { useToastContext } from '../components/Toast';
 import Pagination from '../components/Pagination';
@@ -25,6 +25,14 @@ export default function EventDetail() {
   const [expandedComments, setExpandedComments] = useState({});
   const [comments, setComments] = useState({});
   const [newComment, setNewComment] = useState({});
+  const [commentImageFiles, setCommentImageFiles] = useState({});
+  const [commentImagePreviews, setCommentImagePreviews] = useState({});
+  const [commentUploading, setCommentUploading] = useState({});
+  const [replyActive, setReplyActive] = useState({});
+  const [newReply, setNewReply] = useState({});
+  const [replyImageFiles, setReplyImageFiles] = useState({});
+  const [replyImagePreviews, setReplyImagePreviews] = useState({});
+  const [replyUploading, setReplyUploading] = useState({});
   const [postToDelete, setPostToDelete] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -170,23 +178,200 @@ export default function EventDetail() {
     } catch {}
   };
 
+  const handleCommentImageChange = (postId, file) => {
+    if (commentImagePreviews[postId]) {
+      URL.revokeObjectURL(commentImagePreviews[postId]);
+    }
+    if (!file) {
+      const nextFiles = { ...commentImageFiles };
+      delete nextFiles[postId];
+      setCommentImageFiles(nextFiles);
+
+      const nextPreviews = { ...commentImagePreviews };
+      delete nextPreviews[postId];
+      setCommentImagePreviews(nextPreviews);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be at most 5MB');
+      return;
+    }
+    const preview = URL.createObjectURL(file);
+    setCommentImageFiles({ ...commentImageFiles, [postId]: file });
+    setCommentImagePreviews({ ...commentImagePreviews, [postId]: preview });
+  };
+
+  const removeCommentImage = (postId) => {
+    handleCommentImageChange(postId, null);
+  };
+
   const handleComment = async (postId) => {
     const content = newComment[postId];
-    if (!content?.trim()) return;
+    if (!content?.trim() && !commentImageFiles[postId]) return;
+
+    setCommentUploading({ ...commentUploading, [postId]: true });
     try {
-      const res = await api.post(`/posts/${postId}/comments`, { content });
+      let imageUrl = null;
+      if (commentImageFiles[postId]) {
+        const formData = new FormData();
+        formData.append('image', commentImageFiles[postId]);
+        const uploadRes = await api.post('/uploads/images', formData);
+        imageUrl = uploadRes.data.url;
+      }
+
+      const payload = { content: content?.trim() || '' };
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+      }
+
+      const res = await api.post(`/posts/${postId}/comments`, payload);
+
       setComments({
         ...comments,
         [postId]: [...(comments[postId] || []), res.data],
       });
       setNewComment({ ...newComment, [postId]: '' });
+
+      // Clean up local preview & file
+      if (commentImagePreviews[postId]) {
+        URL.revokeObjectURL(commentImagePreviews[postId]);
+      }
+      const nextFiles = { ...commentImageFiles };
+      delete nextFiles[postId];
+      setCommentImageFiles(nextFiles);
+
+      const nextPreviews = { ...commentImagePreviews };
+      delete nextPreviews[postId];
+      setCommentImagePreviews(nextPreviews);
+
       setPosts(
         posts.map((p) =>
           p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p,
         ),
       );
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Không thể gửi bình luận. Bạn cần là thành viên của World này.');
+      toast.error(
+        err.response?.data?.error ||
+          'Không thể gửi bình luận. Bạn cần là thành viên của World này.',
+      );
+    } finally {
+      const nextUploading = { ...commentUploading };
+      delete nextUploading[postId];
+      setCommentUploading(nextUploading);
+    }
+  };
+
+  const handleCommentLike = async (postId, commentId) => {
+    try {
+      const res = await api.post(`/posts/comments/${commentId}/like`);
+      setComments({
+        ...comments,
+        [postId]: comments[postId].map((c) => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              liked: res.data.liked,
+              like_count: c.like_count + (res.data.liked ? 1 : -1),
+            };
+          }
+          return c;
+        }),
+      });
+    } catch {}
+  };
+
+  const handleReplyImageChange = (commentId, file) => {
+    if (replyImagePreviews[commentId]) {
+      URL.revokeObjectURL(replyImagePreviews[commentId]);
+    }
+    if (!file) {
+      const nextFiles = { ...replyImageFiles };
+      delete nextFiles[commentId];
+      setReplyImageFiles(nextFiles);
+
+      const nextPreviews = { ...replyImagePreviews };
+      delete nextPreviews[commentId];
+      setReplyImagePreviews(nextPreviews);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be at most 5MB');
+      return;
+    }
+    const preview = URL.createObjectURL(file);
+    setReplyImageFiles({ ...replyImageFiles, [commentId]: file });
+    setReplyImagePreviews({ ...replyImagePreviews, [commentId]: preview });
+  };
+
+  const removeReplyImage = (commentId) => {
+    handleReplyImageChange(commentId, null);
+  };
+
+  const handleReply = async (postId, parentCommentId) => {
+    const content = newReply[parentCommentId];
+    if (!content?.trim() && !replyImageFiles[parentCommentId]) return;
+
+    setReplyUploading({ ...replyUploading, [parentCommentId]: true });
+    try {
+      let imageUrl = null;
+      if (replyImageFiles[parentCommentId]) {
+        const formData = new FormData();
+        formData.append('image', replyImageFiles[parentCommentId]);
+        const uploadRes = await api.post('/uploads/images', formData);
+        imageUrl = uploadRes.data.url;
+      }
+
+      const payload = {
+        content: content?.trim() || '',
+        parent_id: parentCommentId,
+      };
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+      }
+
+      const res = await api.post(`/posts/${postId}/comments`, payload);
+
+      setComments({
+        ...comments,
+        [postId]: [...(comments[postId] || []), res.data],
+      });
+      setNewReply({ ...newReply, [parentCommentId]: '' });
+      setReplyActive({ ...replyActive, [parentCommentId]: false });
+
+      // Clean up local preview & file
+      if (replyImagePreviews[parentCommentId]) {
+        URL.revokeObjectURL(replyImagePreviews[parentCommentId]);
+      }
+      const nextFiles = { ...replyImageFiles };
+      delete nextFiles[parentCommentId];
+      setReplyImageFiles(nextFiles);
+
+      const nextPreviews = { ...replyImagePreviews };
+      delete nextPreviews[parentCommentId];
+      setReplyImagePreviews(nextPreviews);
+
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p,
+        ),
+      );
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          'Không thể gửi phản hồi. Bạn cần là thành viên của World này.',
+      );
+    } finally {
+      const nextUploading = { ...replyUploading };
+      delete nextUploading[parentCommentId];
+      setReplyUploading(nextUploading);
     }
   };
 
@@ -423,30 +608,265 @@ export default function EventDetail() {
                       compact
                     />
                   ) : (
-                    (comments[post.id] || []).map(c => (
-                      <div key={c.id} className="flex gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5">
-                          {c.display_name?.[0]?.toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
-                          <span className="text-xs text-dark-500 ml-2">{new Date(c.created_at).toLocaleString()}</span>
-                          <p className="text-dark-300 text-sm">{c.content}</p>
-                        </div>
-                      </div>
-                    ))
+                    (() => {
+                      const allComments = comments[post.id] || [];
+                      const parentComments = allComments.filter(c => !c.parent_id);
+                      const getRepliesForParent = (parentId) => {
+                        return allComments.filter(c => {
+                          if (!c.parent_id) return false;
+                          let current = c;
+                          while (current.parent_id) {
+                            if (current.parent_id === parentId) return true;
+                            const parent = allComments.find(x => x.id === current.parent_id);
+                            if (!parent) break;
+                            current = parent;
+                          }
+                          return false;
+                        });
+                      };
+
+                      return parentComments.map(c => {
+                        const replies = getRepliesForParent(c.id);
+                        return (
+                          <div key={c.id} className="mb-4">
+                            {/* Parent Comment */}
+                            <div className="flex gap-2">
+                              <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+                                {c.display_name?.[0]?.toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
+                                  <span className="text-xs text-dark-500">@{c.username}</span>
+                                  <span className="text-xs text-dark-500">{new Date(c.created_at).toLocaleString()}</span>
+                                </div>
+                                <p className="text-dark-300 text-sm whitespace-pre-wrap mt-0.5">{c.content}</p>
+                                {c.image_url && (
+                                  <img
+                                    src={getApiAssetUrl(c.image_url)}
+                                    alt="Bình luận"
+                                    className="mt-1.5 max-h-40 rounded-lg object-contain border border-dark-600 shadow-sm"
+                                  />
+                                )}
+                                
+                                {/* Comment Actions */}
+                                <div className="flex items-center gap-4 text-xs mt-1 text-dark-500">
+                                  <button
+                                    onClick={() => handleCommentLike(post.id, c.id)}
+                                    className={`flex items-center gap-1 hover:text-red-400 transition-colors ${c.liked ? 'text-red-500' : 'text-dark-400'}`}
+                                  >
+                                    {c.liked ? '❤️' : '🤍'} <span>{c.like_count || 0}</span>
+                                  </button>
+                                  {user && (
+                                    <button
+                                      onClick={() => setReplyActive({ ...replyActive, [c.id]: !replyActive[c.id] })}
+                                      className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-dark-400"
+                                    >
+                                      💬 Phản hồi
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Nested Replies Container */}
+                            <div className="ml-8 mt-2 space-y-3 border-l border-dark-700 pl-4">
+                              {replies.map(r => {
+                                const parentComment = allComments.find(x => x.id === r.parent_id);
+                                const replyToUsername = parentComment && parentComment.id !== c.id ? parentComment.username : null;
+
+                                return (
+                                  <div key={r.id} className="flex gap-2">
+                                    <div className="w-5 h-5 rounded-full bg-dark-700 flex items-center justify-center text-[10px] text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+                                      {r.display_name?.[0]?.toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                                        <span className="text-xs font-medium text-dark-300">{r.display_name}</span>
+                                        <span className="text-[10px] text-dark-500">@{r.username}</span>
+                                        {replyToUsername && (
+                                          <span className="text-[10px] text-indigo-400 font-medium">
+                                            phản hồi @{replyToUsername}
+                                          </span>
+                                        )}
+                                        <span className="text-[10px] text-dark-500">{new Date(r.created_at).toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-dark-300 text-xs whitespace-pre-wrap mt-0.5">{r.content}</p>
+                                      {r.image_url && (
+                                        <img
+                                          src={getApiAssetUrl(r.image_url)}
+                                          alt="Bình luận"
+                                          className="mt-1.5 max-h-32 rounded-lg object-contain border border-dark-600 shadow-sm"
+                                        />
+                                      )}
+
+                                      {/* Reply Actions */}
+                                      <div className="flex items-center gap-4 text-[10px] mt-1 text-dark-500">
+                                        <button
+                                          onClick={() => handleCommentLike(post.id, r.id)}
+                                          className={`flex items-center gap-1 hover:text-red-400 transition-colors ${r.liked ? 'text-red-500' : 'text-dark-400'}`}
+                                        >
+                                          {r.liked ? '❤️' : '🤍'} <span>{r.like_count || 0}</span>
+                                        </button>
+                                        {user && (
+                                          <button
+                                            onClick={() => {
+                                              setReplyActive({ ...replyActive, [c.id]: true });
+                                              setNewReply({ ...newReply, [c.id]: `@${r.username} ` });
+                                            }}
+                                            className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-dark-400"
+                                          >
+                                            💬 Phản hồi
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Reply Input Form under root parent comment */}
+                              {user && replyActive[c.id] && (
+                                <div className="space-y-2 mt-2 pt-2 border-t border-dark-700">
+                                  {/* Reply Image preview */}
+                                  {replyImagePreviews[c.id] && (
+                                    <div className="relative inline-block mt-1">
+                                      <img
+                                        src={replyImagePreviews[c.id]}
+                                        alt="Preview"
+                                        className="max-h-20 max-w-xs rounded-lg object-contain border border-dark-600"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => removeReplyImage(c.id)}
+                                        className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md border border-white font-bold"
+                                        title="Xóa ảnh"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Reply Input Row */}
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder={replyUploading[c.id] ? "Uploading..." : "Viết phản hồi..."}
+                                      value={newReply[c.id] || ''}
+                                      onChange={e => setNewReply({ ...newReply, [c.id]: e.target.value })}
+                                      onKeyDown={e => e.key === 'Enter' && !replyUploading[c.id] && handleReply(post.id, c.id)}
+                                      disabled={replyUploading[c.id]}
+                                      className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-xs text-dark-100 focus:outline-none focus:border-primary-500 transition disabled:opacity-60"
+                                    />
+
+                                    {/* Hidden File Input for Reply */}
+                                    <input
+                                      type="file"
+                                      id={`reply-image-input-${c.id}`}
+                                      accept="image/*"
+                                      onChange={e => handleReplyImageChange(c.id, e.target.files?.[0])}
+                                      className="hidden"
+                                      disabled={replyUploading[c.id]}
+                                    />
+
+                                    {/* Reply Attachment Button */}
+                                    <label
+                                      htmlFor={`reply-image-input-${c.id}`}
+                                      className={`cursor-pointer rounded-lg border border-dark-600 bg-dark-800 p-1.5 text-xs text-dark-300 hover:text-dark-100 hover:bg-dark-700 transition flex items-center justify-center shrink-0 ${replyUploading[c.id] ? 'opacity-60 pointer-events-none' : ''}`}
+                                      title="Tải ảnh lên"
+                                    >
+                                      📷
+                                    </label>
+
+                                    {/* Send/Cancel Buttons */}
+                                    <button
+                                      onClick={() => handleReply(post.id, c.id)}
+                                      disabled={replyUploading[c.id] || (!newReply[c.id]?.trim() && !replyImageFiles[c.id])}
+                                      className="bg-primary-600 hover:bg-primary-500 text-white px-3.5 py-1.5 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 shrink-0"
+                                    >
+                                      {replyUploading[c.id] ? '...' : 'Gửi'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setReplyActive({ ...replyActive, [c.id]: false });
+                                        setNewReply({ ...newReply, [c.id]: '' });
+                                        removeReplyImage(c.id);
+                                      }}
+                                      disabled={replyUploading[c.id]}
+                                      className="bg-dark-700 hover:bg-dark-600 text-dark-300 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition shrink-0"
+                                    >
+                                      Hủy
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()
                   )}
                   {user && (
-                    <div className="flex gap-2 mt-2">
-                      <input type="text" placeholder="Write a comment..."
-                        value={newComment[post.id] || ''}
-                        onChange={e => setNewComment({ ...newComment, [post.id]: e.target.value })}
-                        onKeyDown={e => e.key === 'Enter' && handleComment(post.id)}
-                        className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition" />
-                      <button onClick={() => handleComment(post.id)}
-                        className="bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
-                        Send
-                      </button>
+                    <div className="space-y-2 mt-2">
+                      {/* Image preview row */}
+                      {commentImagePreviews[post.id] && (
+                        <div className="relative inline-block mt-1">
+                          <img
+                            src={commentImagePreviews[post.id]}
+                            alt="Preview"
+                            className="max-h-20 max-w-xs rounded-lg object-contain border border-dark-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeCommentImage(post.id)}
+                            className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md border border-white font-bold"
+                            title="Xóa ảnh"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Input row */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder={commentUploading[post.id] ? "Uploading..." : "Write a comment..."}
+                          value={newComment[post.id] || ''}
+                          onChange={e => setNewComment({ ...newComment, [post.id]: e.target.value })}
+                          onKeyDown={e => e.key === 'Enter' && !commentUploading[post.id] && handleComment(post.id)}
+                          disabled={commentUploading[post.id]}
+                          className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition disabled:opacity-60"
+                        />
+
+                        {/* Hidden File Input */}
+                        <input
+                          type="file"
+                          id={`comment-image-input-${post.id}`}
+                          accept="image/*"
+                          onChange={e => handleCommentImageChange(post.id, e.target.files?.[0])}
+                          className="hidden"
+                          disabled={commentUploading[post.id]}
+                        />
+
+                        {/* Attachment Button */}
+                        <label
+                          htmlFor={`comment-image-input-${post.id}`}
+                          className={`cursor-pointer rounded-lg border border-dark-600 bg-dark-800 p-1.5 text-sm text-dark-300 hover:text-dark-100 hover:bg-dark-700 transition flex items-center justify-center shrink-0 ${commentUploading[post.id] ? 'opacity-60 pointer-events-none' : ''}`}
+                          title="Tải ảnh lên"
+                        >
+                          📷
+                        </label>
+
+                        {/* Submit button */}
+                        <button
+                          onClick={() => handleComment(post.id)}
+                          disabled={commentUploading[post.id] || (!newComment[post.id]?.trim() && !commentImageFiles[post.id])}
+                          className="bg-primary-600 hover:bg-primary-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-50 shrink-0"
+                        >
+                          {commentUploading[post.id] ? '...' : 'Send'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
