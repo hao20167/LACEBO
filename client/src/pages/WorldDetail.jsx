@@ -344,7 +344,7 @@ export default function WorldDetail() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />{' '}
                   Ongoing Events
                 </h2>
                 {isDev ? (

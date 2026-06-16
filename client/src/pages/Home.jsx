@@ -93,7 +93,7 @@ export default function Home() {
               Earn Credits
             </h3>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Gain citizen credits through interactions and climb your world's
+              Gain citizen credits through interactions and climb your world&apos;s
               leaderboard.
             </p>
           </div>

@@ -59,8 +59,8 @@ export default function MyWorlds() {
           {devWorlds.length > 0 && (
             <section>
               <h2 className="text-base font-bold text-slate-700 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
-                Worlds I Created
+                <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />{' '}
+                Worlds I Created{' '}
                 <span className="text-xs font-normal text-slate-400">
                   ({devWorlds.length})
                 </span>
@@ -77,8 +77,8 @@ export default function MyWorlds() {
           {memberWorlds.length > 0 && (
             <section>
               <h2 className="text-base font-bold text-slate-700 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
-                Worlds I Joined
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />{' '}
+                Worlds I Joined{' '}
                 <span className="text-xs font-normal text-slate-400">
                   ({memberWorlds.length})
                 </span>

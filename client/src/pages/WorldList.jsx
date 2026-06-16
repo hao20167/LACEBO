@@ -42,6 +42,7 @@ export default function WorldList() {
 
   useEffect(() => {
     fetchWorlds(1, '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = (e) => {
