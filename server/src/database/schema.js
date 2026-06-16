@@ -19,8 +19,8 @@ export function initDatabase() {
       cover_image TEXT DEFAULT NULL,
       owner_id INTEGER DEFAULT NULL,
       is_public INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(owner_id) REFERENCES users(id)
+      deletion_scheduled_at DATETIME DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS world_members (
@@ -118,9 +118,9 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_worlds_public_created ON worlds(is_public, created_at);
   `);
 
-  const worldColumns = db.prepare('PRAGMA table_info(worlds)').all();
-  const hasOwnerId = worldColumns.some((column) => column.name === 'owner_id');
-  if (!hasOwnerId) {
-    db.exec('ALTER TABLE worlds ADD COLUMN owner_id INTEGER DEFAULT NULL');
+  const columns = db.prepare("PRAGMA table_info(worlds)").all();
+  const hasDeletionColumn = columns.some((column) => column.name === 'deletion_scheduled_at');
+  if (!hasDeletionColumn) {
+    db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
   }
 }

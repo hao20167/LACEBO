@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/EmptyState.jsx';
+import Pagination from '../components/Pagination.jsx';
+import { WorldListSkeleton } from '../components/SkeletonLoader.jsx';
 import api, { getApiCollection } from '../services/api.js';
-import { WorldListSkeleton } from '../components/SkeletonLoader';
-import Pagination from '../components/Pagination';
 
 export default function WorldList() {
   const [worlds, setWorlds] = useState([]);
@@ -100,21 +101,22 @@ export default function WorldList() {
       {loading ? (
         <WorldListSkeleton count={6} />
       ) : worlds.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl py-20 text-center shadow-sm">
-          <div className="text-5xl mb-4">🌍</div>
-          <p className="text-lg font-semibold text-slate-700 mb-1">
-            No worlds found
-          </p>
-          <p className="text-sm text-slate-500 mb-5">
-            Try a different search term or start a new world.
-          </p>
-          <Link
-            to="/worlds/create"
-            className="inline-flex bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            Create a World
-          </Link>
-        </div>
+        <EmptyState
+          title="No worlds found"
+          description={
+            search
+              ? 'Try a different search term or clear the search to browse every world.'
+              : 'Start the first shared setting for this community.'
+          }
+          action={
+            <Link
+              to="/worlds/create"
+              className="text-primary-400 hover:underline"
+            >
+              Create a world
+            </Link>
+          }
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

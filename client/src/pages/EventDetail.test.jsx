@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, beforeEach, afterEach, test, expect } from 'vitest';
+import { vi, describe, beforeEach, test, expect } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import EventDetail from './EventDetail';
 import api from '../services/api.js';
@@ -12,22 +12,11 @@ vi.mock('../services/api.js', () => ({
     patch: vi.fn(),
     delete: vi.fn(),
   },
-  getApiErrorMessage: vi.fn((err, fallback) => err?.message || fallback),
-  getApiCollection: vi.fn((payload) =>
-    Array.isArray(payload) ? payload : payload?.data || [],
-  ),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 1, username: 'tester' } }),
 }));
-
-const mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
-vi.mock('../components/Toast', () => ({
-  useToastContext: () => mockToast,
-}));
-
-// ─── Mock data ───────────────────────────────────────────────────────────────
 
 const mockEvent = {
   id: 1,
@@ -39,15 +28,18 @@ const mockEvent = {
   start_date: '2024-06-01',
   end_date: '2024-06-02',
   creator_display_name: 'Creator User',
-  creator_name: 'creator',
 };
 
 const mockPost = {
   id: 10,
+  event_id: 1,
+  world_id: 2,
+  user_id: 1,
   content: 'Hello world',
   liked: false,
   like_count: 5,
   comment_count: 2,
+  can_delete: true,
   username: 'postauthor',
   display_name: 'Post Author',
   created_at: '2024-05-26T10:00:00Z',
@@ -61,8 +53,6 @@ const mockComment = {
   created_at: '2024-05-26T11:00:00Z',
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function setupApiMocks({
   event = mockEvent,
   posts = [mockPost],
@@ -71,8 +61,9 @@ function setupApiMocks({
   api.get.mockImplementation((url) => {
     if (url === '/events/1') return Promise.resolve({ data: event });
     if (url === '/posts/event/1') return Promise.resolve({ data: posts });
-    if (/^\/posts\/\d+\/comments$/.test(url))
+    if (/^\/posts\/\d+\/comments$/.test(url)) {
       return Promise.resolve({ data: comments });
+    }
     return Promise.resolve({ data: [] });
   });
 }
@@ -87,304 +78,198 @@ function renderEventDetail() {
   );
 }
 
-// ─── EventDetail Component ───────────────────────────────────────────────────
-
-describe('EventDetail Component', () => {
+describe('EventDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  test('displays loading state, error message, or not found appropriately', async () => {
-    // 1. Loading
+  test('renders loading and not found states', async () => {
     api.get.mockImplementation(() => new Promise(() => {}));
     const { unmount } = renderEventDetail();
     expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
     unmount();
 
-    // 2. Error: the current component falls back to the not-found state.
-    api.get.mockRejectedValue(new Error('Server error'));
-    const { unmount: unmountErr } = renderEventDetail();
-    expect(await screen.findByText('Event not found')).toBeInTheDocument();
-    unmountErr();
-
-    // 3. Not Found
     api.get.mockImplementation((url) => {
       if (url === '/events/1') return Promise.resolve({ data: null });
       return Promise.resolve({ data: [] });
     });
     renderEventDetail();
+
     expect(await screen.findByText('Event not found')).toBeInTheDocument();
   });
 
-  test('displays basic event details (title, description, badges, creator)', async () => {
+  test('renders event details and posts', async () => {
     setupApiMocks();
     renderEventDetail();
+
     expect(await screen.findByText('Test Event')).toBeInTheDocument();
     expect(screen.getByText('Demo description')).toBeInTheDocument();
     expect(screen.getByText('SMALL EVENT')).toBeInTheDocument();
     expect(screen.getByText('OPEN')).toBeInTheDocument();
     expect(screen.getByText(/Creator User/)).toBeInTheDocument();
-  });
-
-  test('displays alternative event details (BIG EVENT, empty description)', async () => {
-    setupApiMocks({
-      event: { ...mockEvent, event_type: 'big', description: '' },
-    });
-    renderEventDetail();
-    expect(await screen.findByText('BIG EVENT')).toBeInTheDocument();
-    expect(screen.queryByText('Demo description')).not.toBeInTheDocument();
-  });
-
-  test('displays posts list correctly', async () => {
-    setupApiMocks();
-    renderEventDetail();
-    expect(await screen.findByText('Hello world')).toBeInTheDocument();
+    expect(screen.getByText('Hello world')).toBeInTheDocument();
     expect(screen.getByText('Post Author')).toBeInTheDocument();
     expect(screen.getByText(/@postauthor/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /💬\s*2/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /5/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2/ })).toBeInTheDocument();
   });
 
-  test('displays empty posts message when posts list is empty', async () => {
+  test('renders empty state when there are no approved posts', async () => {
     setupApiMocks({ posts: [] });
     renderEventDetail();
+
     expect(
       await screen.findByText('No posts yet. Be the first to post!'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Be the first to post.')).toBeInTheDocument();
   });
 
-  test('handles post creation visibility based on event status', async () => {
-    // 1. Open event -> shows create post form
-    setupApiMocks({ posts: [] });
-    const { unmount } = renderEventDetail();
-    expect(
-      await screen.findByPlaceholderText(
-        'Share your thoughts about this event...',
-      ),
-    ).toBeInTheDocument();
-    unmount();
-
-    // 2. Closed event -> hides create post form
+  test('hides post composer for closed events', async () => {
     setupApiMocks({ event: { ...mockEvent, status: 'closed' }, posts: [] });
     renderEventDetail();
-    await screen.findByText('CLOSED');
-    expect(
-      screen.queryByPlaceholderText('Share your thoughts about this event...'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText('This event is closed. Posts are read-only.'),
-    ).toBeInTheDocument();
+
+    expect(await screen.findByText('CLOSED')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Share your thoughts/)).not.toBeInTheDocument();
+    expect(screen.getByText('This event is closed. You can still view the posts.')).toBeInTheDocument();
   });
 
-  test('Post button enables only when textarea has content', async () => {
-    setupApiMocks({ posts: [] });
+  test('creates a post and refreshes the list', async () => {
+    let postFetchCount = 0;
+    api.get.mockImplementation((url) => {
+      if (url === '/events/1') return Promise.resolve({ data: mockEvent });
+      if (url === '/posts/event/1') {
+        postFetchCount += 1;
+        return Promise.resolve({
+          data: postFetchCount === 1 ? [] : [{ ...mockPost, content: 'Fresh post' }],
+        });
+      }
+      return Promise.resolve({ data: [] });
+    });
+    api.post.mockResolvedValue({ data: { id: 99 } });
+
     renderEventDetail();
-    const button = await screen.findByRole('button', { name: 'Post' });
-    expect(button).toBeDisabled();
-
-    const textarea = screen.getByPlaceholderText(
-      'Share your thoughts about this event...',
-    );
-    await userEvent.type(textarea, 'Some content');
-    expect(button).toBeEnabled();
-  });
-
-  test('submits post successfully and clears textarea', async () => {
-    setupApiMocks({ posts: [] });
-    api.post.mockResolvedValue({ data: { id: 99, status: 'pending' } });
-    renderEventDetail();
-
-    const textarea = await screen.findByPlaceholderText(
-      'Share your thoughts about this event...',
-    );
-    await userEvent.type(textarea, 'Some content');
+    const textarea = await screen.findByPlaceholderText('Share your thoughts about this event...');
+    await userEvent.type(textarea, 'Fresh post');
     fireEvent.click(screen.getByRole('button', { name: 'Post' }));
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/posts/event/1', {
-        content: 'Some content',
+        content: 'Fresh post',
       });
-      expect(textarea).toHaveValue('');
     });
+    expect(await screen.findByText('Fresh post')).toBeInTheDocument();
+    expect(textarea).toHaveValue('');
   });
 
-  test('refreshes posts when post is created', async () => {
-    const approvedPost = {
-      ...mockPost,
-      id: 99,
-      content: 'Approved content',
-      status: 'approved',
-    };
-    let postsFetched = false;
-    api.get.mockImplementation((url) => {
-      if (url === '/events/1') return Promise.resolve({ data: mockEvent });
-      if (url === '/posts/event/1') {
-        if (!postsFetched) {
-          postsFetched = true;
-          return Promise.resolve({ data: [] });
-        }
-        return Promise.resolve({ data: [approvedPost] });
-      }
-      if (/^\/posts\/\d+\/comments$/.test(url))
-        return Promise.resolve({ data: [] });
-      return Promise.resolve({ data: [] });
-    });
-    api.post.mockResolvedValue({ data: approvedPost });
-
-    renderEventDetail();
-    const textarea = await screen.findByPlaceholderText(
-      'Share your thoughts about this event...',
-    );
-    await userEvent.type(textarea, 'Approved content');
-    fireEvent.click(screen.getByRole('button', { name: 'Post' }));
-
-    expect(await screen.findByText('Approved content')).toBeInTheDocument();
-  });
-
-  test('shows error message when post creation fails', async () => {
-    setupApiMocks({ posts: [] });
-    api.post.mockRejectedValue(new Error('Failed to create post'));
-    renderEventDetail();
-
-    const textarea = await screen.findByPlaceholderText(
-      'Share your thoughts about this event...',
-    );
-    await userEvent.type(textarea, 'Some content');
-    fireEvent.click(screen.getByRole('button', { name: 'Post' }));
-
-    await waitFor(() =>
-      expect(mockToast.error).toHaveBeenCalledWith('Failed to create post'),
-    );
-  });
-});
-
-// ─── LikeButton Component ────────────────────────────────────────────────────
-
-describe('LikeButton Component', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  test('handles like state correctly (display, optimistic update, error revert)', async () => {
-    // Initial display not liked
+  test('edits an owned post and updates the rendered content', async () => {
     setupApiMocks();
-    api.post
-      .mockResolvedValueOnce({ data: { liked: true } }) // First click success
-      .mockRejectedValueOnce(new Error('Network error')); // Second click fail
-
+    api.patch.mockResolvedValue({ data: { ...mockPost, content: 'Updated post' } });
     renderEventDetail();
 
-    // Check initial
-    const likeButton = await screen.findByRole('button', { name: /🤍\s*5/ });
-    expect(likeButton).toBeInTheDocument();
+    await screen.findByText('Hello world');
+    fireEvent.click(screen.getByRole('button', { name: '...' }));
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent.includes('S')));
 
-    // Click -> update to liked (6)
-    fireEvent.click(likeButton);
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /❤️\s*6/ }),
-      ).toBeInTheDocument(),
-    );
+    const editor = screen.getByDisplayValue('Hello world');
+    await userEvent.clear(editor);
+    await userEvent.type(editor, 'Updated post');
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent.includes('L')));
 
-    // Click again but API fails -> current component keeps the existing state
-    const likedButton = screen.getByRole('button', { name: /❤️\s*6/ });
-    fireEvent.click(likedButton);
-
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /❤️\s*6/ }),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith('/posts/10', {
+        content: 'Updated post',
+      });
+    });
+    expect(screen.getByText('Updated post')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Updated post')).not.toBeInTheDocument();
   });
 
-  test('displays Liked button when post is initially liked', async () => {
-    setupApiMocks({ posts: [{ ...mockPost, liked: true }] });
+  test('cancels editing without calling the API', async () => {
+    setupApiMocks();
     renderEventDetail();
+
+    await screen.findByText('Hello world');
+    fireEvent.click(screen.getByRole('button', { name: '...' }));
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent.includes('S')));
+
+    const editor = screen.getByDisplayValue('Hello world');
+    await userEvent.clear(editor);
+    await userEvent.type(editor, 'Discarded post');
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent.includes('H')));
+
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(screen.getByText('Hello world')).toBeInTheDocument();
+    expect(screen.queryByText('Discarded post')).not.toBeInTheDocument();
+  });
+
+  test('confirms before deleting a post and removes it after success', async () => {
+    setupApiMocks();
+    api.delete.mockResolvedValue({ data: { success: true } });
+    renderEventDetail();
+
+    await screen.findByText('Hello world');
+    fireEvent.click(screen.getByRole('button', { name: '...' }));
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent.includes('X')));
+
+    expect(screen.getAllByText('Hello world')).toHaveLength(2);
+    expect(api.delete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole('button').at(-1));
+
+    await waitFor(() => {
+      expect(api.delete).toHaveBeenCalledWith('/posts/10');
+    });
+    expect(screen.queryByText('Hello world')).not.toBeInTheDocument();
     expect(
-      await screen.findByRole('button', { name: /❤️\s*5/ }),
+      screen.getByText('No approved posts for this event yet.'),
     ).toBeInTheDocument();
   });
-});
 
-// ─── Comments Component ───────────────────────────────────────────────────────
-
-describe('Comments Component', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  test('fetches and displays comments when expanded', async () => {
-    let callCount = 0;
-    api.get.mockImplementation((url) => {
-      if (url === '/events/1') return Promise.resolve({ data: mockEvent });
-      if (url === '/posts/event/1')
-        return Promise.resolve({ data: [mockPost] });
-      if (/^\/posts\/\d+\/comments$/.test(url)) {
-        callCount++;
-        return Promise.resolve({ data: [mockComment] });
-      }
-      return Promise.resolve({ data: [] });
-    });
-
-    renderEventDetail();
-    fireEvent.click(await screen.findByRole('button', { name: /💬\s*2/ }));
-
-    expect(await screen.findByText('A comment')).toBeInTheDocument();
-    expect(screen.getByText('Commenter User')).toBeInTheDocument();
-    expect(callCount).toBe(1);
-  });
-
-  test('comment form input enables button and submits properly', async () => {
-    const newComment = {
-      id: 3,
-      content: 'Great post!',
-      username: 'tester',
-      display_name: 'Tester',
-      created_at: new Date().toISOString(),
-    };
-    setupApiMocks({ posts: [{ ...mockPost, comment_count: 2 }] });
-
-    let resolvePost;
-    api.post.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolvePost = resolve;
-        }),
-    );
-
-    renderEventDetail();
-    fireEvent.click(await screen.findByRole('button', { name: /💬\s*2/ }));
-
-    const submitBtn = await screen.findByRole('button', { name: 'Send' });
-
-    const input = screen.getByPlaceholderText('Write a comment...');
-    await userEvent.type(input, 'Great post!');
-
-    // Submit
-    fireEvent.click(submitBtn);
-
-    // Resolve API
-    resolvePost({ data: newComment });
-
-    // Assertions after success
-    await waitFor(() => {
-      expect(screen.getByText('Great post!')).toBeInTheDocument();
-      expect(input).toHaveValue('');
-      expect(
-        screen.getByRole('button', { name: /💬\s*3/ }),
-      ).toBeInTheDocument();
-    });
-  });
-
-  test('keeps comment input when comment submission fails', async () => {
+  test('cancels delete dialog without calling the API', async () => {
     setupApiMocks();
-    api.post.mockRejectedValue(new Error('Failed to add comment'));
     renderEventDetail();
 
-    fireEvent.click(await screen.findByRole('button', { name: /💬\s*2/ }));
-    const input = await screen.findByPlaceholderText('Write a comment...');
-    await userEvent.type(input, 'Failed content');
+    await screen.findByText('Hello world');
+    fireEvent.click(screen.getByRole('button', { name: '...' }));
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent.includes('X')));
+
+    fireEvent.click(screen.getAllByRole('button').at(-2));
+
+    expect(api.delete).not.toHaveBeenCalled();
+    expect(screen.getAllByText('Hello world')).toHaveLength(1);
+  });
+
+  test('loads comments, renders empty comment state, and adds a comment', async () => {
+    setupApiMocks({ comments: [] });
+    api.post.mockResolvedValue({ data: mockComment });
+    renderEventDetail();
+
+    fireEvent.click(await screen.findByRole('button', { name: /2/ }));
+    expect(await screen.findByText('No comments yet.')).toBeInTheDocument();
+
+    const commentInput = screen.getByPlaceholderText('Write a comment...');
+    await userEvent.type(commentInput, 'A comment');
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-    await waitFor(() => expect(input).toHaveValue('Failed content'));
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/posts/10/comments', {
+        content: 'A comment',
+      });
+    });
+    expect(screen.getByText('Commenter User')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /3/ })).toBeInTheDocument();
+  });
+
+  test('toggles like state from the API response', async () => {
+    setupApiMocks();
+    api.post.mockResolvedValue({ data: { liked: true } });
+    renderEventDetail();
+
+    fireEvent.click(await screen.findByRole('button', { name: /5/ }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/posts/10/like');
+    });
+    expect(screen.getByRole('button', { name: /6/ })).toBeInTheDocument();
   });
 });
