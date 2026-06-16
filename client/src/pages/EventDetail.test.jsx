@@ -12,6 +12,7 @@ vi.mock('../services/api.js', () => ({
     patch: vi.fn(),
     delete: vi.fn(),
   },
+  getApiAssetUrl: vi.fn((path) => path),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({

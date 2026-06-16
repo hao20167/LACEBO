@@ -154,4 +154,10 @@ export function initDatabase() {
   if (!hasEventBackground) {
     db.exec('ALTER TABLE events ADD COLUMN background_image_url TEXT DEFAULT NULL');
   }
+
+  const userColumns = db.prepare("PRAGMA table_info(users)").all();
+  const hasUserBackground = userColumns.some((column) => column.name === 'background_image_url');
+  if (!hasUserBackground) {
+    db.exec('ALTER TABLE users ADD COLUMN background_image_url TEXT DEFAULT NULL');
+  }
 }

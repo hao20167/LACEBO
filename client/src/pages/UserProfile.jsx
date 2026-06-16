@@ -34,6 +34,9 @@ export default function UserProfile() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
+  const [bgFile, setBgFile] = useState(null);
+  const [bgPreview, setBgPreview] = useState('');
+  const [uploadingBg, setUploadingBg] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,6 +76,41 @@ export default function UserProfile() {
       URL.revokeObjectURL(nextPreview);
     };
   }, [avatarFile]);
+
+  useEffect(() => {
+    if (!bgFile) {
+      setBgPreview('');
+      return undefined;
+    }
+    const nextPreview = URL.createObjectURL(bgFile);
+    setBgPreview(nextPreview);
+    return () => {
+      URL.revokeObjectURL(nextPreview);
+    };
+  }, [bgFile]);
+
+  const handleBgChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setBgFile(file);
+  };
+
+  const handleSaveBg = async () => {
+    if (!bgFile) return;
+    setUploadingBg(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', bgFile);
+      const uploadRes = await api.post('/uploads/images', formData);
+      const profileRes = await api.patch('/users/me', { background_image: uploadRes.data.url });
+      setProfile(profileRes.data);
+      updateUser?.(profileRes.data);
+      setBgFile(null);
+      setSaveMessage('Background updated.');
+    } catch (err) {
+      setSaveError(getApiErrorMessage(err, 'Unable to update background.'));
+    }
+    setUploadingBg(false);
+  };
 
   const displayName = profile?.display_name || profile?.username || 'User';
   const avatarSrc = avatarPreview || getApiAssetUrl(profile?.avatar_url);
@@ -163,11 +201,59 @@ export default function UserProfile() {
     <div className="space-y-8">
       {/* ── Banner + Profile card ────────────────────── */}
       <div>
-        {/* Gradient banner */}
-        <div className="h-36 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 shadow-sm" />
-
+        {/* Background banner — clickable to upload */}
+        <div className="relative h-36 rounded-2xl overflow-hidden shadow-sm group">
+          {bgPreview || getApiAssetUrl(profile?.background_image_url) ? (
+            <img
+              src={bgPreview || getApiAssetUrl(profile?.background_image_url)}
+              alt="Profile background"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600" />
+          )}
+          {/* Hover overlay to change background */}
+          <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer gap-1">
+            <span className="text-white text-sm font-medium">
+              {uploadingBg ? 'Uploading...' : '📷 Change Background'}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              onChange={handleBgChange}
+              className="hidden"
+              disabled={uploadingBg}
+            />
+          </label>
+        </div>
         {/* Profile card overlapping banner */}
-        <div className="bg-white border border-slate-200 rounded-2xl px-6 pb-6 pt-0 -mt-12 mx-2 shadow-sm relative">
+        <div className="bg-white border border-slate-200 rounded-2xl px-6 pb-6 pt-0 -mt-12 mx-2 shadow-sm relative z-10">
+          {/* BG save bar — appears inside the card so it's never covered */}
+          {bgFile && (
+            <div className="flex items-center justify-between gap-3 bg-indigo-50 border-b border-indigo-100 -mx-6 px-6 py-3 mb-0 rounded-t-2xl">
+              <span className="text-sm text-indigo-700 font-medium">
+                {uploadingBg ? 'Saving background...' : 'New background image ready to save'}
+              </span>
+              {!uploadingBg && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setBgFile(null); setBgPreview(''); }}
+                    className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveBg}
+                    className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition-colors"
+                  >
+                    Save Background
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-6">
             {/* Avatar */}
             {avatarSrc ? (
@@ -349,7 +435,15 @@ export default function UserProfile() {
                   to={`/worlds/${world.id}`}
                   className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all group flex flex-col"
                 >
-                  <div className="h-1 bg-gradient-to-r from-indigo-400 to-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {getApiAssetUrl(world.cover_image) ? (
+                    <img
+                      src={getApiAssetUrl(world.cover_image)}
+                      alt={world.title}
+                      className="w-full h-28 object-cover group-hover:opacity-95 transition-opacity"
+                    />
+                  ) : (
+                    <div className="h-1 bg-gradient-to-r from-indigo-400 to-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
                   <div className="p-5 flex flex-col flex-1">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <h3 className="text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">

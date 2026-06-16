@@ -18,6 +18,7 @@ vi.mock('../services/api.js', () => ({
   getApiCollection: vi.fn((payload) =>
     Array.isArray(payload) ? payload : payload?.data || [],
   ),
+  getApiAssetUrl: vi.fn((path) => path),
 }));
 
 const mockWorlds = [

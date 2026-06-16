@@ -9,6 +9,7 @@ vi.mock('../services/api.js', () => ({
   default: {
     get: vi.fn(),
   },
+  getApiAssetUrl: vi.fn((path) => path),
 }));
 
 const mockWorlds = [
