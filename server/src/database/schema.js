@@ -71,9 +71,12 @@ export function initDatabase() {
       post_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
       content TEXT NOT NULL,
+      image_url TEXT DEFAULT NULL,
+      parent_id INTEGER DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
-      FOREIGN KEY(user_id) REFERENCES users(id)
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(parent_id) REFERENCES comments(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS likes (
@@ -122,5 +125,16 @@ export function initDatabase() {
   const hasDeletionColumn = columns.some((column) => column.name === 'deletion_scheduled_at');
   if (!hasDeletionColumn) {
     db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
+  }
+
+  const commentColumns = db.prepare("PRAGMA table_info(comments)").all();
+  const hasCommentImageUrl = commentColumns.some((column) => column.name === 'image_url');
+  if (!hasCommentImageUrl) {
+    db.exec('ALTER TABLE comments ADD COLUMN image_url TEXT DEFAULT NULL');
+  }
+
+  const hasParentId = commentColumns.some((column) => column.name === 'parent_id');
+  if (!hasParentId) {
+    db.exec('ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL');
   }
 }

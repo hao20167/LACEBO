@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
 
@@ -66,7 +67,7 @@ export default function WorldManage() {
         status,
       });
       setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
-    } catch {}
+    } catch { }
   };
 
   const handlePost = async (postId, action) => {
@@ -80,7 +81,7 @@ export default function WorldManage() {
         await api.patch(`/posts/${safePostId}/reject`);
       }
       setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
-    } catch {}
+    } catch { }
   };
 
   const handleEvent = async (eventId, status) => {
@@ -90,7 +91,7 @@ export default function WorldManage() {
     try {
       await api.patch(`/events/${safeEventId}`, { status });
       setProposedEvents(proposedEvents.filter((e) => e.id !== eventId));
-    } catch {}
+    } catch { }
   };
 
   const scheduleWorldDeletion = async () => {
@@ -206,15 +207,17 @@ export default function WorldManage() {
     return <div className="text-center text-dark-400 py-12">Loading...</div>;
 
   return (
-    <div>
-      <div className="flex items-center gap-4 mb-6">
+    <div className="space-y-6">
+      {/* ── Page header ──────────────────────────────── */}
+      <div className="flex items-center gap-4 pb-5 border-b border-slate-200">
         <Link
           to={`/worlds/${id}`}
-          className="text-dark-400 hover:text-dark-200 transition"
+          className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium"
         >
-          ← Back to World
+          ← Back
         </Link>
-        <h1 className="text-2xl font-bold text-dark-100">World Management</h1>
+        <div className="h-5 w-px bg-slate-200" />
+        <h1 className="text-2xl font-bold text-slate-900">World Management</h1>
       </div>
 
       {actionMessage && (
@@ -298,166 +301,214 @@ export default function WorldManage() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${tab === t.key ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}`}
+            className={`bg-white rounded-xl p-4 border text-left transition-all ${tab === t.key
+              ? 'border-indigo-300 shadow-md ring-1 ring-indigo-200'
+              : 'border-slate-200 shadow-sm hover:border-indigo-200'
+              }`}
           >
-            {t.label}
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xl">{t.icon}</span>
+              {t.count > 0 && (
+                <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {t.count}
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-sm font-semibold ${tab === t.key ? 'text-indigo-700' : 'text-slate-700'}`}
+            >
+              {t.label}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {t.count === 0 ? 'All clear' : `${t.count} pending`}
+            </p>
           </button>
         ))}
       </div>
 
-      {/* Pending Members */}
-      {tab === 'members' && (
-        <div>
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">
-            Pending Member Requests
-          </h2>
-          {pendingMembers.length === 0 ? (
-            <EmptyState
-              title="No pending requests"
-              description="New member requests will appear here for review."
-            />
-          ) : (
-            <div className="space-y-3">
-              {pendingMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="bg-dark-900 border border-dark-700 rounded-xl p-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between"
-                >
-                  <div>
-                    <span className="font-medium text-dark-200">
-                      {member.display_name}
-                    </span>
-                    <span className="text-dark-500 text-sm ml-2">
-                      @{member.username}
-                    </span>
+      {/* ── Pending Members ───────────────────────────── */}
+      {
+        tab === 'members' && (
+          <section>
+            <h2 className="text-base font-bold text-slate-900 mb-4">
+              Pending Member Requests
+            </h2>
+            {pendingMembers.length === 0 ? (
+              <EmptyState
+                title="No pending requests"
+                description="New member requests will appear here for review."
+              />
+            ) : (
+              <div className="space-y-3">
+                {pendingMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600 flex-shrink-0">
+                        {member.display_name?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-900 text-sm">
+                          {member.display_name}
+                        </span>
+                        <span className="text-slate-400 text-xs ml-1.5">
+                          @{member.username}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleMember(member.id, 'approved')}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        ✓ Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => confirmRejectMember(member)}
+                        className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      >
+                        ✕ Reject
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleMember(member.id, 'approved')}
-                      className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => confirmRejectMember(member)}
-                      className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      }
 
-      {/* Pending Posts */}
-      {tab === 'posts' && (
-        <div>
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">
-            Pending Posts
-          </h2>
-          {pendingPosts.length === 0 ? (
-            <EmptyState
-              title="No pending posts"
-              description="Posts waiting for approval will appear here."
-            />
-          ) : (
-            <div className="space-y-3">
-              {pendingPosts.map((post) => (
-                <div
-                  key={post.id}
-                  className="bg-dark-900 border border-dark-700 rounded-xl p-4"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium text-dark-200">
-                      {post.display_name}
-                    </span>
-                    <span className="text-dark-500 text-sm">
-                      @{post.username}
-                    </span>
+      {/* ── Pending Posts ─────────────────────────────── */}
+      {
+        tab === 'posts' && (
+          <section>
+            <h2 className="text-base font-bold text-slate-900 mb-4">
+              Posts Awaiting Approval
+            </h2>
+            {pendingPosts.length === 0 ? (
+              <EmptyState
+                title="No pending posts"
+                description="Posts waiting for approval will appear here."
+              />
+            ) : (
+              <div className="space-y-3">
+                {pendingPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"
+                  >
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 flex-shrink-0">
+                        {post.display_name?.[0]?.toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-slate-900 text-sm">
+                        {post.display_name}
+                      </span>
+                      <span className="text-slate-400 text-xs">
+                        @{post.username}
+                      </span>
+                    </div>
+                    <p className="text-dark-300 text-sm mb-3">{post.content}</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePost(post.id, 'approve')}
+                        className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => confirmRejectPost(post)}
+                        className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-dark-300 text-sm mb-3">{post.content}</p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handlePost(post.id, 'approve')}
-                      className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => confirmRejectPost(post)}
-                      className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      }
 
-      {/* Proposed Events */}
-      {tab === 'events' && (
-        <div>
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">
-            Proposed Small Events
-          </h2>
-          {proposedEvents.length === 0 ? (
-            <EmptyState
-              title="No event proposals"
-              description="Member-submitted small event proposals will appear here."
-            />
-          ) : (
-            <div className="space-y-3">
-              {proposedEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="bg-dark-900 border border-dark-700 rounded-xl p-4"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs bg-dark-700 text-dark-300 px-2 py-0.5 rounded-full">
-                      SMALL EVENT PROPOSAL
-                    </span>
+      {/* ── Proposed Events ───────────────────────────── */}
+      {
+        tab === 'events' && (
+          <section>
+            <h2 className="text-base font-bold text-slate-900 mb-4">
+              Proposed Small Events
+            </h2>
+            {proposedEvents.length === 0 ? (
+              <EmptyState
+                title="No event proposals"
+                description="Member-submitted small event proposals will appear here."
+              />
+            ) : (
+              <div className="space-y-3">
+                {proposedEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"
+                  >
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                      <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                        PROPOSAL
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        by {event.creator_display_name}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-dark-100 mb-1">
+                      {event.title}
+                    </h3>
+                    <p className="text-dark-400 text-sm mb-1">
+                      {event.description}
+                    </p>
+                    <p className="text-dark-500 text-xs mb-3">
+                      Proposed by {event.creator_display_name}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEvent(event.id, 'open')}
+                        className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      >
+                        Approve & Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => confirmRejectEvent(event)}
+                        className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-dark-100 mb-1">
-                    {event.title}
-                  </h3>
-                  <p className="text-dark-400 text-sm mb-1">
-                    {event.description}
-                  </p>
-                  <p className="text-dark-500 text-xs mb-3">
-                    Proposed by {event.creator_display_name}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEvent(event.id, 'open')}
-                      className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      Approve & Open
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => confirmRejectEvent(event)}
-                      className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      }
+    </div >
+  );
+}
+
+function WorldManageEmptyState({ message }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl py-14 text-center shadow-sm">
+      <div className="text-3xl mb-3">✅</div>
+      <p className="text-slate-500 text-sm">{message}</p>
     </div>
   );
 }
+
+WorldManageEmptyState.propTypes = {
+  message: PropTypes.string.isRequired,
+};

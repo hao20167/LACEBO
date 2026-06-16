@@ -414,6 +414,7 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(commentRes.status).toBe(201);
       expect(commentRes.body.content).toBe('This is a comment');
       expect(commentRes.body.user_id).toBe(playerUser.id);
+      expect(commentRes.body.image_url).toBeNull();
 
       // Fetch comments
       const getCommentsRes = await request(app).get(
@@ -423,6 +424,120 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(getCommentsRes.body.data).toHaveLength(1);
       expect(getCommentsRes.body.data[0].content).toBe('This is a comment');
       expect(getCommentsRes.body.data[0].username).toBe(playerUser.username);
+    });
+
+    it('should allow user to add comments with an image_url and fetch them', async () => {
+      // Add comment with image
+      const commentRes = await request(app)
+        .post(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({
+          content: 'Look at this pic',
+          image_url: '/uploads/images/comment-pic.png',
+        });
+
+      expect(commentRes.status).toBe(201);
+      expect(commentRes.body.content).toBe('Look at this pic');
+      expect(commentRes.body.image_url).toBe('/uploads/images/comment-pic.png');
+
+      // Fetch comments
+      const getCommentsRes = await request(app).get(
+        `/api/posts/${postId}/comments`,
+      );
+      expect(getCommentsRes.status).toBe(200);
+      const comments = getCommentsRes.body.data;
+      expect(comments.some(c => c.content === 'Look at this pic' && c.image_url === '/uploads/images/comment-pic.png')).toBe(true);
+    });
+
+    it('should allow user to add comments with ONLY an image_url and fetch them', async () => {
+      // Add comment with only image
+      const commentRes = await request(app)
+        .post(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({
+          image_url: '/uploads/images/only-comment-pic.png',
+        });
+
+      expect(commentRes.status).toBe(201);
+      expect(commentRes.body.content).toBe('');
+      expect(commentRes.body.image_url).toBe('/uploads/images/only-comment-pic.png');
+
+      // Fetch comments
+      const getCommentsRes = await request(app).get(
+        `/api/posts/${postId}/comments`,
+      );
+      expect(getCommentsRes.status).toBe(200);
+      const comments = getCommentsRes.body.data;
+      expect(comments.some(c => c.content === '' && c.image_url === '/uploads/images/only-comment-pic.png')).toBe(true);
+    });
+
+    it('should allow user to like and unlike a comment', async () => {
+      // Create a comment first
+      const commentRes = await request(app)
+        .post(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Liking test comment' });
+      const commentId = commentRes.body.id;
+
+      // Like comment
+      const likeRes = await request(app)
+        .post(`/api/posts/comments/${commentId}/like`)
+        .set('Authorization', `Bearer ${devToken}`);
+      expect(likeRes.status).toBe(200);
+      expect(likeRes.body.liked).toBe(true);
+
+      // Fetch comment details to check like_count and liked status
+      const getCommentsRes1 = await request(app)
+        .get(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${devToken}`);
+      const comments1 = getCommentsRes1.body.data;
+      const targetComment1 = comments1.find(c => c.id === commentId);
+      expect(targetComment1.like_count).toBe(1);
+      expect(targetComment1.liked).toBe(true);
+
+      // Unlike comment
+      const unlikeRes = await request(app)
+        .post(`/api/posts/comments/${commentId}/like`)
+        .set('Authorization', `Bearer ${devToken}`);
+      expect(unlikeRes.status).toBe(200);
+      expect(unlikeRes.body.liked).toBe(false);
+
+      const getCommentsRes2 = await request(app)
+        .get(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${devToken}`);
+      const comments2 = getCommentsRes2.body.data;
+      const targetComment2 = comments2.find(c => c.id === commentId);
+      expect(targetComment2.like_count).toBe(0);
+      expect(targetComment2.liked).toBe(false);
+    });
+
+    it('should allow user to reply to a comment and fetch nested replies', async () => {
+      // Create parent comment
+      const parentRes = await request(app)
+        .post(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({ content: 'Parent comment' });
+      const parentId = parentRes.body.id;
+
+      // Create reply comment
+      const replyRes = await request(app)
+        .post(`/api/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ content: 'Reply to parent', parent_id: parentId });
+
+      expect(replyRes.status).toBe(201);
+      expect(replyRes.body.content).toBe('Reply to parent');
+      expect(replyRes.body.parent_id).toBe(parentId);
+
+      // Fetch all comments and verify the nested structure exists
+      const getCommentsRes = await request(app).get(
+        `/api/posts/${postId}/comments`,
+      );
+      expect(getCommentsRes.status).toBe(200);
+      const comments = getCommentsRes.body.data;
+      expect(comments).toHaveLength(2); // parent comment + reply
+      const replyComment = comments.find(c => c.id === replyRes.body.id);
+      expect(replyComment.parent_id).toBe(parentId);
     });
   });
 });

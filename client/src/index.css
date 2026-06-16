@@ -5,11 +5,27 @@
 body {
   font-family: 'Inter', sans-serif;
   margin: 0;
+  background-color: #f8fafc;
 }
 
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: #334155 #0f172a;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.22s ease-out both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

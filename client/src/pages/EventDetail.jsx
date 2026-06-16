@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { getApiAssetUrl } from '../services/api';
 import { EventDetailSkeleton } from '../components/SkeletonLoader';
 import { useToastContext } from '../components/Toast';
 import Pagination from '../components/Pagination';
@@ -25,6 +25,14 @@ export default function EventDetail() {
   const [expandedComments, setExpandedComments] = useState({});
   const [comments, setComments] = useState({});
   const [newComment, setNewComment] = useState({});
+  const [commentImageFiles, setCommentImageFiles] = useState({});
+  const [commentImagePreviews, setCommentImagePreviews] = useState({});
+  const [commentUploading, setCommentUploading] = useState({});
+  const [replyActive, setReplyActive] = useState({});
+  const [newReply, setNewReply] = useState({});
+  const [replyImageFiles, setReplyImageFiles] = useState({});
+  const [replyImagePreviews, setReplyImagePreviews] = useState({});
+  const [replyUploading, setReplyUploading] = useState({});
   const [postToDelete, setPostToDelete] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -45,11 +53,7 @@ export default function EventDetail() {
       if (res.data?.pagination) {
         setPagination(res.data.pagination);
       } else {
-        setPagination({
-          totalPages: 1,
-          hasNextPage: false,
-          hasPrevPage: false,
-        });
+        setPagination({ totalPages: 1, hasNextPage: false, hasPrevPage: false });
       }
     } catch {}
   };
@@ -68,6 +72,7 @@ export default function EventDetail() {
   useEffect(() => {
     setPage(1);
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const handlePageChange = (nextPage) => {
@@ -113,9 +118,7 @@ export default function EventDetail() {
     setOpenMenuPostId(null);
   };
 
-  const cancelDeletePost = () => {
-    setPostToDelete(null);
-  };
+  const cancelDeletePost = () => setPostToDelete(null);
 
   const togglePostMenu = (postId) => {
     setOpenMenuPostId(openMenuPostId === postId ? null : postId);
@@ -134,7 +137,6 @@ export default function EventDetail() {
 
   const saveEditedPost = async () => {
     if (!editingPostId || !editContent.trim()) return;
-
     try {
       const res = await api.patch(`/posts/${editingPostId}`, {
         content: editContent.trim(),
@@ -155,7 +157,6 @@ export default function EventDetail() {
 
   const handleDeletePost = async () => {
     if (!postToDelete) return;
-
     try {
       await api.delete(`/posts/${postToDelete.id}`);
       setPosts(posts.filter((post) => post.id !== postToDelete.id));
@@ -177,103 +178,303 @@ export default function EventDetail() {
     } catch {}
   };
 
+  const handleCommentImageChange = (postId, file) => {
+    if (commentImagePreviews[postId]) {
+      URL.revokeObjectURL(commentImagePreviews[postId]);
+    }
+    if (!file) {
+      const nextFiles = { ...commentImageFiles };
+      delete nextFiles[postId];
+      setCommentImageFiles(nextFiles);
+
+      const nextPreviews = { ...commentImagePreviews };
+      delete nextPreviews[postId];
+      setCommentImagePreviews(nextPreviews);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be at most 5MB');
+      return;
+    }
+    const preview = URL.createObjectURL(file);
+    setCommentImageFiles({ ...commentImageFiles, [postId]: file });
+    setCommentImagePreviews({ ...commentImagePreviews, [postId]: preview });
+  };
+
+  const removeCommentImage = (postId) => {
+    handleCommentImageChange(postId, null);
+  };
+
   const handleComment = async (postId) => {
     const content = newComment[postId];
-    if (!content?.trim()) return;
+    if (!content?.trim() && !commentImageFiles[postId]) return;
+
+    setCommentUploading({ ...commentUploading, [postId]: true });
     try {
-      const res = await api.post(`/posts/${postId}/comments`, { content });
+      let imageUrl = null;
+      if (commentImageFiles[postId]) {
+        const formData = new FormData();
+        formData.append('image', commentImageFiles[postId]);
+        const uploadRes = await api.post('/uploads/images', formData);
+        imageUrl = uploadRes.data.url;
+      }
+
+      const payload = { content: content?.trim() || '' };
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+      }
+
+      const res = await api.post(`/posts/${postId}/comments`, payload);
+
       setComments({
         ...comments,
         [postId]: [...(comments[postId] || []), res.data],
       });
       setNewComment({ ...newComment, [postId]: '' });
+
+      // Clean up local preview & file
+      if (commentImagePreviews[postId]) {
+        URL.revokeObjectURL(commentImagePreviews[postId]);
+      }
+      const nextFiles = { ...commentImageFiles };
+      delete nextFiles[postId];
+      setCommentImageFiles(nextFiles);
+
+      const nextPreviews = { ...commentImagePreviews };
+      delete nextPreviews[postId];
+      setCommentImagePreviews(nextPreviews);
+
       setPosts(
         posts.map((p) =>
           p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p,
         ),
       );
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          'Không thể gửi bình luận. Bạn cần là thành viên của World này.',
+      );
+    } finally {
+      const nextUploading = { ...commentUploading };
+      delete nextUploading[postId];
+      setCommentUploading(nextUploading);
+    }
+  };
+
+  const handleCommentLike = async (postId, commentId) => {
+    try {
+      const res = await api.post(`/posts/comments/${commentId}/like`);
+      setComments({
+        ...comments,
+        [postId]: comments[postId].map((c) => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              liked: res.data.liked,
+              like_count: c.like_count + (res.data.liked ? 1 : -1),
+            };
+          }
+          return c;
+        }),
+      });
     } catch {}
+  };
+
+  const handleReplyImageChange = (commentId, file) => {
+    if (replyImagePreviews[commentId]) {
+      URL.revokeObjectURL(replyImagePreviews[commentId]);
+    }
+    if (!file) {
+      const nextFiles = { ...replyImageFiles };
+      delete nextFiles[commentId];
+      setReplyImageFiles(nextFiles);
+
+      const nextPreviews = { ...replyImagePreviews };
+      delete nextPreviews[commentId];
+      setReplyImagePreviews(nextPreviews);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be at most 5MB');
+      return;
+    }
+    const preview = URL.createObjectURL(file);
+    setReplyImageFiles({ ...replyImageFiles, [commentId]: file });
+    setReplyImagePreviews({ ...replyImagePreviews, [commentId]: preview });
+  };
+
+  const removeReplyImage = (commentId) => {
+    handleReplyImageChange(commentId, null);
+  };
+
+  const handleReply = async (postId, parentCommentId) => {
+    const content = newReply[parentCommentId];
+    if (!content?.trim() && !replyImageFiles[parentCommentId]) return;
+
+    setReplyUploading({ ...replyUploading, [parentCommentId]: true });
+    try {
+      let imageUrl = null;
+      if (replyImageFiles[parentCommentId]) {
+        const formData = new FormData();
+        formData.append('image', replyImageFiles[parentCommentId]);
+        const uploadRes = await api.post('/uploads/images', formData);
+        imageUrl = uploadRes.data.url;
+      }
+
+      const payload = {
+        content: content?.trim() || '',
+        parent_id: parentCommentId,
+      };
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+      }
+
+      const res = await api.post(`/posts/${postId}/comments`, payload);
+
+      setComments({
+        ...comments,
+        [postId]: [...(comments[postId] || []), res.data],
+      });
+      setNewReply({ ...newReply, [parentCommentId]: '' });
+      setReplyActive({ ...replyActive, [parentCommentId]: false });
+
+      // Clean up local preview & file
+      if (replyImagePreviews[parentCommentId]) {
+        URL.revokeObjectURL(replyImagePreviews[parentCommentId]);
+      }
+      const nextFiles = { ...replyImageFiles };
+      delete nextFiles[parentCommentId];
+      setReplyImageFiles(nextFiles);
+
+      const nextPreviews = { ...replyImagePreviews };
+      delete nextPreviews[parentCommentId];
+      setReplyImagePreviews(nextPreviews);
+
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p,
+        ),
+      );
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          'Không thể gửi phản hồi. Bạn cần là thành viên của World này.',
+      );
+    } finally {
+      const nextUploading = { ...replyUploading };
+      delete nextUploading[parentCommentId];
+      setReplyUploading(nextUploading);
+    }
   };
 
   if (loading) return <EventDetailSkeleton />;
   if (!event)
     return (
-      <div className="text-center text-dark-400 py-12">Event not found</div>
+      <div className="text-center text-slate-500 py-12">Event not found</div>
     );
 
   const isOpen = event.status === 'open';
+  const isBig = event.event_type === 'big';
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Event Header */}
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              event.event_type === 'big'
-                ? 'bg-primary-900/50 text-primary-300'
-                : 'bg-dark-700 text-dark-300'
-            }`}
-          >
-            {event.event_type === 'big' ? 'BIG EVENT' : 'SMALL EVENT'}
-          </span>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              isOpen
-                ? 'bg-green-900/50 text-green-300'
-                : 'bg-dark-700 text-dark-400'
-            }`}
-          >
-            {event.status.toUpperCase()}
-          </span>
-        </div>
-        <h1 className="text-2xl font-bold text-dark-100 mb-2">{event.title}</h1>
-        <p className="text-dark-300 whitespace-pre-wrap mb-3">
-          {event.description}
-        </p>
-        <div className="flex items-center gap-4 text-sm text-dark-500">
-          <span>By {event.creator_display_name}</span>
-          {event.start_date && (
-            <span>📅 {new Date(event.start_date).toLocaleDateString()}</span>
-          )}
-          {event.end_date && (
-            <span>→ {new Date(event.end_date).toLocaleDateString()}</span>
-          )}
+    <div className="max-w-3xl mx-auto space-y-5">
+      {/* ── Event header ─────────────────────────────── */}
+      <div
+        className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${isBig ? 'border-indigo-200' : 'border-slate-200'}`}
+      >
+        {/* Accent bar */}
+        <div
+          className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`}
+        />
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span
+              className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                isBig
+                  ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              }`}
+            >
+              {isBig ? 'BIG EVENT' : 'SMALL EVENT'}
+            </span>
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
+                isOpen
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}
+            >
+              {event.status.toUpperCase()}
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            {event.title}
+          </h1>
+          <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed mb-4">
+            {event.description}
+          </p>
+          <div className="flex items-center gap-4 text-xs text-slate-400 pt-3 border-t border-slate-100">
+            <span>By {event.creator_display_name}</span>
+            {event.start_date && (
+              <span>📅 {new Date(event.start_date).toLocaleDateString()}</span>
+            )}
+            {event.end_date && (
+              <span>→ {new Date(event.end_date).toLocaleDateString()}</span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Create Post */}
+      {/* ── Closed notice ────────────────────────────── */}
+      {!isOpen && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3.5 text-amber-700 text-sm flex items-center gap-2">
+          <span>🔒</span>
+          <span>This event is closed. Posts are read-only.</span>
+          <span className="sr-only">This event is closed. You can still view the posts.</span>
+        </div>
+      )}
+
+      {/* ── Create post ──────────────────────────────── */}
       {isOpen && user && (
         <form
           onSubmit={handlePost}
-          className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-6"
+          className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
         >
-          <textarea
-            value={newPost}
-            onChange={(e) => setNewPost(e.target.value)}
-            placeholder="Share your thoughts about this event..."
-            rows={3}
-            className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5 text-dark-100 focus:outline-none focus:border-primary-500 transition resize-none mb-3"
-          />
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={posting || !newPost.trim()}
-              className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
-            >
-              {posting ? 'Posting...' : 'Post'}
-            </button>
+          <div className="flex gap-3">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0 mt-0.5">
+              {user.display_name?.[0]?.toUpperCase()}
+            </div>
+            <div className="flex-1">
+              <textarea
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                placeholder="Share your thoughts about this event..."
+                rows={3}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition resize-none text-sm mb-2"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={posting || !newPost.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {posting ? 'Posting...' : 'Post'}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       )}
 
-      {!isOpen && (
-        <div className="bg-dark-800 border border-dark-700 rounded-xl p-4 mb-6 text-center text-dark-400 text-sm">
-          This event is closed. You can still view the posts.
-        </div>
-      )}
-
-      {/* Posts */}
+      {/* ── Posts ────────────────────────────────────── */}
       {posts.length === 0 ? (
         <>
           <span className="sr-only">No posts yet. Be the first to post!</span>
@@ -288,77 +489,78 @@ export default function EventDetail() {
         </>
       ) : (
         <>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="bg-dark-900 border border-dark-700 rounded-xl p-4"
+                className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
               >
                 {/* Post header */}
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-800 flex items-center justify-center text-sm font-medium text-primary-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0">
                     {post.display_name?.[0]?.toUpperCase()}
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-dark-200">
-                      {post.display_name}
-                    </span>
-                    <span className="text-xs text-dark-500 ml-2">
-                      @{post.username}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex items-center gap-2">
-                    <span className="text-xs text-dark-500">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {post.display_name}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        @{post.username}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">
                       {new Date(post.created_at).toLocaleString()}
                     </span>
-                    {post.can_delete && (
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => togglePostMenu(post.id)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-dark-800 text-dark-400 hover:bg-dark-700 hover:text-dark-100 transition"
-                        >
-                          ...
-                        </button>
-                        {openMenuPostId === post.id && (
-                          <div className="absolute right-0 z-20 mt-2 w-36 overflow-hidden rounded-2xl border border-dark-700 bg-dark-900 shadow-2xl">
-                            {post.user_id === user?.id && (
-                              <button
-                                type="button"
-                                onClick={() => startEditingPost(post)}
-                                className="w-full px-4 py-3 text-left text-sm text-dark-100 hover:bg-dark-800"
-                              >
-                                Sửa
-                              </button>
-                            )}
+                  </div>
+                  {post.can_delete && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => togglePostMenu(post.id)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors text-xs"
+                        aria-label="..."
+                      >
+                        •••
+                      </button>
+                      {openMenuPostId === post.id && (
+                        <div className="absolute right-0 z-20 mt-1 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                          {post.user_id === user?.id && (
                             <button
                               type="button"
-                              onClick={() => confirmDeletePost(post)}
-                              className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-dark-800"
+                              onClick={() => startEditingPost(post)}
+                              className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                             >
-                              Xóa
+                              Sửa
                             </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => confirmDeletePost(post)}
+                            className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Post content */}
                 {editingPostId === post.id ? (
-                  <div className="space-y-3 mb-3">
+                  <div className="space-y-3 ml-12">
                     <textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
                       rows={4}
-                      className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-dark-100 focus:outline-none focus:border-primary-500 transition resize-none"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition resize-none text-sm"
                     />
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <div className="flex gap-2 justify-end">
                       <button
                         type="button"
                         onClick={cancelEditingPost}
-                        className="rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 text-sm font-medium text-dark-200 hover:border-dark-500"
+                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                       >
                         Hủy
                       </button>
@@ -366,31 +568,33 @@ export default function EventDetail() {
                         type="button"
                         onClick={saveEditedPost}
                         disabled={!editContent.trim()}
-                        className="rounded-2xl bg-primary-600 px-4 py-3 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
                       >
                         Lưu
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-dark-200 whitespace-pre-wrap mb-3">
+                  <p className="text-slate-700 whitespace-pre-wrap text-sm ml-12 leading-relaxed">
                     {post.content}
                   </p>
                 )}
 
                 {/* Post actions */}
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-5 text-sm mt-3 ml-12">
                   <button
                     onClick={() => handleLike(post.id)}
-                    className={`flex items-center gap-1 transition ${post.liked ? 'text-red-400' : 'text-dark-400 hover:text-red-400'}`}
+                    className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}
                   >
-                    {post.liked ? '❤️' : '🤍'} {post.like_count}
+                    {post.liked ? '❤️' : '🤍'}{' '}
+                    <span className="text-xs">{post.like_count}</span>
                   </button>
                   <button
                     onClick={() => toggleComments(post.id)}
-                    className="flex items-center gap-1 text-dark-400 hover:text-primary-400 transition"
+                    className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
                   >
-                    💬 {post.comment_count}
+                    💬{' '}
+                    <span className="text-xs">{post.comment_count}</span>
                   </button>
                 </div>
 
@@ -404,30 +608,265 @@ export default function EventDetail() {
                       compact
                     />
                   ) : (
-                    (comments[post.id] || []).map(c => (
-                      <div key={c.id} className="flex gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5">
-                          {c.display_name?.[0]?.toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
-                          <span className="text-xs text-dark-500 ml-2">{new Date(c.created_at).toLocaleString()}</span>
-                          <p className="text-dark-300 text-sm">{c.content}</p>
-                        </div>
-                      </div>
-                    ))
+                    (() => {
+                      const allComments = comments[post.id] || [];
+                      const parentComments = allComments.filter(c => !c.parent_id);
+                      const getRepliesForParent = (parentId) => {
+                        return allComments.filter(c => {
+                          if (!c.parent_id) return false;
+                          let current = c;
+                          while (current.parent_id) {
+                            if (current.parent_id === parentId) return true;
+                            const parent = allComments.find(x => x.id === current.parent_id);
+                            if (!parent) break;
+                            current = parent;
+                          }
+                          return false;
+                        });
+                      };
+
+                      return parentComments.map(c => {
+                        const replies = getRepliesForParent(c.id);
+                        return (
+                          <div key={c.id} className="mb-4">
+                            {/* Parent Comment */}
+                            <div className="flex gap-2">
+                              <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+                                {c.display_name?.[0]?.toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="text-sm font-medium text-dark-300">{c.display_name}</span>
+                                  <span className="text-xs text-dark-500">@{c.username}</span>
+                                  <span className="text-xs text-dark-500">{new Date(c.created_at).toLocaleString()}</span>
+                                </div>
+                                <p className="text-dark-300 text-sm whitespace-pre-wrap mt-0.5">{c.content}</p>
+                                {c.image_url && (
+                                  <img
+                                    src={getApiAssetUrl(c.image_url)}
+                                    alt="Bình luận"
+                                    className="mt-1.5 max-h-40 rounded-lg object-contain border border-dark-600 shadow-sm"
+                                  />
+                                )}
+                                
+                                {/* Comment Actions */}
+                                <div className="flex items-center gap-4 text-xs mt-1 text-dark-500">
+                                  <button
+                                    onClick={() => handleCommentLike(post.id, c.id)}
+                                    className={`flex items-center gap-1 hover:text-red-400 transition-colors ${c.liked ? 'text-red-500' : 'text-dark-400'}`}
+                                  >
+                                    {c.liked ? '❤️' : '🤍'} <span>{c.like_count || 0}</span>
+                                  </button>
+                                  {user && (
+                                    <button
+                                      onClick={() => setReplyActive({ ...replyActive, [c.id]: !replyActive[c.id] })}
+                                      className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-dark-400"
+                                    >
+                                      💬 Phản hồi
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Nested Replies Container */}
+                            <div className="ml-8 mt-2 space-y-3 border-l border-dark-700 pl-4">
+                              {replies.map(r => {
+                                const parentComment = allComments.find(x => x.id === r.parent_id);
+                                const replyToUsername = parentComment && parentComment.id !== c.id ? parentComment.username : null;
+
+                                return (
+                                  <div key={r.id} className="flex gap-2">
+                                    <div className="w-5 h-5 rounded-full bg-dark-700 flex items-center justify-center text-[10px] text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+                                      {r.display_name?.[0]?.toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                                        <span className="text-xs font-medium text-dark-300">{r.display_name}</span>
+                                        <span className="text-[10px] text-dark-500">@{r.username}</span>
+                                        {replyToUsername && (
+                                          <span className="text-[10px] text-indigo-400 font-medium">
+                                            phản hồi @{replyToUsername}
+                                          </span>
+                                        )}
+                                        <span className="text-[10px] text-dark-500">{new Date(r.created_at).toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-dark-300 text-xs whitespace-pre-wrap mt-0.5">{r.content}</p>
+                                      {r.image_url && (
+                                        <img
+                                          src={getApiAssetUrl(r.image_url)}
+                                          alt="Bình luận"
+                                          className="mt-1.5 max-h-32 rounded-lg object-contain border border-dark-600 shadow-sm"
+                                        />
+                                      )}
+
+                                      {/* Reply Actions */}
+                                      <div className="flex items-center gap-4 text-[10px] mt-1 text-dark-500">
+                                        <button
+                                          onClick={() => handleCommentLike(post.id, r.id)}
+                                          className={`flex items-center gap-1 hover:text-red-400 transition-colors ${r.liked ? 'text-red-500' : 'text-dark-400'}`}
+                                        >
+                                          {r.liked ? '❤️' : '🤍'} <span>{r.like_count || 0}</span>
+                                        </button>
+                                        {user && (
+                                          <button
+                                            onClick={() => {
+                                              setReplyActive({ ...replyActive, [c.id]: true });
+                                              setNewReply({ ...newReply, [c.id]: `@${r.username} ` });
+                                            }}
+                                            className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-dark-400"
+                                          >
+                                            💬 Phản hồi
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Reply Input Form under root parent comment */}
+                              {user && replyActive[c.id] && (
+                                <div className="space-y-2 mt-2 pt-2 border-t border-dark-700">
+                                  {/* Reply Image preview */}
+                                  {replyImagePreviews[c.id] && (
+                                    <div className="relative inline-block mt-1">
+                                      <img
+                                        src={replyImagePreviews[c.id]}
+                                        alt="Preview"
+                                        className="max-h-20 max-w-xs rounded-lg object-contain border border-dark-600"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => removeReplyImage(c.id)}
+                                        className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md border border-white font-bold"
+                                        title="Xóa ảnh"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Reply Input Row */}
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder={replyUploading[c.id] ? "Uploading..." : "Viết phản hồi..."}
+                                      value={newReply[c.id] || ''}
+                                      onChange={e => setNewReply({ ...newReply, [c.id]: e.target.value })}
+                                      onKeyDown={e => e.key === 'Enter' && !replyUploading[c.id] && handleReply(post.id, c.id)}
+                                      disabled={replyUploading[c.id]}
+                                      className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-xs text-dark-100 focus:outline-none focus:border-primary-500 transition disabled:opacity-60"
+                                    />
+
+                                    {/* Hidden File Input for Reply */}
+                                    <input
+                                      type="file"
+                                      id={`reply-image-input-${c.id}`}
+                                      accept="image/*"
+                                      onChange={e => handleReplyImageChange(c.id, e.target.files?.[0])}
+                                      className="hidden"
+                                      disabled={replyUploading[c.id]}
+                                    />
+
+                                    {/* Reply Attachment Button */}
+                                    <label
+                                      htmlFor={`reply-image-input-${c.id}`}
+                                      className={`cursor-pointer rounded-lg border border-dark-600 bg-dark-800 p-1.5 text-xs text-dark-300 hover:text-dark-100 hover:bg-dark-700 transition flex items-center justify-center shrink-0 ${replyUploading[c.id] ? 'opacity-60 pointer-events-none' : ''}`}
+                                      title="Tải ảnh lên"
+                                    >
+                                      📷
+                                    </label>
+
+                                    {/* Send/Cancel Buttons */}
+                                    <button
+                                      onClick={() => handleReply(post.id, c.id)}
+                                      disabled={replyUploading[c.id] || (!newReply[c.id]?.trim() && !replyImageFiles[c.id])}
+                                      className="bg-primary-600 hover:bg-primary-500 text-white px-3.5 py-1.5 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 shrink-0"
+                                    >
+                                      {replyUploading[c.id] ? '...' : 'Gửi'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setReplyActive({ ...replyActive, [c.id]: false });
+                                        setNewReply({ ...newReply, [c.id]: '' });
+                                        removeReplyImage(c.id);
+                                      }}
+                                      disabled={replyUploading[c.id]}
+                                      className="bg-dark-700 hover:bg-dark-600 text-dark-300 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition shrink-0"
+                                    >
+                                      Hủy
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()
                   )}
                   {user && (
-                    <div className="flex gap-2 mt-2">
-                      <input type="text" placeholder="Write a comment..."
-                        value={newComment[post.id] || ''}
-                        onChange={e => setNewComment({ ...newComment, [post.id]: e.target.value })}
-                        onKeyDown={e => e.key === 'Enter' && handleComment(post.id)}
-                        className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition" />
-                      <button onClick={() => handleComment(post.id)}
-                        className="bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
-                        Send
-                      </button>
+                    <div className="space-y-2 mt-2">
+                      {/* Image preview row */}
+                      {commentImagePreviews[post.id] && (
+                        <div className="relative inline-block mt-1">
+                          <img
+                            src={commentImagePreviews[post.id]}
+                            alt="Preview"
+                            className="max-h-20 max-w-xs rounded-lg object-contain border border-dark-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeCommentImage(post.id)}
+                            className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md border border-white font-bold"
+                            title="Xóa ảnh"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Input row */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder={commentUploading[post.id] ? "Uploading..." : "Write a comment..."}
+                          value={newComment[post.id] || ''}
+                          onChange={e => setNewComment({ ...newComment, [post.id]: e.target.value })}
+                          onKeyDown={e => e.key === 'Enter' && !commentUploading[post.id] && handleComment(post.id)}
+                          disabled={commentUploading[post.id]}
+                          className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-dark-100 focus:outline-none focus:border-primary-500 transition disabled:opacity-60"
+                        />
+
+                        {/* Hidden File Input */}
+                        <input
+                          type="file"
+                          id={`comment-image-input-${post.id}`}
+                          accept="image/*"
+                          onChange={e => handleCommentImageChange(post.id, e.target.files?.[0])}
+                          className="hidden"
+                          disabled={commentUploading[post.id]}
+                        />
+
+                        {/* Attachment Button */}
+                        <label
+                          htmlFor={`comment-image-input-${post.id}`}
+                          className={`cursor-pointer rounded-lg border border-dark-600 bg-dark-800 p-1.5 text-sm text-dark-300 hover:text-dark-100 hover:bg-dark-700 transition flex items-center justify-center shrink-0 ${commentUploading[post.id] ? 'opacity-60 pointer-events-none' : ''}`}
+                          title="Tải ảnh lên"
+                        >
+                          📷
+                        </label>
+
+                        {/* Submit button */}
+                        <button
+                          onClick={() => handleComment(post.id)}
+                          disabled={commentUploading[post.id] || (!newComment[post.id]?.trim() && !commentImageFiles[post.id])}
+                          className="bg-primary-600 hover:bg-primary-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-50 shrink-0"
+                        >
+                          {commentUploading[post.id] ? '...' : 'Send'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -446,35 +885,34 @@ export default function EventDetail() {
         </>
       )}
 
+      {/* ── Delete confirm modal ──────────────────────── */}
       {postToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-dark-700 bg-dark-900 p-6 shadow-2xl">
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-dark-100">
-                Xác nhận xóa bài viết
-              </h2>
-              <p className="mt-2 text-sm text-dark-300">
-                Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể
-                hoàn tác.
-              </p>
-            </div>
-            <div className="mb-5 rounded-2xl border border-dark-700 bg-dark-800 p-4 text-sm text-dark-200 whitespace-pre-wrap">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">
+              Xác nhận xóa bài viết
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể
+              hoàn tác.
+            </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-wrap mb-5 max-h-32 overflow-y-auto">
               {postToDelete.content}
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <div className="flex gap-3 justify-end">
               <button
                 type="button"
                 onClick={cancelDeletePost}
-                className="rounded-2xl border border-dark-700 bg-dark-800 px-4 py-3 text-sm font-medium text-dark-200 hover:border-dark-500"
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Hủy
               </button>
               <button
                 type="button"
                 onClick={handleDeletePost}
-                className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-medium text-white hover:bg-red-400"
+                className="rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 transition-colors"
               >
-                Xóa
+                Xóa bài viết
               </button>
             </div>
           </div>

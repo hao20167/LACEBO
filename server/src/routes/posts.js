@@ -318,6 +318,26 @@ router.get(
   `,
       )
       .all(req.params.postId, limit, offset);
+
+    if (req.user && comments.length > 0) {
+      const commentIds = comments.map((c) => c.id);
+      const placeholders = commentIds.map(() => '?').join(', ');
+      const likedRows = db
+        .prepare(
+          `SELECT comment_id FROM likes WHERE user_id = ? AND comment_id IN (${placeholders})`,
+        )
+        .all(req.user.id, ...commentIds);
+      const likedCommentIds = new Set(likedRows.map((row) => row.comment_id));
+
+      for (const comment of comments) {
+        comment.liked = likedCommentIds.has(comment.id);
+      }
+    } else {
+      for (const comment of comments) {
+        comment.liked = false;
+      }
+    }
+
     const total = db
       .prepare(`SELECT COUNT(*) as count FROM comments WHERE post_id = ?`)
       .get(req.params.postId).count;
@@ -342,14 +362,16 @@ router.post(
       .get(post.world_id, req.user.id);
     if (!member) return res.status(403).json({ error: 'Not a member' });
 
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ error: 'Content required' });
+    const { content, image_url, parent_id } = req.body;
+    if (!content?.trim() && !image_url) {
+      return res.status(400).json({ error: 'Content or image_url required' });
+    }
 
     const result = db
       .prepare(
-        'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
+        'INSERT INTO comments (post_id, user_id, content, image_url, parent_id) VALUES (?, ?, ?, ?, ?)',
       )
-      .run(post.id, req.user.id, content);
+      .run(post.id, req.user.id, content?.trim() || '', image_url || null, parent_id || null);
     addCredits(post.world_id, req.user.id, 2);
 
     const comment = db
@@ -364,5 +386,30 @@ router.post(
     res.status(201).json(comment);
   },
 );
+
+router.post('/comments/:commentId/like', authMiddleware, (req, res) => {
+  const commentId = req.params.commentId;
+  const comment = db.prepare('SELECT * FROM comments WHERE id = ?').get(commentId);
+  if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+  const post = db.prepare('SELECT world_id FROM posts WHERE id = ?').get(comment.post_id);
+  if (!post) return res.status(404).json({ error: 'Associated post not found' });
+
+  const existing = db
+    .prepare('SELECT id FROM likes WHERE comment_id = ? AND user_id = ?')
+    .get(commentId, req.user.id);
+  if (existing) {
+    db.prepare('DELETE FROM likes WHERE id = ?').run(existing.id);
+    addCredits(post.world_id, comment.user_id, -1);
+    res.json({ liked: false });
+  } else {
+    db.prepare('INSERT INTO likes (comment_id, user_id) VALUES (?, ?)').run(
+      commentId,
+      req.user.id,
+    );
+    addCredits(post.world_id, comment.user_id, 1);
+    res.json({ liked: true });
+  }
+});
 
 export default router;

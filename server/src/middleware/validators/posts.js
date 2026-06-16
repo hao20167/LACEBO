@@ -19,12 +19,20 @@ export const createCommentValidators = [
     .isInt({ min: 1 })
     .withMessage('Post ID must be a positive integer'),
   body('content')
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage('Content is required')
     .isLength({ max: 2000 })
     .withMessage('Comment must be at most 2000 characters')
     .escape(),
+  body('image_url')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 2048 })
+    .withMessage('image_url must be at most 2048 characters'),
+  body('parent_id')
+    .optional({ nullable: true, checkFalsy: true })
+    .isInt({ min: 1 })
+    .withMessage('parent_id must be a positive integer'),
 ];
 
 export const createAnnouncementValidators = [
