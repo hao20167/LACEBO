@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../database/connection.js';
 import { authMiddleware } from '../config/auth.js';
 import { isDev, isMember } from '../helpers/world.js';
+import { authRateLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
 import {
   createEventValidators,
@@ -96,6 +97,7 @@ router.post(
 
 router.patch(
   '/:eventId',
+  authRateLimiter,
   authMiddleware,
   validate(updateEventValidators),
   (req, res) => {
