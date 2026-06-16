@@ -137,4 +137,10 @@ export function initDatabase() {
   if (!hasParentId) {
     db.exec('ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL');
   }
+
+  const userColumns = db.prepare("PRAGMA table_info(users)").all();
+  const hasUserBackground = userColumns.some((column) => column.name === 'background_image_url');
+  if (!hasUserBackground) {
+    db.exec('ALTER TABLE users ADD COLUMN background_image_url TEXT DEFAULT NULL');
+  }
 }

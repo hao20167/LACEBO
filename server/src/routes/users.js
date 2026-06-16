@@ -62,7 +62,7 @@ router.post(
 router.get('/me', authMiddleware, (req, res) => {
   const user = db
     .prepare(
-      'SELECT id, username, email, display_name, avatar_url, created_at FROM users WHERE id = ?',
+      'SELECT id, username, email, display_name, avatar_url, background_image_url, created_at FROM users WHERE id = ?',
     )
     .get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -74,7 +74,7 @@ router.patch(
   authMiddleware,
   validate(updateProfileValidators),
   (req, res) => {
-    const { display_name, avatar } = req.body;
+    const { display_name, avatar, background_image } = req.body;
     const updates = [];
     const values = [];
 
@@ -88,6 +88,11 @@ router.patch(
       values.push(avatar.trim());
     }
 
+    if (background_image !== undefined) {
+      updates.push('background_image_url = ?');
+      values.push(background_image.trim());
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No profile fields provided' });
     }
@@ -99,7 +104,7 @@ router.patch(
 
     const user = db
       .prepare(
-        'SELECT id, username, email, display_name, avatar_url, created_at FROM users WHERE id = ?',
+        'SELECT id, username, email, display_name, avatar_url, background_image_url, created_at FROM users WHERE id = ?',
       )
       .get(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });

@@ -34,6 +34,9 @@ export default function UserProfile() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
+  const [bgFile, setBgFile] = useState(null);
+  const [bgPreview, setBgPreview] = useState('');
+  const [uploadingBg, setUploadingBg] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,6 +76,41 @@ export default function UserProfile() {
       URL.revokeObjectURL(nextPreview);
     };
   }, [avatarFile]);
+
+  useEffect(() => {
+    if (!bgFile) {
+      setBgPreview('');
+      return undefined;
+    }
+    const nextPreview = URL.createObjectURL(bgFile);
+    setBgPreview(nextPreview);
+    return () => {
+      URL.revokeObjectURL(nextPreview);
+    };
+  }, [bgFile]);
+
+  const handleBgChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setBgFile(file);
+  };
+
+  const handleSaveBg = async () => {
+    if (!bgFile) return;
+    setUploadingBg(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', bgFile);
+      const uploadRes = await api.post('/uploads/images', formData);
+      const profileRes = await api.patch('/users/me', { background_image: uploadRes.data.url });
+      setProfile(profileRes.data);
+      updateUser?.(profileRes.data);
+      setBgFile(null);
+      setSaveMessage('Background updated.');
+    } catch (err) {
+      setSaveError(getApiErrorMessage(err, 'Unable to update background.'));
+    }
+    setUploadingBg(false);
+  };
 
   const displayName = profile?.display_name || profile?.username || 'User';
   const avatarSrc = avatarPreview || getApiAssetUrl(profile?.avatar_url);
@@ -163,8 +201,50 @@ export default function UserProfile() {
     <div className="space-y-8">
       {/* ── Banner + Profile card ────────────────────── */}
       <div>
-        {/* Gradient banner */}
-        <div className="h-36 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 shadow-sm" />
+        {/* Background banner — clickable to upload */}
+        <div className="relative h-36 rounded-2xl overflow-hidden shadow-sm group">
+          {bgPreview || getApiAssetUrl(profile?.background_image_url) ? (
+            <img
+              src={bgPreview || getApiAssetUrl(profile?.background_image_url)}
+              alt="Profile background"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600" />
+          )}
+          {/* Hover overlay to change background */}
+          <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer gap-1">
+            <span className="text-white text-sm font-medium">
+              {uploadingBg ? 'Uploading...' : '📷 Change Background'}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              onChange={handleBgChange}
+              className="hidden"
+              disabled={uploadingBg}
+            />
+          </label>
+        </div>
+        {/* Show save button when a new bg is selected */}
+        {bgFile && !uploadingBg && (
+          <div className="flex gap-2 mt-2 justify-end">
+            <button
+              type="button"
+              onClick={() => { setBgFile(null); setBgPreview(''); }}
+              className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveBg}
+              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition-colors"
+            >
+              Save Background
+            </button>
+          </div>
+        )}
 
         {/* Profile card overlapping banner */}
         <div className="bg-white border border-slate-200 rounded-2xl px-6 pb-6 pt-0 -mt-12 mx-2 shadow-sm relative">
