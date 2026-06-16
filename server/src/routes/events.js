@@ -63,7 +63,7 @@ router.post(
 
     let status;
     if (member.role === 'dev') {
-      status = event_type === 'big' ? 'open' : 'approved';
+      status = 'open';
     } else {
       if (event_type === 'big')
         return res
