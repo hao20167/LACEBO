@@ -227,17 +227,14 @@ export default function WorldDetail() {
                   </label>
                 )}
               </div>
+            ) : isDev ? (
+              <label className="flex h-28 cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-slate-100 text-indigo-500 text-sm font-medium hover:from-indigo-100 hover:to-violet-100 transition-colors">
+                {uploadingCover ? 'Uploading...' : '📷 Add Cover Image'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+                  onChange={e => handleUploadImage('cover_image', e.target.files?.[0])} />
+              </label>
             ) : (
-              <div className="relative group">
-                <div className="h-2 bg-gradient-to-r from-indigo-500 to-violet-500" />
-                {isDev && (
-                  <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/10 text-indigo-700 text-xs font-semibold">
-                    {uploadingCover ? 'Uploading...' : '📷 Add Cover Image'}
-                    <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
-                      onChange={e => handleUploadImage('cover_image', e.target.files?.[0])} />
-                  </label>
-                )}
-              </div>
+              <div className="h-2 bg-gradient-to-r from-indigo-500 to-violet-500" />
             )}
             <div className="p-6">
               <h1 className="text-xl font-bold text-slate-900 mb-2 leading-tight">
@@ -346,12 +343,20 @@ export default function WorldDetail() {
                     />
                     <Link
                       to={`/events/${event.id}`}
-                      className={`block bg-white border rounded-xl p-4 hover:shadow-md transition-all ${
+                      className={`block bg-white border rounded-xl overflow-hidden hover:shadow-md transition-all ${
                         event.event_type === 'big'
                           ? 'border-l-4 border-l-indigo-400 border-y border-r border-slate-200'
                           : 'border border-slate-200'
                       }`}
                     >
+                      {getApiAssetUrl(event.thumbnail_url) && (
+                        <img
+                          src={getApiAssetUrl(event.thumbnail_url)}
+                          alt={event.title}
+                          className="w-full h-24 object-cover"
+                        />
+                      )}
+                      <div className="p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span
                           className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
@@ -395,6 +400,7 @@ export default function WorldDetail() {
                           </span>
                         )}
                         <span>📝 {event.post_count} posts</span>
+                      </div>
                       </div>
                     </Link>
                   </div>
