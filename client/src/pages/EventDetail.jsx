@@ -450,9 +450,17 @@ export default function EventDetail() {
           className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
         >
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0 mt-0.5">
-              {user.display_name?.[0]?.toUpperCase()}
-            </div>
+            {getApiAssetUrl(user.avatar_url) ? (
+              <img
+                src={getApiAssetUrl(user.avatar_url)}
+                alt={user.display_name}
+                className="w-8 h-8 rounded-full object-cover border border-indigo-200 flex-shrink-0 mt-0.5"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0 mt-0.5">
+                {user.display_name?.[0]?.toUpperCase()}
+              </div>
+            )}
             <div className="flex-1">
               <textarea
                 value={newPost}
@@ -498,9 +506,17 @@ export default function EventDetail() {
               >
                 {/* Post header */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0">
-                    {post.display_name?.[0]?.toUpperCase()}
-                  </div>
+                  {getApiAssetUrl(post.avatar_url) ? (
+                    <img
+                      src={getApiAssetUrl(post.avatar_url)}
+                      alt={post.display_name}
+                      className="w-9 h-9 rounded-full object-cover border border-indigo-200 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0">
+                      {post.display_name?.[0]?.toUpperCase()}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-sm font-semibold text-slate-900">
@@ -785,9 +801,17 @@ function CommentItem({
     <div className="mb-4">
       {/* Parent Comment */}
       <div className="flex gap-2">
-        <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5 font-bold">
-          {comment.display_name?.[0]?.toUpperCase()}
-        </div>
+        {getApiAssetUrl(comment.avatar_url) ? (
+          <img
+            src={getApiAssetUrl(comment.avatar_url)}
+            alt={comment.display_name}
+            className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5"
+          />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+            {comment.display_name?.[0]?.toUpperCase()}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5">
             <span className="text-sm font-medium text-dark-300">{comment.display_name}</span>
@@ -831,9 +855,17 @@ function CommentItem({
 
           return (
             <div key={r.id} className="flex gap-2">
-              <div className="w-5 h-5 rounded-full bg-dark-700 flex items-center justify-center text-[10px] text-dark-300 flex-shrink-0 mt-0.5 font-bold">
-                {r.display_name?.[0]?.toUpperCase()}
-              </div>
+              {getApiAssetUrl(r.avatar_url) ? (
+                <img
+                  src={getApiAssetUrl(r.avatar_url)}
+                  alt={r.display_name}
+                  className="w-5 h-5 rounded-full object-cover flex-shrink-0 mt-0.5"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-dark-700 flex items-center justify-center text-[10px] text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+                  {r.display_name?.[0]?.toUpperCase()}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span className="text-xs font-medium text-dark-300">{r.display_name}</span>
