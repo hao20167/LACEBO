@@ -97,6 +97,7 @@ export default function UserProfile() {
   const handleSaveBg = async () => {
     if (!bgFile) return;
     setUploadingBg(true);
+    setSaveError('');
     try {
       const formData = new FormData();
       formData.append('image', bgFile);
@@ -108,8 +109,10 @@ export default function UserProfile() {
       setSaveMessage('Background updated.');
     } catch (err) {
       setSaveError(getApiErrorMessage(err, 'Unable to update background.'));
+      setBgFile(null);
+    } finally {
+      setUploadingBg(false);
     }
-    setUploadingBg(false);
   };
 
   const displayName = profile?.display_name || profile?.username || 'User';
