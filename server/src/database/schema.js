@@ -121,10 +121,16 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_worlds_public_created ON worlds(is_public, created_at);
   `);
 
-  const columns = db.prepare("PRAGMA table_info(worlds)").all();
-  const hasDeletionColumn = columns.some((column) => column.name === 'deletion_scheduled_at');
+  const worldColumns = db.prepare("PRAGMA table_info(worlds)").all();
+
+  const hasDeletionColumn = worldColumns.some((column) => column.name === 'deletion_scheduled_at');
   if (!hasDeletionColumn) {
     db.exec('ALTER TABLE worlds ADD COLUMN deletion_scheduled_at DATETIME DEFAULT NULL');
+  }
+
+  const hasWorldBackground = worldColumns.some((column) => column.name === 'background_image_url');
+  if (!hasWorldBackground) {
+    db.exec('ALTER TABLE worlds ADD COLUMN background_image_url TEXT DEFAULT NULL');
   }
 
   const commentColumns = db.prepare("PRAGMA table_info(comments)").all();
@@ -136,6 +142,17 @@ export function initDatabase() {
   const hasParentId = commentColumns.some((column) => column.name === 'parent_id');
   if (!hasParentId) {
     db.exec('ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL');
+  }
+
+  const eventColumns = db.prepare("PRAGMA table_info(events)").all();
+  const hasEventThumbnail = eventColumns.some((column) => column.name === 'thumbnail_url');
+  if (!hasEventThumbnail) {
+    db.exec('ALTER TABLE events ADD COLUMN thumbnail_url TEXT DEFAULT NULL');
+  }
+
+  const hasEventBackground = eventColumns.some((column) => column.name === 'background_image_url');
+  if (!hasEventBackground) {
+    db.exec('ALTER TABLE events ADD COLUMN background_image_url TEXT DEFAULT NULL');
   }
 
   const userColumns = db.prepare("PRAGMA table_info(users)").all();

@@ -44,6 +44,7 @@ export default function EventDetail() {
     hasNextPage: false,
     hasPrevPage: false,
   });
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   const fetchPosts = async (pageNumber = 1) => {
     try {
@@ -385,40 +386,108 @@ export default function EventDetail() {
   const isOpen = event.status === 'open';
   const isBig = event.event_type === 'big';
 
+  const handleUploadEventImage = async (field, file) => {
+    if (!file) return;
+    setUploadingEventImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const uploadRes = await api.post('/uploads/images', formData);
+      await api.patch(`/events/${eventId}`, { [field]: uploadRes.data.url });
+      const res = await api.get(`/events/${eventId}`);
+      setEvent(res.data);
+      toast.success('Image updated.');
+    } catch {
+      toast.error('Failed to upload image.');
+    }
+    setUploadingEventImage(false);
+  };
+
+  const isDev = user && event.created_by && user.id === event.created_by;
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       {/* ── Event header ─────────────────────────────── */}
       <div
         className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${isBig ? 'border-indigo-200' : 'border-slate-200'}`}
       >
-        {/* Accent bar */}
-        <div
-          className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`}
-        />
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                isBig
-                  ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
-                  : 'bg-slate-100 text-slate-600 border-slate-200'
-              }`}
-            >
-              {isBig ? 'BIG EVENT' : 'SMALL EVENT'}
-            </span>
-            <span
-              className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
-                isOpen
-                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                  : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}
-            >
-              {event.status.toUpperCase()}
-            </span>
+        {/* Background image or accent bar */}
+        {getApiAssetUrl(event.background_image_url) ? (
+          <div className="relative h-40 group">
+            <img
+              src={getApiAssetUrl(event.background_image_url)}
+              alt="Event background"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            {isDev && (
+              <label className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-xs px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors">
+                {uploadingEventImage ? '...' : '📷 Change BG'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+                  onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+              </label>
+            )}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            {event.title}
-          </h1>
+        ) : isDev ? (
+          <label className={`flex h-20 cursor-pointer items-center justify-center gap-2 text-sm font-medium transition-colors ${isBig ? 'bg-indigo-50 text-indigo-500 hover:bg-indigo-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+            {uploadingEventImage ? 'Uploading...' : '📷 Add Background Image'}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+              onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+          </label>
+        ) : (
+          <div className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
+        )}
+
+        {/* Cover image (full-width, above title) */}
+        {getApiAssetUrl(event.thumbnail_url) ? (
+          <div className="relative group">
+            <img
+              src={getApiAssetUrl(event.thumbnail_url)}
+              alt="Event cover"
+              className="w-full h-36 object-cover"
+            />
+            {isDev && (
+              <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs font-medium">
+                {uploadingEventImage ? 'Uploading...' : '📷 Change Cover'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+                  onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+              </label>
+            )}
+          </div>
+        ) : isDev ? (
+          <label className={`flex h-24 cursor-pointer items-center justify-center gap-2 border-b text-sm font-medium transition-colors ${isBig ? 'bg-indigo-50/50 border-indigo-100 text-indigo-400 hover:bg-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>
+            {uploadingEventImage ? 'Uploading...' : '📷 Add Cover Image'}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+              onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+          </label>
+        ) : null}
+
+        <div className="p-6">
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-3">
+                <span
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                    isBig
+                      ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {isBig ? 'BIG EVENT' : 'SMALL EVENT'}
+                </span>
+                <span
+                  className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
+                    isOpen
+                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                  }`}
+                >
+                  {event.status.toUpperCase()}
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">
+                {event.title}
+              </h1>
+            </div>
           <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed mb-4">
             {event.description}
           </p>
@@ -450,9 +519,17 @@ export default function EventDetail() {
           className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
         >
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0 mt-0.5">
-              {user.display_name?.[0]?.toUpperCase()}
-            </div>
+            {getApiAssetUrl(user.avatar_url) ? (
+              <img
+                src={getApiAssetUrl(user.avatar_url)}
+                alt={user.display_name}
+                className="w-8 h-8 rounded-full object-cover border border-indigo-200 flex-shrink-0 mt-0.5"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0 mt-0.5">
+                {user.display_name?.[0]?.toUpperCase()}
+              </div>
+            )}
             <div className="flex-1">
               <textarea
                 value={newPost}
@@ -498,9 +575,17 @@ export default function EventDetail() {
               >
                 {/* Post header */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0">
-                    {post.display_name?.[0]?.toUpperCase()}
-                  </div>
+                  {getApiAssetUrl(post.avatar_url) ? (
+                    <img
+                      src={getApiAssetUrl(post.avatar_url)}
+                      alt={post.display_name}
+                      className="w-9 h-9 rounded-full object-cover border border-indigo-200 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0">
+                      {post.display_name?.[0]?.toUpperCase()}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-sm font-semibold text-slate-900">
@@ -785,9 +870,17 @@ function CommentItem({
     <div className="mb-4">
       {/* Parent Comment */}
       <div className="flex gap-2">
-        <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5 font-bold">
-          {comment.display_name?.[0]?.toUpperCase()}
-        </div>
+        {getApiAssetUrl(comment.avatar_url) ? (
+          <img
+            src={getApiAssetUrl(comment.avatar_url)}
+            alt={comment.display_name}
+            className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5"
+          />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center text-xs text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+            {comment.display_name?.[0]?.toUpperCase()}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5">
             <span className="text-sm font-medium text-dark-300">{comment.display_name}</span>
@@ -831,9 +924,17 @@ function CommentItem({
 
           return (
             <div key={r.id} className="flex gap-2">
-              <div className="w-5 h-5 rounded-full bg-dark-700 flex items-center justify-center text-[10px] text-dark-300 flex-shrink-0 mt-0.5 font-bold">
-                {r.display_name?.[0]?.toUpperCase()}
-              </div>
+              {getApiAssetUrl(r.avatar_url) ? (
+                <img
+                  src={getApiAssetUrl(r.avatar_url)}
+                  alt={r.display_name}
+                  className="w-5 h-5 rounded-full object-cover flex-shrink-0 mt-0.5"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-dark-700 flex items-center justify-center text-[10px] text-dark-300 flex-shrink-0 mt-0.5 font-bold">
+                  {r.display_name?.[0]?.toUpperCase()}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span className="text-xs font-medium text-dark-300">{r.display_name}</span>
@@ -964,6 +1065,7 @@ CommentItem.propTypes = {
     id: PropTypes.number.isRequired,
     display_name: PropTypes.string,
     username: PropTypes.string,
+    avatar_url: PropTypes.string,
     created_at: PropTypes.string.isRequired,
     content: PropTypes.string,
     image_url: PropTypes.string,
@@ -976,6 +1078,7 @@ CommentItem.propTypes = {
       id: PropTypes.number.isRequired,
       display_name: PropTypes.string,
       username: PropTypes.string,
+      avatar_url: PropTypes.string,
       created_at: PropTypes.string.isRequired,
       content: PropTypes.string,
       image_url: PropTypes.string,

@@ -6,6 +6,18 @@ import { getApiAssetUrl } from '../services/api.js';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
+function PillIcon() {
+  return (
+    <svg width="28" height="16" viewBox="0 0 28 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0.5" y="0.5" width="27" height="15" rx="7.5" stroke="#4f46e5" strokeWidth="1" fill="none"/>
+      <path d="M14 0.5 C14 0.5 14 15.5 14 15.5" stroke="#4f46e5" strokeWidth="1"/>
+      <rect x="1" y="1" width="12.5" height="14" rx="7" fill="#4f46e5"/>
+      <rect x="14.5" y="1" width="12.5" height="14" rx="7" fill="white"/>
+      <rect x="0.5" y="0.5" width="27" height="15" rx="7.5" stroke="#4f46e5" strokeWidth="1"/>
+    </svg>
+  );
+}
+
 function GlobeIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
@@ -92,12 +104,10 @@ function SidebarContent({ onClose }) {
         <Link
           to="/"
           onClick={onClose}
-          className="flex items-center gap-2 group"
+          className="flex items-center gap-2.5 group"
         >
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm group-hover:bg-indigo-700 transition-colors">
-            <span className="text-white font-black text-xs tracking-tight">LC</span>
-          </div>
-          <span className="text-xl font-extrabold tracking-wider text-indigo-600 group-hover:text-indigo-700 transition-colors">
+          <PillIcon />
+          <span className="text-xl font-black tracking-widest text-indigo-600 group-hover:text-indigo-700 transition-colors uppercase">
             LACEBO
           </span>
         </Link>
@@ -208,11 +218,9 @@ export default function Navbar() {
 
       {/* ── Mobile top bar ── */}
       <header className="lg:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-40 shadow-sm">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
-            <span className="text-white font-black text-[10px] tracking-tight">LC</span>
-          </div>
-          <span className="text-lg font-extrabold tracking-wider text-indigo-600">LACEBO</span>
+        <Link to="/" className="flex items-center gap-2.5">
+          <PillIcon />
+          <span className="text-lg font-black tracking-widest text-indigo-600 uppercase">LACEBO</span>
         </Link>
         <button
           type="button"
