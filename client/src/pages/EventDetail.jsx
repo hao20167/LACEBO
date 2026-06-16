@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getApiAssetUrl } from '../services/api';
@@ -957,3 +958,47 @@ function CommentItem({
     </div>
   );
 }
+
+CommentItem.propTypes = {
+  comment: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    display_name: PropTypes.string,
+    username: PropTypes.string,
+    created_at: PropTypes.string.isRequired,
+    content: PropTypes.string,
+    image_url: PropTypes.string,
+    liked: PropTypes.bool,
+    like_count: PropTypes.number,
+    parent_id: PropTypes.number,
+  }).isRequired,
+  allComments: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      display_name: PropTypes.string,
+      username: PropTypes.string,
+      created_at: PropTypes.string.isRequired,
+      content: PropTypes.string,
+      image_url: PropTypes.string,
+      liked: PropTypes.bool,
+      like_count: PropTypes.number,
+      parent_id: PropTypes.number,
+    })
+  ).isRequired,
+  postId: PropTypes.number.isRequired,
+  user: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    username: PropTypes.string,
+    display_name: PropTypes.string,
+  }),
+  replyActive: PropTypes.object.isRequired,
+  setReplyActive: PropTypes.func.isRequired,
+  newReply: PropTypes.object.isRequired,
+  setNewReply: PropTypes.func.isRequired,
+  replyImageFiles: PropTypes.object.isRequired,
+  replyImagePreviews: PropTypes.object.isRequired,
+  replyUploading: PropTypes.object.isRequired,
+  handleCommentLike: PropTypes.func.isRequired,
+  handleReply: PropTypes.func.isRequired,
+  handleReplyImageChange: PropTypes.func.isRequired,
+  removeReplyImage: PropTypes.func.isRequired,
+};
