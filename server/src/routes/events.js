@@ -106,7 +106,7 @@ router.patch(
     if (!isDev(event.world_id, req.user.id))
       return res.status(403).json({ error: 'Dev only' });
 
-    const { status, title, description, start_date, end_date } = req.body;
+    const { status, title, description, start_date, end_date, thumbnail_url, background_image_url } = req.body;
 
     if (status) {
       db.prepare('UPDATE events SET status = ? WHERE id = ?').run(
@@ -132,6 +132,16 @@ router.patch(
     if (end_date)
       db.prepare('UPDATE events SET end_date = ? WHERE id = ?').run(
         end_date,
+        event.id,
+      );
+    if (thumbnail_url !== undefined)
+      db.prepare('UPDATE events SET thumbnail_url = ? WHERE id = ?').run(
+        thumbnail_url,
+        event.id,
+      );
+    if (background_image_url !== undefined)
+      db.prepare('UPDATE events SET background_image_url = ? WHERE id = ?').run(
+        background_image_url,
         event.id,
       );
 

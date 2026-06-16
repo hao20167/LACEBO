@@ -143,4 +143,15 @@ export function initDatabase() {
   if (!hasParentId) {
     db.exec('ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL');
   }
+
+  const eventColumns = db.prepare("PRAGMA table_info(events)").all();
+  const hasEventThumbnail = eventColumns.some((column) => column.name === 'thumbnail_url');
+  if (!hasEventThumbnail) {
+    db.exec('ALTER TABLE events ADD COLUMN thumbnail_url TEXT DEFAULT NULL');
+  }
+
+  const hasEventBackground = eventColumns.some((column) => column.name === 'background_image_url');
+  if (!hasEventBackground) {
+    db.exec('ALTER TABLE events ADD COLUMN background_image_url TEXT DEFAULT NULL');
+  }
 }
