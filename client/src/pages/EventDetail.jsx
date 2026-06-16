@@ -428,47 +428,43 @@ export default function EventDetail() {
               </label>
             )}
           </div>
+        ) : isDev ? (
+          <label className={`flex h-20 cursor-pointer items-center justify-center gap-2 text-sm font-medium transition-colors ${isBig ? 'bg-indigo-50 text-indigo-500 hover:bg-indigo-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+            {uploadingEventImage ? 'Uploading...' : '📷 Add Background Image'}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+              onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
+          </label>
         ) : (
-          <div className="relative group">
-            <div className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
-            {isDev && (
-              <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/5 text-slate-500 text-xs font-medium">
-                {uploadingEventImage ? 'Uploading...' : '📷 Add Background Image'}
-                <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
-                  onChange={e => handleUploadEventImage('background_image_url', e.target.files?.[0])} />
-              </label>
-            )}
-          </div>
+          <div className={`h-1.5 ${isBig ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
         )}
 
-        <div className="p-6">
-          <div className="flex items-start gap-4 mb-3">
-            {/* Thumbnail */}
-            {getApiAssetUrl(event.thumbnail_url) ? (
-              <div className="relative group flex-shrink-0">
-                <img
-                  src={getApiAssetUrl(event.thumbnail_url)}
-                  alt="Event thumbnail"
-                  className="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm"
-                />
-                {isDev && (
-                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl cursor-pointer text-white text-[10px] font-medium text-center">
-                    {uploadingEventImage ? '...' : '📷'}
-                    <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
-                      onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
-                  </label>
-                )}
-              </div>
-            ) : isDev ? (
-              <label className="flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs cursor-pointer hover:border-indigo-400 hover:text-indigo-500 transition-colors">
-                {uploadingEventImage ? '...' : '📷'}
+        {/* Cover image (full-width, above title) */}
+        {getApiAssetUrl(event.thumbnail_url) ? (
+          <div className="relative group">
+            <img
+              src={getApiAssetUrl(event.thumbnail_url)}
+              alt="Event cover"
+              className="w-full h-36 object-cover"
+            />
+            {isDev && (
+              <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs font-medium">
+                {uploadingEventImage ? 'Uploading...' : '📷 Change Cover'}
                 <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
                   onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
               </label>
-            ) : null}
+            )}
+          </div>
+        ) : isDev ? (
+          <label className={`flex h-24 cursor-pointer items-center justify-center gap-2 border-b text-sm font-medium transition-colors ${isBig ? 'bg-indigo-50/50 border-indigo-100 text-indigo-400 hover:bg-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>
+            {uploadingEventImage ? 'Uploading...' : '📷 Add Cover Image'}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingEventImage}
+              onChange={e => handleUploadEventImage('thumbnail_url', e.target.files?.[0])} />
+          </label>
+        ) : null}
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-3">
+        <div className="p-6">
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-3">
                 <span
                   className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
                     isBig
@@ -492,7 +488,6 @@ export default function EventDetail() {
                 {event.title}
               </h1>
             </div>
-          </div>
           <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed mb-4">
             {event.description}
           </p>
