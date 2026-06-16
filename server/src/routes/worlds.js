@@ -346,7 +346,7 @@ router.post('/:id/schedule-delete', authMiddleware, (req, res) => {
   const world = db.prepare('SELECT * FROM worlds WHERE id = ?').get(worldId);
   if (!world) return res.status(404).json({ error: 'World not found' });
 
-  const result = db
+  db
     .prepare(
       `UPDATE worlds SET deletion_scheduled_at = datetime('now', '+${SCHEDULED_DELETE_DELAY}') WHERE id = ?`,
     )

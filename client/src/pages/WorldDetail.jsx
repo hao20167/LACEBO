@@ -55,6 +55,7 @@ export default function WorldDetail() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const isDev =
@@ -184,62 +185,29 @@ export default function WorldDetail() {
               <p className="text-slate-500 text-sm leading-relaxed mb-5">
                 {world.description}
               </p>
-
-      {/* Lore Tab - Timeline */}
-      {tab === 'lore' && (
-        <div>
-          <h2 className="text-xl font-bold text-dark-100 mb-4">
-            World Lore Timeline
-          </h2>
-          {events.length === 0 ? (
-            <EmptyState
-              title="No events in this world's lore yet."
-              description={
-                isDev
-                  ? 'Create the first event to start this world timeline.'
-                  : 'Once events are opened, they will appear here as the world timeline.'
-              }
-            />
-          ) : (
-            <div className="relative">
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-dark-700"></div>
-              {events.map((event) => (
-                <div key={event.id} className="relative pl-14 pb-8">
-                  <div
-                    className={`absolute left-4 w-5 h-5 rounded-full border-2 ${
-                      event.event_type === 'big'
-                        ? 'bg-primary-500 border-primary-400'
-                        : 'bg-dark-600 border-dark-500'
-                    } ${event.status === 'open' ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-dark-950' : ''}`}
-                  ></div>
-                  <Link
-                    to={`/events/${event.id}`}
-                    className={`block bg-dark-900 border rounded-xl p-4 transition hover:border-primary-600 ${
-                      event.event_type === 'big'
-                        ? 'border-primary-800'
-                        : 'border-dark-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          event.event_type === 'big'
-                            ? 'bg-primary-900/50 text-primary-300'
-                            : 'bg-dark-700 text-dark-300'
-                        }`}
-                      >
-                        {event.event_type === 'big'
-                          ? 'BIG EVENT'
-                          : 'SMALL EVENT'}
-                      </span>
-                    </div>
+              {/* World Stats */}
+              <div className="space-y-3 pt-4 border-t border-slate-100 mb-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Members</span>
+                  <span className="text-slate-900 font-semibold">{world.member_count}</span>
+                </div>
+                {isMember && world.membership && (
+                  <>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">Your Role</span>
                       <span
-                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${isDev ? 'bg-violet-100 text-violet-700 border-violet-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                          isDev
+                            ? 'bg-violet-100 text-violet-700 border-violet-200'
+                            : 'bg-blue-100 text-blue-700 border-blue-200'
+                        }`}
                       >
                         {world.membership.role.toUpperCase()}
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Credits</span>
+                      <span className="text-indigo-600 font-bold">⭐ {world.membership.credits}</span>
                     </div>
                   </>
                 )}
@@ -281,15 +249,20 @@ export default function WorldDetail() {
           ))}
         </div>
 
-            {openEvents.length === 0 ? (
+        {/* Lore Tab */}
+        {tab === 'lore' && (
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+              📖 World Lore Timeline
+            </h2>
+            {events.length === 0 ? (
               <EmptyState
-                title="No ongoing events"
+                title="No events in this world's lore yet."
                 description={
                   isDev
-                    ? 'Open a new event when this world is ready for activity.'
-                    : 'Check back later for open events you can join.'
+                    ? 'Create the first event to start this world timeline.'
+                    : 'Once events are opened, they will appear here as the world timeline.'
                 }
-                compact
               />
             ) : (
               <div className="relative">
@@ -363,6 +336,7 @@ export default function WorldDetail() {
           </div>
         )}
 
+
         {/* ── Events Tab ── */}
         {tab === 'events' && (
           <div className="space-y-8">
@@ -373,15 +347,61 @@ export default function WorldDetail() {
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
                   Ongoing Events
                 </h2>
-                {isDev && (
+                {isDev ? (
                   <button
                     onClick={() => setShowEventForm(!showEventForm)}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm"
                   >
                     + New Event
                   </button>
+                ) : (
+                  isMember && (
+                    <button
+                      onClick={() => setShowProposalForm(!showProposalForm)}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm"
+                    >
+                      + Propose Event
+                    </button>
+                  )
                 )}
               </div>
+
+              {showProposalForm && (
+                <form
+                  onSubmit={handleProposal}
+                  className="bg-white border border-slate-200 rounded-xl p-5 mb-4 space-y-3 shadow-sm"
+                >
+                  <input
+                    type="text"
+                    placeholder="Event title"
+                    value={proposalForm.title}
+                    onChange={(e) =>
+                      setProposalForm({ ...proposalForm, title: e.target.value })
+                    }
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  />
+                  <textarea
+                    placeholder="Event description"
+                    value={proposalForm.description}
+                    onChange={(e) =>
+                      setProposalForm({
+                        ...proposalForm,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                  >
+                    Submit Proposal
+                  </button>
+                </form>
+              )}
 
               {showEventForm && (
                 <form
@@ -506,7 +526,7 @@ export default function WorldDetail() {
 
           {/* Past Events */}
           <div>
-            <h2 className="text-xl font-bold text-dark-100 mb-3">📜 Past Events</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-3">📜 Past Events</h2>
             {closedEvents.length === 0 ? (
               <EmptyState
                 title="No past events"
@@ -515,26 +535,43 @@ export default function WorldDetail() {
               />
             ) : (
               <div className="space-y-3">
-                {announcements.map((ann) => (
-                  <div
-                    key={ann.id}
-                    className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm"
+                {closedEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    to={`/events/${event.id}`}
+                    className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-slate-900">
-                        {ann.display_name}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${event.event_type === 'big' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                      >
+                        {event.event_type.toUpperCase()}
                       </span>
-                      <span className="text-xs text-slate-400">
-                        {new Date(ann.created_at).toLocaleString()}
+                      <span className="text-xs bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full">
+                        CLOSED
                       </span>
                     </div>
-                    <h3 className="font-bold text-slate-900 mb-1.5">
-                      {ann.title}
+                    <h3 className="font-semibold text-slate-900">
+                      {event.title}
                     </h3>
-                    <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">
-                      {ann.content}
+                    <p className="text-slate-500 text-sm mt-1 line-clamp-2">
+                      {event.description}
                     </p>
-                  </div>
+                    <div className="text-xs text-slate-400 mt-2 flex gap-3">
+                      {event.start_date && (
+                        <span>
+                          📅{' '}
+                          {new Date(event.start_date).toLocaleDateString()}
+                        </span>
+                      )}
+                      {event.end_date && (
+                        <span>
+                          → {new Date(event.end_date).toLocaleDateString()}
+                        </span>
+                      )}
+                      <span>📝 {event.post_count} posts</span>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -558,7 +595,6 @@ export default function WorldDetail() {
               </button>
             )}
           </div>
-        )}
 
           {showAnnForm && (
             <form
@@ -630,7 +666,7 @@ export default function WorldDetail() {
       {/* Leaderboard Tab */}
       {tab === 'leaderboard' && (
         <div>
-          <h2 className="text-xl font-bold text-dark-100 mb-4">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">
             🏆 Citizen Leaderboard
           </h2>
           {leaderboard.length === 0 ? (
@@ -639,80 +675,55 @@ export default function WorldDetail() {
               description="Approved members and their credits will appear here."
             />
           ) : (
-            <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-dark-700 text-dark-400 text-sm">
-                    <th className="text-left px-4 py-3 w-16">#</th>
-                    <th className="text-left px-4 py-3">Citizen</th>
-                    <th className="text-left px-4 py-3 w-24">Role</th>
-                    <th className="text-right px-4 py-3 w-32">Credits</th>
+                  <tr className="border-b border-slate-200 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-50">
+                    <th className="text-left px-5 py-3 w-16">#</th>
+                    <th className="text-left px-5 py-3">Citizen</th>
+                    <th className="text-left px-5 py-3 w-28">Role</th>
+                    <th className="text-right px-5 py-3 w-32">Credits</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaderboard.map((m, i) => (
                     <tr
                       key={m.id}
-                      className="border-b border-dark-800 hover:bg-dark-800/50 transition"
+                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
                     >
-                      <td className="px-4 py-3 text-dark-400 font-medium">
+                      <td className="px-5 py-3.5 text-slate-500 font-medium text-sm">
                         {getRankDisplay(i)}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-dark-100 font-medium">
+                      <td className="px-5 py-3.5">
+                        <span className="text-slate-900 font-medium text-sm">
                           {m.display_name}
                         </span>
-                        <span className="text-dark-500 text-sm ml-2">
+                        <span className="text-slate-400 text-xs ml-2">
                           @{m.username}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3.5">
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${m.role === 'dev' ? 'bg-purple-900/50 text-purple-300' : 'bg-blue-900/50 text-blue-300'}`}
+                          className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
+                            m.role === 'dev'
+                              ? 'bg-violet-100 text-violet-700 border-violet-200'
+                              : 'bg-blue-100 text-blue-700 border-blue-200'
+                          }`}
                         >
                           {m.role.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-primary-400 font-semibold">
-                        {m.credits}
+                      <td className="px-5 py-3.5 text-right text-indigo-600 font-bold text-sm">
+                        ⭐ {m.credits}
                       </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {leaderboard.map((m, i) => (
-                      <tr
-                        key={m.id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
-                      >
-                        <td className="px-4 py-3.5 text-slate-500 font-medium text-sm">
-                          {getRankDisplay(i)}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className="text-slate-900 font-medium text-sm">
-                            {m.display_name}
-                          </span>
-                          <span className="text-slate-400 text-xs ml-2">
-                            @{m.username}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full border font-medium ${m.role === 'dev' ? 'bg-violet-100 text-violet-700 border-violet-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}
-                          >
-                            {m.role.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-right text-indigo-600 font-bold text-sm">
-                          {m.credits}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );

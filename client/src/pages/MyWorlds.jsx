@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import EmptyState from '../components/EmptyState.jsx';
 import api from '../services/api.js';
 import { MyWorldsSkeleton } from '../components/SkeletonLoader';
@@ -28,7 +29,7 @@ export default function MyWorlds() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">My Worlds</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Worlds you've created or joined
+            {"Worlds you've created or joined"}
           </p>
         </div>
         <Link
@@ -52,23 +53,6 @@ export default function MyWorlds() {
           </Link>
           }
         />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {worlds.map((world) => (
-            <Link
-              to="/worlds"
-              className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-            >
-              Explore Worlds
-            </Link>
-            <Link
-              to="/worlds/create"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-            >
-              Create a World
-            </Link>
-          </div>
-        </div>
       ) : (
         <>
           {/* Dev worlds */}
@@ -145,3 +129,14 @@ function WorldCard({ world }) {
     </Link>
   );
 }
+
+WorldCard.propTypes = {
+  world: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    role: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    member_count: PropTypes.number.isRequired,
+    credits: PropTypes.number.isRequired,
+  }).isRequired,
+};
