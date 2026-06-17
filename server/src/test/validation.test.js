@@ -164,12 +164,24 @@ describe('Input Validation Tests', () => {
       expect(res.status).toBe(400);
     });
 
+    test('rejects unsupported video_url', async () => {
+      const res = await request(ctx.app)
+        .post(`/api/posts/event/${eventId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ content: 'Hello', video_url: 'https://example.com/video/1' });
+      expect(res.status).toBe(400);
+    });
+
     test('accepts valid post', async () => {
       const res = await request(ctx.app)
         .post(`/api/posts/event/${eventId}`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ content: 'My post content' });
+        .send({
+          content: 'My post content',
+          video_url: 'https://youtu.be/dQw4w9WgXcQ',
+        });
       expect(res.status).toBe(201);
+      expect(res.body.video_url).toBe('https://youtu.be/dQw4w9WgXcQ');
     });
   });
 });

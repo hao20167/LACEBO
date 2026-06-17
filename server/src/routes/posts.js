@@ -162,13 +162,13 @@ router.post(
     if (!member)
       return res.status(403).json({ error: 'Not a member of this world' });
 
-    const { content, image_url } = req.body;
+    const { content, image_url, video_url } = req.body;
     if (!content) return res.status(400).json({ error: 'Content required' });
 
     const status = member.role === 'dev' ? 'approved' : 'pending';
     const result = db
       .prepare(
-        'INSERT INTO posts (event_id, world_id, user_id, content, image_url, status) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO posts (event_id, world_id, user_id, content, image_url, video_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
       )
       .run(
         event.id,
@@ -176,6 +176,7 @@ router.post(
         req.user.id,
         content,
         image_url || null,
+        video_url?.trim() || null,
         status,
       );
 
@@ -255,7 +256,7 @@ router.patch(
   authMiddleware,
   validate(updatePostValidators),
   (req, res) => {
-    const { content, image_url } = req.body;
+    const { content, image_url, video_url } = req.body;
 
     const post = db
       .prepare('SELECT * FROM posts WHERE id = ?')
@@ -277,6 +278,11 @@ router.patch(
     if (image_url !== undefined) {
       updates.push('image_url = ?');
       values.push(image_url.trim());
+    }
+
+    if (video_url !== undefined) {
+      updates.push('video_url = ?');
+      values.push(video_url?.trim() || null);
     }
 
     if (updates.length === 0) {
