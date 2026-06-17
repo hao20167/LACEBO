@@ -115,26 +115,6 @@ describe('EventDetail', () => {
     expect(screen.getByRole('button', { name: /2/ })).toBeInTheDocument();
   });
 
-  test('renders embedded video for supported post video URLs', async () => {
-    setupApiMocks({
-      posts: [
-        {
-          ...mockPost,
-          video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-        },
-      ],
-    });
-    renderEventDetail();
-
-    expect(await screen.findByText('Hello world')).toBeInTheDocument();
-    const iframe = screen.getByTitle('YouTube video');
-    expect(iframe).toBeInTheDocument();
-    expect(iframe).toHaveAttribute(
-      'src',
-      'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    );
-  });
-
   test('renders empty state when there are no approved posts', async () => {
     setupApiMocks({ posts: [] });
     renderEventDetail();
@@ -180,27 +160,6 @@ describe('EventDetail', () => {
     });
     expect(await screen.findByText('Fresh post')).toBeInTheDocument();
     expect(textarea).toHaveValue('');
-  });
-
-  test('creates a post with an embedded video URL', async () => {
-    setupApiMocks({ posts: [] });
-    api.post.mockResolvedValue({ data: { id: 99 } });
-
-    renderEventDetail();
-    const textarea = await screen.findByPlaceholderText('Share your thoughts about this event...');
-    await userEvent.type(textarea, 'Fresh video post');
-    await userEvent.type(
-      screen.getByPlaceholderText('Dán link YouTube hoặc TikTok (tùy chọn)'),
-      'https://youtu.be/dQw4w9WgXcQ',
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Post' }));
-
-    await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/posts/event/1', {
-        content: 'Fresh video post',
-        video_url: 'https://youtu.be/dQw4w9WgXcQ',
-      });
-    });
   });
 
   test('edits an owned post and updates the rendered content', async () => {

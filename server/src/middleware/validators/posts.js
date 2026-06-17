@@ -1,15 +1,4 @@
 import { body, param } from 'express-validator';
-import { isSupportedVideoUrl } from '../../utils/videoEmbeds.js';
-
-const optionalVideoUrlValidator = () =>
-  body('video_url')
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ max: 2048 })
-    .withMessage('video_url must be at most 2048 characters')
-    .bail()
-    .custom((value) => isSupportedVideoUrl(value))
-    .withMessage('video_url must be a supported YouTube or TikTok URL');
 
 export const createPostValidators = [
   body('content')
@@ -22,7 +11,6 @@ export const createPostValidators = [
     .optional()
     .isURL()
     .withMessage('image_url must be a valid URL'),
-  optionalVideoUrlValidator(),
 ];
 
 export const createCommentValidators = [
@@ -78,5 +66,4 @@ export const updatePostValidators = [
     .withMessage('image_url cannot be empty')
     .isLength({ max: 2048 })
     .withMessage('image_url must be at most 2048 characters'),
-  optionalVideoUrlValidator(),
 ];

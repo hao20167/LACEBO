@@ -23,5 +23,3 @@ dist/
 # Uploaded assets
 /server/uploads/
 /server/upload/
-
-.codegraph/

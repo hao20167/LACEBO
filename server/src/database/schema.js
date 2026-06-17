@@ -58,7 +58,6 @@ export function initDatabase() {
       user_id INTEGER NOT NULL,
       content TEXT NOT NULL,
       image_url TEXT DEFAULT NULL,
-      video_url TEXT DEFAULT NULL,
       post_type TEXT NOT NULL DEFAULT 'normal' CHECK(post_type IN ('normal', 'announcement', 'event_description')),
       status TEXT NOT NULL DEFAULT 'approved' CHECK(status IN ('pending', 'approved', 'rejected')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -143,12 +142,6 @@ export function initDatabase() {
   const hasParentId = commentColumns.some((column) => column.name === 'parent_id');
   if (!hasParentId) {
     db.exec('ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL');
-  }
-
-  const postColumns = db.prepare("PRAGMA table_info(posts)").all();
-  const hasPostVideoUrl = postColumns.some((column) => column.name === 'video_url');
-  if (!hasPostVideoUrl) {
-    db.exec('ALTER TABLE posts ADD COLUMN video_url TEXT DEFAULT NULL');
   }
 
   const eventColumns = db.prepare("PRAGMA table_info(events)").all();

@@ -116,33 +116,6 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(getRes.body.data[0].content).toBe('Dev post content');
     });
 
-    it('should allow supported embedded video URLs on posts', async () => {
-      const videoUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-      const res = await request(app)
-        .post(`/api/posts/event/${eventId}`)
-        .set('Authorization', `Bearer ${devToken}`)
-        .send({ content: 'Video post content', video_url: videoUrl });
-
-      expect(res.status).toBe(201);
-      expect(res.body.video_url).toBe(videoUrl);
-
-      const getRes = await request(app).get(`/api/posts/event/${eventId}`);
-      expect(getRes.status).toBe(200);
-      expect(getRes.body.data[0].video_url).toBe(videoUrl);
-    });
-
-    it('should reject unsupported embedded video URLs on posts', async () => {
-      const res = await request(app)
-        .post(`/api/posts/event/${eventId}`)
-        .set('Authorization', `Bearer ${devToken}`)
-        .send({
-          content: 'Bad video',
-          video_url: 'https://example.com/watch?v=abc123',
-        });
-
-      expect(res.status).toBe(400);
-    });
-
     it('should return approved posts for an authenticated user', async () => {
       await request(app)
         .post(`/api/posts/event/${eventId}`)
@@ -209,20 +182,18 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
       expect(secondApproveRes.status).toBe(400);
     });
 
-    it('should allow the author to update post content, image, and video', async () => {
+    it('should allow the author to update post content and image', async () => {
       const createRes = await request(app)
         .post(`/api/posts/event/${eventId}`)
         .set('Authorization', `Bearer ${devToken}`)
         .send({ content: 'Original post' });
 
-      const videoUrl = 'https://www.tiktok.com/@lacebo/video/7123456789012345678';
       const res = await request(app)
         .patch(`/api/posts/${createRes.body.id}`)
         .set('Authorization', `Bearer ${devToken}`)
         .send({
           content: 'Updated post',
           image_url: '/uploads/images/post.png',
-          video_url: videoUrl,
         });
 
       expect(res.status).toBe(200);
@@ -230,7 +201,6 @@ describe('Posts, Comments, and Likes Routes Integration', () => {
         id: createRes.body.id,
         content: 'Updated post',
         image_url: '/uploads/images/post.png',
-        video_url: videoUrl,
       });
     });
 
