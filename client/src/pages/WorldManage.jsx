@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import EmptyState from '../components/EmptyState.jsx';
+import EmbeddedVideo from '../components/EmbeddedVideo.jsx';
 import api from '../services/api.js';
 
 const toSafeUrlId = (value) => {
@@ -412,22 +413,29 @@ export default function WorldManage() {
                         @{post.username}
                       </span>
                     </div>
-                    <p className="text-dark-300 text-sm mb-3">{post.content}</p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handlePost(post.id, 'approve')}
-                        className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => confirmRejectPost(post)}
-                        className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        Reject
-                      </button>
+                    <div className="p-4">
+                      <p className="mb-3 whitespace-pre-wrap text-sm text-slate-700">
+                        {post.content}
+                      </p>
+                      {post.video_url && (
+                        <EmbeddedVideo url={post.video_url} className="mb-3" />
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handlePost(post.id, 'approve')}
+                          className="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => confirmRejectPost(post)}
+                          className="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

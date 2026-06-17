@@ -7,6 +7,8 @@ import api, { getApiAssetUrl } from '../services/api';
 import { EventDetailSkeleton } from '../components/SkeletonLoader';
 import { useToastContext } from '../components/Toast';
 import Pagination from '../components/Pagination';
+import EmbeddedVideo from '../components/EmbeddedVideo';
+import { isSupportedVideoUrl } from '../utils/videoEmbeds';
 
 const getCollection = (payload) => {
   if (Array.isArray(payload)) return payload;
@@ -22,6 +24,7 @@ export default function EventDetail() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newPost, setNewPost] = useState('');
+  const [newPostVideoUrl, setNewPostVideoUrl] = useState('');
   const [posting, setPosting] = useState(false);
   const [expandedComments, setExpandedComments] = useState({});
   const [comments, setComments] = useState({});
@@ -37,6 +40,7 @@ export default function EventDetail() {
   const [postToDelete, setPostToDelete] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [editVideoUrl, setEditVideoUrl] = useState('');
   const [openMenuPostId, setOpenMenuPostId] = useState(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -101,10 +105,19 @@ export default function EventDetail() {
   const handlePost = async (e) => {
     e.preventDefault();
     if (!newPost.trim()) return;
+    if (newPostVideoUrl.trim() && !isSupportedVideoUrl(newPostVideoUrl.trim())) {
+      toast.error('Chỉ hỗ trợ link YouTube hoặc TikTok hợp lệ.');
+      return;
+    }
     setPosting(true);
     try {
-      await api.post(`/posts/event/${eventId}`, { content: newPost });
+      const payload = { content: newPost };
+      if (newPostVideoUrl.trim()) {
+        payload.video_url = newPostVideoUrl.trim();
+      }
+      await api.post(`/posts/event/${eventId}`, payload);
       setNewPost('');
+      setNewPostVideoUrl('');
       setPage(1);
       await fetchPosts(1);
     } catch (err) {
@@ -146,28 +159,40 @@ export default function EventDetail() {
     setOpenMenuPostId(null);
     setEditingPostId(post.id);
     setEditContent(post.content || '');
+    setEditVideoUrl(post.video_url || '');
   };
 
   const cancelEditingPost = () => {
     setEditingPostId(null);
     setEditContent('');
+    setEditVideoUrl('');
   };
 
   const saveEditedPost = async () => {
     if (!editingPostId || !editContent.trim()) return;
+    if (editVideoUrl.trim() && !isSupportedVideoUrl(editVideoUrl.trim())) {
+      toast.error('Chỉ hỗ trợ link YouTube hoặc TikTok hợp lệ.');
+      return;
+    }
     try {
-      const res = await api.patch(`/posts/${editingPostId}`, {
+      const originalPost = posts.find((post) => post.id === editingPostId);
+      const payload = {
         content: editContent.trim(),
-      });
+      };
+      if (editVideoUrl.trim() || originalPost?.video_url) {
+        payload.video_url = editVideoUrl.trim() || null;
+      }
+      const res = await api.patch(`/posts/${editingPostId}`, payload);
       setPosts(
         posts.map((post) =>
           post.id === editingPostId
-            ? { ...post, content: res.data.content }
+            ? { ...post, content: res.data.content, video_url: res.data.video_url }
             : post,
         ),
       );
       setEditingPostId(null);
       setEditContent('');
+      setEditVideoUrl('');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update post');
     }
@@ -639,6 +664,13 @@ export default function EventDetail() {
                 rows={3}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition resize-none text-sm mb-2"
               />
+              <input
+                type="url"
+                value={newPostVideoUrl}
+                onChange={(e) => setNewPostVideoUrl(e.target.value)}
+                placeholder="Dán link YouTube hoặc TikTok (tùy chọn)"
+                className="mb-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              />
               <div className="flex justify-end">
                 <button
                   type="submit"
@@ -743,6 +775,13 @@ export default function EventDetail() {
                       rows={4}
                       className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition resize-none text-sm"
                     />
+                    <input
+                      type="url"
+                      value={editVideoUrl}
+                      onChange={(e) => setEditVideoUrl(e.target.value)}
+                      placeholder="Dán link YouTube hoặc TikTok (tùy chọn)"
+                      className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    />
                     <div className="flex gap-2 justify-end">
                       <button
                         type="button"
@@ -765,6 +804,9 @@ export default function EventDetail() {
                   <p className="text-slate-700 whitespace-pre-wrap text-sm ml-12 leading-relaxed">
                     {post.content}
                   </p>
+                )}
+                {editingPostId !== post.id && post.video_url && (
+                  <EmbeddedVideo url={post.video_url} className="mt-3 ml-12" />
                 )}
 
                 {/* Post actions */}
